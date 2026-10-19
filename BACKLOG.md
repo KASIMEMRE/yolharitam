@@ -78,3 +78,7 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Şablon kalıntılarını temizle**: kullanılmayan `external-link.tsx`, `hint-row.tsx`, `AnimatedIcon`, `assets/images/tabIcons/*`; açılış ekranı (`AnimatedSplashOverlay`) hâlâ Expo logosu.
 - **Alt kategori ikonları**: alt kategori listesinde tüm kartlar kategorinin emojisini taşıyor; alt kategoriye özel emoji eklenebilir.
 - **"Yolculuk başlıyor" çipi**: Y-04/Y-05 ile gerçek adımlar gelince kaldırılmalı/güncellenmeli.
+
+### OTP-01 · E-posta doğrulaması kodla
+- Kayıttan sonra e-postaya gelen kod `src/app/verify-email.tsx` ekranında girilir (`verifyOtp`); "Tekrar gönder" 60 sn geri sayımlıdır.
+- Girişte "Email not confirmed" hatası kod ekranına yönlendirir; hata çevirileri `src/lib/auth-errors.ts` içinde ortaklaştı.
