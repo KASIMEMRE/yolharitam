@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -17,30 +18,13 @@ import { TrailMap } from '@/components/route-steps';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AUTH_STEPS } from '@/constants/auth-steps';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { ALREADY_REGISTERED_MESSAGE, isEmailNotConfirmed, toTurkish } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
 type Mode = 'login' | 'signup';
-
-const STEPS = [
-  { emoji: '🔑', label: 'Hesabını oluştur' },
-  { emoji: '🧭', label: 'Konunu ve seviyeni seç' },
-  { emoji: '🗺️', label: 'Kişisel yol haritanı al' },
-];
-
-// Supabase'in İngilizce hata mesajlarını kullanıcının anlayacağı Türkçeye çevir
-function toTurkish(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes('invalid login credentials')) return 'E-posta veya şifre hatalı.';
-  if (m.includes('already registered')) return 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
-  if (m.includes('email not confirmed'))
-    return 'E-postanı henüz onaylamadın. Gelen kutundaki bağlantıya tıkla, sonra giriş yap.';
-  if (m.includes('rate limit') || m.includes('too many'))
-    return 'Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar dene.';
-  if (m.includes('network')) return 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';
-  return message; // Tanımadığımız bir hata: orijinalini göster
-}
 
 export default function LoginScreen() {
   const theme = useTheme();
@@ -55,7 +39,6 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   // Türetilmiş değerler
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
@@ -65,30 +48,51 @@ export default function LoginScreen() {
   function switchMode(next: Mode) {
     setMode(next);
     setError(null);
-    setNotice(null);
+  }
+
+  // Kod ekranına git. `push` kullanıyoruz (replace DEĞİL): geri dönünce bu ekran ve yazılan e-posta
+  // yığında durur, "E-postayı değiştir" tam olarak buraya döner. Şifreyi taşımayız (verifyOtp istemez).
+  // Başarıdan sonra `router.replace` ile içeri girmeyi de elle yapmıyoruz: kod doğrulanınca oturum
+  // oluşur, Stack.Protected (_layout.tsx) kullanıcıyı kendisi içeri alır. Tek doğruluk kaynağı oturumdur.
+  function goToVerify(from: 'login' | 'signup', mail: string) {
+    setPassword('');
+    router.push({ pathname: '/verify-email', params: { email: mail, from } });
   }
 
   async function handleSubmit() {
     setBusy(true);
     setError(null);
-    setNotice(null);
 
     const credentials = { email: email.trim(), password };
 
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword(credentials);
-      if (error) setError(toTurkish(error.message));
+      if (error && isEmailNotConfirmed(error)) {
+        // Hesap var ama doğrulanmamış (şifre doğru). Çıkmaz yerine kod ekranına yolla.
+        // Burada otomatik "tekrar gönder" YOK: e-posta kotasını yer, önceki kod hâlâ geçerli olabilir.
+        goToVerify('login', credentials.email);
+      } else if (error) {
+        setError(toTurkish(error, 'login'));
+      }
       // Başarılıysa Stack.Protected bizi otomatik içeri alır.
     } else {
       const { data, error } = await supabase.auth.signUp(credentials);
       if (error) {
-        setError(toTurkish(error.message));
+        setError(toTurkish(error, 'signup'));
+      } else if (data.user?.identities?.length === 0) {
+        // Güvenlik deseni: "E-posta onayı" açıkken, zaten doğrulanmış bir e-postayla kayıt denenirse
+        // Supabase hesabın varlığını sızdırmamak için hata DÖNMEZ; sahte bir kullanıcı döner ve
+        // `identities` boş dizi olur, e-posta gönderilmez. Bunu yakalamazsak kullanıcı hiç gelmeyecek
+        // bir kodu bekler. Bu kontrol `!data.session`ten ÖNCE olmalı (ikisinde de session yoktur).
+        setError(ALREADY_REGISTERED_MESSAGE);
       } else if (!data.session) {
-        setNotice(`Onay bağlantısı ${credentials.email} adresine gönderildi. Bağlantıya tıkladıktan sonra giriş yap.`);
-        setMode('login');
+        goToVerify('signup', credentials.email);
       }
+      // data.session doluysa (panelde "Confirm email" kapalı) Stack.Protected içeri alır.
     }
 
+    // Başarıda ekran Stack.Protected ile kapanabilir; ama kod ekranına push'ta bu ekran yığında kalır,
+    // geri dönülünce buton takılı kalmasın diye busy burada sıfırlanır.
     setBusy(false);
   }
 
@@ -122,7 +126,7 @@ export default function LoginScreen() {
                 </ThemedText>
               </Animated.View>
               <TrailMap
-                stops={STEPS}
+                stops={AUTH_STEPS}
                 current={mode === 'login' ? 1 : 0}
                 variant="horizontal"
                 showDone={false}
@@ -198,9 +202,15 @@ export default function LoginScreen() {
                 }
               />
 
-              {/* Hata ve bilgi kutuları */}
+              {/* Hata kutusu */}
               {error && <Banner tone="warning">{error}</Banner>}
-              {notice && <Banner tone="info">{notice}</Banner>}
+
+              {/* Kayıtta beklentiyi önceden söyle: kod e-postayla gelecek */}
+              {mode === 'signup' && (
+                <ThemedText type="small" themeColor="textSecondary">
+                  Hesabını doğrulamak için e-postana bir kod göndereceğiz.
+                </ThemedText>
+              )}
             </View>
           </ScrollView>
 

@@ -58,6 +58,12 @@ function RootStack() {
           name="login"
           options={{ title: '', headerStyle: { backgroundColor: theme.accentSoft } }}
         />
+        {/* Kod ekranı da oturumsuz kullanıcıya ait: doğrulama bitip oturum gelince bu grup kapanır
+            ve ekran kendiliğinden düşer (elle router.replace gerekmez). Başlık login ile aynı. */}
+        <Stack.Screen
+          name="verify-email"
+          options={{ title: '', headerStyle: { backgroundColor: theme.accentSoft }, headerBackButtonDisplayMode: 'minimal' }}
+        />
       </Stack.Protected>
 
       {/* GİRİŞ YAPMIŞ kullanıcının görebileceği ekranlar */}
