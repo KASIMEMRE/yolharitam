@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  useWindowDimensions,
   View,
 } from 'react-native';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { RouteSteps } from '@/components/route-steps';
+import { Banner } from '@/components/banner';
+import { Button } from '@/components/button';
+import { TrailMap } from '@/components/route-steps';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
+import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
 
@@ -41,6 +44,8 @@ function toTurkish(message: string): string {
 
 export default function LoginScreen() {
   const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const gutter = width < 360 ? Spacing.three : Spacing.four;
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -91,106 +96,110 @@ export default function LoginScreen() {
         <KeyboardAvoidingView
           style={styles.flex}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-            {/* Ekranın akılda kalan parçası: rota */}
-            <View style={styles.header}>
-              <ThemedText type="subtitle">
-                {mode === 'login' ? 'Rotana devam et' : 'Rotanı oluşturalım'}
-              </ThemedText>
-              <RouteSteps stops={STEPS} current={mode === 'login' ? 1 : 0} />
+          <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled">
+            {/* SAHNE: kenarlara taşan yumuşak yeşil blok. İçinde başlık ve küçük yatay patika;
+                mod değişince sarı aktif durak yeni adıma kayar. */}
+            <View
+              style={[
+                styles.stage,
+                { backgroundColor: theme.accentSoft, paddingHorizontal: gutter },
+              ]}>
+              <Animated.View key={mode} entering={FadeIn.duration(150)}>
+                <ThemedText type="heading" accessibilityRole="header">
+                  {mode === 'login' ? 'Rotana devam et' : 'Rotanı oluşturalım'}
+                </ThemedText>
+              </Animated.View>
+              <TrailMap stops={STEPS} current={mode === 'login' ? 1 : 0} variant="horizontal" />
             </View>
 
-            {/* Giriş / Kayıt seçici */}
-            <View
-              style={[styles.segment, { backgroundColor: theme.backgroundElement }]}
-              accessibilityRole="tablist">
-              {(['login', 'signup'] as const).map((m) => {
-                const active = mode === m;
-                return (
+            <View style={[styles.form, { padding: gutter }]}>
+              {/* Giriş / Kayıt seçici */}
+              <View
+                style={[
+                  styles.segment,
+                  { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+                ]}
+                accessibilityRole="tablist">
+                {(['login', 'signup'] as const).map((m) => {
+                  const active = mode === m;
+                  return (
+                    <Pressable
+                      key={m}
+                      onPress={() => switchMode(m)}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: active }}
+                      style={[
+                        styles.segmentItem,
+                        {
+                          borderColor: active ? theme.accent : 'transparent',
+                          backgroundColor: active ? theme.accentSoft : 'transparent',
+                        },
+                      ]}>
+                      <ThemedText type="smallBold" themeColor={active ? 'accentInk' : 'textSecondary'}>
+                        {m === 'login' ? 'Giriş yap' : 'Kayıt ol'}
+                      </ThemedText>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              <TextField
+                label="E-posta"
+                placeholder="ornek@mail.com"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                textContentType="emailAddress"
+                returnKeyType="next"
+              />
+
+              <TextField
+                label="Şifre"
+                placeholder={mode === 'signup' ? 'Yeni bir şifre belirle' : 'Şifren'}
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                textContentType={mode === 'login' ? 'password' : 'newPassword'}
+                returnKeyType="go"
+                onSubmitEditing={() => canSubmit && handleSubmit()}
+                hint={mode === 'signup' ? (passwordValid ? '✓ En az 6 karakter' : 'En az 6 karakter') : undefined}
+                hintTone={passwordValid ? 'good' : 'neutral'}
+                right={
                   <Pressable
-                    key={m}
-                    onPress={() => switchMode(m)}
-                    accessibilityRole="tab"
-                    accessibilityState={{ selected: active }}
-                    style={[styles.segmentItem, active && { backgroundColor: theme.background }]}>
-                    <ThemedText type="smallBold" themeColor={active ? 'text' : 'textSecondary'}>
-                      {m === 'login' ? 'Giriş yap' : 'Kayıt ol'}
+                    onPress={() => setShowPassword(!showPassword)}
+                    hitSlop={12}
+                    style={styles.showButton}
+                    accessibilityRole="button"
+                    accessibilityLabel={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}>
+                    <ThemedText type="smallBold" themeColor="accentInk">
+                      {showPassword ? 'Gizle' : 'Göster'}
                     </ThemedText>
                   </Pressable>
-                );
-              })}
+                }
+              />
+
+              {/* Hata ve bilgi kutuları */}
+              {error && <Banner tone="warning">{error}</Banner>}
+              {notice && <Banner tone="info">{notice}</Banner>}
             </View>
+          </ScrollView>
 
-            <TextField
-              label="E-posta"
-              placeholder="ornek@mail.com"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              textContentType="emailAddress"
-              returnKeyType="next"
-            />
-
-            <TextField
-              label="Şifre"
-              placeholder={mode === 'signup' ? 'Yeni bir şifre belirle' : 'Şifren'}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              textContentType={mode === 'login' ? 'password' : 'newPassword'}
-              returnKeyType="go"
-              onSubmitEditing={() => canSubmit && handleSubmit()}
-              hint={mode === 'signup' ? (passwordValid ? '✓ En az 6 karakter' : 'En az 6 karakter') : undefined}
-              hintTone={passwordValid ? 'good' : 'neutral'}
-              right={
-                <Pressable
-                  onPress={() => setShowPassword(!showPassword)}
-                  hitSlop={12}
-                  accessibilityRole="button"
-                  accessibilityLabel={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}>
-                  <ThemedText type="small" style={{ color: theme.accent }}>
-                    {showPassword ? 'Gizle' : 'Göster'}
-                  </ThemedText>
-                </Pressable>
-              }
-            />
-
-            {/* Hata ve bilgi kutuları */}
-            {error && (
-              <View
-                style={[styles.banner, { backgroundColor: theme.warningBackground }]}
-                accessibilityLiveRegion="polite">
-                <ThemedText type="small">{error}</ThemedText>
-              </View>
-            )}
-            {notice && (
-              <View style={[styles.banner, { backgroundColor: theme.backgroundElement }]}>
-                <ThemedText type="small">{notice}</ThemedText>
-              </View>
-            )}
-
-            <Pressable
+          {/* Gönder butonu klavyenin üstünde sabit kalır; alanlar yukarıda kayar */}
+          <View
+            style={[
+              styles.footer,
+              { paddingHorizontal: gutter, borderTopColor: theme.border, backgroundColor: theme.background },
+            ]}>
+            <Button
+              label={mode === 'login' ? 'Giriş yap' : 'Hesap oluştur'}
               onPress={handleSubmit}
               disabled={!canSubmit}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.button,
-                { backgroundColor: theme.accent },
-                pressed && styles.pressed,
-                !canSubmit && styles.disabled,
-              ]}>
-              {busy ? (
-                <ActivityIndicator color={theme.onAccent} />
-              ) : (
-                <ThemedText type="smallBold" style={{ color: theme.onAccent }}>
-                  {mode === 'login' ? 'Giriş yap' : 'Hesap oluştur'}
-                </ThemedText>
-              )}
-            </Pressable>
-          </ScrollView>
+              loading={busy}
+            />
+          </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
     </ThemedView>
@@ -200,23 +209,23 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  content: { padding: Spacing.four, gap: Spacing.four },
-  header: { gap: Spacing.four, paddingTop: Spacing.two },
-  segment: { flexDirection: 'row', borderRadius: Spacing.three, padding: Spacing.one },
+  stage: {
+    gap: Spacing.three,
+    paddingTop: Spacing.four,
+    paddingBottom: Spacing.five,
+    borderBottomLeftRadius: Radius.xl,
+    borderBottomRightRadius: Radius.xl,
+  },
+  form: { gap: Spacing.four },
+  segment: { flexDirection: 'row', borderRadius: Radius.md, borderWidth: Border.thick, padding: Spacing.one },
   segmentItem: {
     flex: 1,
+    minHeight: 44,
     alignItems: 'center',
-    paddingVertical: Spacing.two,
-    borderRadius: Spacing.two,
-  },
-  banner: { padding: Spacing.three, borderRadius: Spacing.three },
-  button: {
-    paddingVertical: Spacing.three,
-    borderRadius: Spacing.five,
-    alignItems: 'center',
-    minHeight: 52,
     justifyContent: 'center',
+    borderWidth: Border.thick,
+    borderRadius: Radius.md - Spacing.one,
   },
-  pressed: { opacity: 0.8 },
-  disabled: { opacity: 0.4 },
+  showButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+  footer: { paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });

@@ -1,4 +1,4 @@
-import { Platform, StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps } from 'react-native';
 
 import { Fonts, ThemeColor } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -17,8 +17,7 @@ export type ThemedTextProps = TextProps & {
     | 'cardTitle'
     | 'eyebrow'
     | 'button'
-    | 'chip'
-    | 'code';
+    | 'chip';
   themeColor?: ThemeColor;
 };
 
@@ -45,7 +44,6 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
         type === 'eyebrow' && styles.eyebrow,
         type === 'button' && styles.button,
         type === 'chip' && styles.chip,
-        type === 'code' && styles.code,
         style,
       ]}
       {...rest}
@@ -70,6 +68,5 @@ const styles = StyleSheet.create({
   // textTransform kullanılmaz: Türkçede i/İ büyük harfe yanlış dönüşür.
   eyebrow: { fontSize: 14, lineHeight: 18, fontWeight: 700, letterSpacing: 0.4 },
   button: { fontFamily: Fonts.rounded, fontSize: 17, lineHeight: 22, fontWeight: 900, letterSpacing: 0.2 },
-  code: { fontFamily: Fonts.mono, fontWeight: Platform.select({ android: 700 }) ?? 400, fontSize: 12 },
   chip: { fontSize: 14, lineHeight: 18, fontWeight: 700 },
 });

@@ -1,85 +1,190 @@
-import { Link, useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Link } from 'expo-router';
+import { StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
+import { Button } from '@/components/button';
+import { IconTile } from '@/components/icon-tile';
+import { LevelBadge, StatusChip } from '@/components/level-badge';
+import { LockedCard } from '@/components/locked-card';
+import { ScreenHeader } from '@/components/screen-header';
+import { Skeleton } from '@/components/skeleton';
+import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { LEVELS } from '@/constants/onboarding';
-import { Spacing } from '@/constants/theme';
+import { Border, Edge, Radius, Spacing } from '@/constants/theme';
 import { getTopicChain } from '@/constants/topics';
-import type { Tables } from '@/lib/database.types';
-import { supabase } from '@/lib/supabase';
-
-// Tables<'roadmaps'> = roadmaps tablosundaki bir satırın tipi (otomatik üretilen dosyadan)
-type Roadmap = Tables<'roadmaps'>;
+import { HUES, getCategoryStyle } from '@/constants/visuals';
+import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
+import { useShadow, useTheme } from '@/hooks/use-theme';
 
 export default function RoadmapScreen() {
-  const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // useFocusEffect: Bu sekme her ekrana geldiğinde çalışır.
-  // Böylece onboarding'de konu değişince buraya dönüldüğünde liste tazelenir.
-  useFocusEffect(
-    useCallback(() => {
-      async function load() {
-        // SQL karşılığı: SELECT * FROM roadmaps ORDER BY created_at DESC LIMIT 1
-        // (RLS sayesinde sadece giriş yapan kullanıcının satırları gelir)
-        const { data } = await supabase
-          .from('roadmaps')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(); // 0 ya da 1 satır bekliyoruz
-        setRoadmap(data);
-        setLoading(false);
-      }
-      load();
-    }, [])
-  );
-
-  const chain = roadmap ? getTopicChain(roadmap.topic_path.split('/')) : [];
-  const topicTitle = chain.map((t) => t.title).join(' › ');
-  const levelTitle = LEVELS.find((l) => l.id === roadmap?.level)?.title;
+  // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'ta: src/hooks/use-latest-roadmap.ts
+  const { roadmap, loading } = useLatestRoadmap();
 
   return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="subtitle">Yol Haritam</ThemedText>
+    <TabScreen>
+      <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
 
-        {loading ? (
-          <ActivityIndicator />
-        ) : roadmap ? (
-          <ThemedView type="backgroundElement" style={styles.card}>
-            <ThemedText type="smallBold">{topicTitle}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Seviye: {levelTitle}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Kişisel yol haritan yakında burada oluşturulacak.
-            </ThemedText>
-          </ThemedView>
-        ) : (
-          <>
-            <ThemedText themeColor="textSecondary">Henüz bir konu seçmedin.</ThemedText>
-            <Link href="/onboarding" asChild>
-              <Pressable style={({ pressed }) => pressed && styles.pressed}>
-                <ThemedView type="backgroundSelected" style={styles.button}>
-                  <ThemedText type="smallBold">Konunu seç →</ThemedText>
-                </ThemedView>
-              </Pressable>
-            </Link>
-          </>
+      {loading ? (
+        <JourneySkeleton />
+      ) : roadmap ? (
+        <>
+          <JourneyCard topicPath={roadmap.topic_path} level={roadmap.level} />
+          <Link href="/onboarding" asChild>
+            <Button variant="secondary" icon="🧭" label="Konumu değiştir" />
+          </Link>
+          <FadingDots />
+          <LockedCard
+            emoji="🥾"
+            title="Adımların yakında burada"
+            description="Kişisel yol haritanın adımları hazırlanınca burada görünecek."
+          />
+        </>
+      ) : (
+        <EmptyState />
+      )}
+    </TabScreen>
+  );
+}
+
+// Yolculuk kartı: konu, konu yolu, seviye. İlerleme yüzdesi/halkası YOK: böyle bir veri henüz yok.
+function JourneyCard({ topicPath, level }: { topicPath: string; level: string }) {
+  const theme = useTheme();
+  const shadow = useShadow();
+  const reduceMotion = useReducedMotion();
+
+  // Bilinmeyen/bozuk yol gelirse çökmek yerine varsayılan görünüm ve genel başlık kullanılır
+  const chain = getTopicChain(topicPath.split('/'));
+  const category = getCategoryStyle(topicPath);
+  const hue = HUES[category.hue];
+  const title = chain.at(-1)?.title ?? 'Seçtiğin konu';
+  const parents = chain.slice(0, -1).map((t) => t.title).join(' › ');
+
+  return (
+    <View
+      style={[
+        styles.card,
+        { backgroundColor: theme.card, borderColor: theme[hue.line], borderBottomColor: theme[hue.edge] },
+        shadow('card'),
+      ]}>
+      <View style={[styles.band, { backgroundColor: theme[hue.soft] }]}>
+        {/* "Bayrak dikme": ikon yaylanarak belirir, 📍 yukarıdan düşer */}
+        <View>
+          <Animated.View entering={reduceMotion ? FadeIn.duration(150) : ZoomIn.springify().damping(10)}>
+            <IconTile emoji={category.emoji} tone={category.hue} size={64} />
+          </Animated.View>
+          <Animated.Text
+            allowFontScaling={false}
+            entering={
+              reduceMotion
+                ? FadeIn.duration(150)
+                : FadeInDown.delay(250).springify().damping(8).stiffness(200)
+            }
+            style={styles.pin}>
+            📍
+          </Animated.Text>
+        </View>
+        <View style={styles.bandTexts}>
+          <ThemedText type="eyebrow" themeColor={hue.ink}>
+            Konun
+          </ThemedText>
+          <ThemedText type="heading">{title}</ThemedText>
+        </View>
+      </View>
+
+      <View style={styles.body}>
+        {parents !== '' && (
+          <ThemedText type="small" themeColor="textSecondary">
+            {parents}
+          </ThemedText>
         )}
-      </SafeAreaView>
-    </ThemedView>
+        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+        <View style={styles.meta}>
+          <ThemedText type="eyebrow" themeColor="textSecondary">
+            Seviyen
+          </ThemedText>
+          {/* Bilinmeyen seviyede rozet hiç çizilmez */}
+          <LevelBadge levelId={level} size="md" />
+        </View>
+        <Animated.View entering={FadeIn.delay(reduceMotion ? 0 : 450)}>
+          <StatusChip tone="marker" emoji="📍" label="Yolculuk başlıyor" />
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+// Süs: karttan kilitli kutuya doğru solan üç nokta (adım sayısı gibi okunmasın diye soluk)
+function FadingDots() {
+  const theme = useTheme();
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={styles.dots}>
+      {[0.6, 0.4, 0.2].map((opacity) => (
+        <View key={opacity} style={[styles.dot, { backgroundColor: theme.borderStrong, opacity }]} />
+      ))}
+    </View>
+  );
+}
+
+// Yüklenirken kartla aynı boyutta iskelet: içerik gelince sayfa zıplamaz
+function JourneySkeleton() {
+  const theme = useTheme();
+  return (
+    <View
+      accessible
+      accessibilityLabel="Yükleniyor"
+      accessibilityState={{ busy: true }}
+      style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, minHeight: 232 }]}>
+      <View style={[styles.band, { backgroundColor: theme.backgroundElement }]}>
+        <Skeleton width={64} height={64} radius={18} />
+        <View style={styles.bandTexts}>
+          <Skeleton width="40%" height={14} />
+          <Skeleton width="70%" height={24} />
+        </View>
+      </View>
+      <View style={styles.body}>
+        <Skeleton width="50%" height={16} />
+        <Skeleton width={120} height={28} radius={Radius.pill} />
+      </View>
+    </View>
+  );
+}
+
+function EmptyState() {
+  return (
+    <View style={styles.empty}>
+      <IconTile emoji="🗺️" tone="accent" size={96} />
+      <ThemedText type="heading" style={styles.centerText}>
+        Henüz bir konu seçmedin.
+      </ThemedText>
+      <ThemedText themeColor="textSecondary" style={styles.centerText}>
+        Başlamak için ilk konunu seç.
+      </ThemedText>
+      <Link href="/onboarding" asChild>
+        <Button label="Konunu seç" />
+      </Link>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-  safeArea: { flex: 1, padding: Spacing.four, gap: Spacing.three },
-  card: { padding: Spacing.three, borderRadius: Spacing.three, gap: Spacing.one },
-  button: { paddingVertical: Spacing.three, borderRadius: Spacing.five, alignItems: 'center' },
-  pressed: { opacity: 0.7 },
+  card: {
+    borderWidth: Border.chunky,
+    borderBottomWidth: Border.chunky + Edge, // 3D alt kenar
+    borderRadius: Radius.lg,
+    overflow: 'hidden',
+  },
+  band: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three },
+  bandTexts: { flex: 1, minWidth: 0, gap: Spacing.one },
+  // 📍 ikonun sağ üst köşesinde, hafif taşarak durur
+  pin: { position: 'absolute', top: -10, right: -8, fontSize: 28, lineHeight: 34 },
+  body: { padding: Spacing.three, gap: Spacing.three },
+  divider: { height: Border.thin },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.three },
+  dots: { flexDirection: 'row', gap: 6, marginLeft: Spacing.five },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  empty: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.five },
+  centerText: { textAlign: 'center' },
 });
