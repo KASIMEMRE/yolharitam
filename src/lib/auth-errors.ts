@@ -84,3 +84,9 @@ const ALREADY_REGISTERED_MESSAGE = 'Bu e-postayla zaten bir hesap var. Giriş ya
 export function isEmailNotConfirmed(error: AuthLikeError): boolean {
   return error.code === 'email_not_confirmed' || error.message.toLowerCase().includes('email not confirmed');
 }
+
+// Limit hatasının mesajında "...after 42 seconds" gibi bir süre varsa saniyeyi verir, yoksa null.
+export function rateLimitSeconds(error: AuthLikeError): number | null {
+  const found = /after (\d+) second/.exec(error.message.toLowerCase())?.[1];
+  return found ? Number(found) : null;
+}

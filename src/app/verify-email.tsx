@@ -30,7 +30,7 @@ import { ThemedView } from '@/components/themed-view';
 import { AUTH_STEPS } from '@/constants/auth-steps';
 import { Border, Fonts, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { authErrorKind, toTurkish } from '@/lib/auth-errors';
+import { authErrorKind, rateLimitSeconds, toTurkish } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
 const RESEND_SECONDS = 60; // Supabase'in kendi "60 saniyede bir" kuralıyla uyumlu
@@ -58,6 +58,8 @@ export default function VerifyEmailScreen() {
   const [resending, setResending] = useState(false); // tekrar gönder isteği sürüyor
   const [error, setError] = useState<string | null>(null);
   const [errorIsCode, setErrorIsCode] = useState(false); // yalnız "kod yanlış" ise alan kırmızı olur
+  // Limit hatası alındıysa sayaç yuvasında "sınıra ulaştın" yazar; başarılı gönderimde kalkar.
+  const [limited, setLimited] = useState<{ seconds: number | null } | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   // GERİ SAYIM: saniyeyi SAYMAK yerine bitiş zamanını saklarız. iOS uygulama arka plandayken
   // zamanlayıcıları durdurur; sayarsak geri dönünce sayaç eski değerde takılı kalır. Bitiş zamanı
@@ -69,7 +71,9 @@ export default function VerifyEmailScreen() {
   // null = henüz bilmiyoruz. Ekran okuyucu açıksa alana otomatik odaklanmayız (başlığı duymadan atlamasın).
   const [screenReader, setScreenReader] = useState<boolean | null>(null);
 
-  const canVerify = code.length >= MIN_DIGITS && code.length <= MAX_DIGITS && !busy && !resending;
+  const canVerify = code.length >= MIN_DIGITS && code.length <= MAX_DIGITS && !busy && !resending &&
+    // Aynı yanlış kodla tekrar basılmasın (yazınca hata zaten kalkar)
+    !(error && errorIsCode);
 
   useEffect(() => {
     AccessibilityInfo.isScreenReaderEnabled()
@@ -158,10 +162,14 @@ export default function VerifyEmailScreen() {
       setError(toTurkish(error, 'resend'));
       setErrorIsCode(false);
       // Bekletme yalnız limit hatasında: ağ/diğer hatada istek hiç gitmemiş olabilir, kullanıcı hemen yeniden denesin.
-      if (authErrorKind(error) === 'rateLimit') setResendAt(Date.now() + RESEND_SECONDS * 1000);
+      if (authErrorKind(error) === 'rateLimit') {
+        setResendAt(Date.now() + RESEND_SECONDS * 1000);
+        setLimited({ seconds: rateLimitSeconds(error) });
+      }
     } else {
       const message = 'Yeni kod gönderildi. En son gelen kodu kullan.';
       setInfo(message);
+      setLimited(null);
       // iOS'ta Banner'ın live region'ı okunmayabilir; elle duyuruyoruz.
       AccessibilityInfo.announceForAccessibility(message);
       setResendAt(Date.now() + RESEND_SECONDS * 1000);
@@ -170,8 +178,19 @@ export default function VerifyEmailScreen() {
     setResending(false);
   }
 
-  const resendHint =
-    secondsLeft > 0 ? `${secondsLeft} sn sonra yeniden isteyebilirsin` : 'Kod gelmediyse gereksiz (spam) klasörüne de bak.';
+  // Aşağıdakiler her çizimde state'ten TÜRETİLİR (ayrı state tutmayız): sayaç değişince metin kendiliğinden güncellenir.
+  // Yanlış kodda hemen "yeni kod iste" demek çıkmaz yaratır (buton sayaçta pasif); bekleme süresini söyleriz.
+  const shownError =
+    error && errorIsCode && secondsLeft > 0
+      ? `Kod hatalı ya da süresi dolmuş. Kodu kontrol et; yeni kod için ${secondsLeft} sn bekle.`
+      : error;
+  const resendHint = limited
+    ? limited.seconds
+      ? `Gönderim sınırına ulaştın. ${limited.seconds} saniye sonra tekrar dene.`
+      : 'Gönderim sınırına ulaştın. Birkaç dakika sonra tekrar dene.'
+    : secondsLeft > 0
+      ? `${secondsLeft} sn sonra yeniden isteyebilirsin`
+      : '';
 
   return (
     <ThemedView style={styles.container}>
@@ -198,7 +217,11 @@ export default function VerifyEmailScreen() {
                 style={short && { fontSize: 28, lineHeight: 34 }}>
                 E-postanı doğrula
               </ThemedText>
-              <ThemedText>Aşağıdaki adrese bir kod gönderdik. Kodu buraya yaz.</ThemedText>
+              <ThemedText>
+                {fromLogin
+                  ? 'Hesabını henüz doğrulamadın. Daha önce gönderdiğimiz kodu yaz ya da yeni kod iste.'
+                  : 'Aşağıdaki adrese bir kod gönderdik. Kodu buraya yaz.'}
+              </ThemedText>
               <View style={[styles.emailBox, { backgroundColor: theme.card, borderColor: theme.accent }]}>
                 <Text
                   accessibilityElementsHidden
@@ -211,18 +234,15 @@ export default function VerifyEmailScreen() {
                   {email}
                 </ThemedText>
               </View>
+              <ThemedText type="small" themeColor="textSecondary">
+                Kod gelen kutuna ya da gereksiz (spam) klasörüne düşebilir.
+              </ThemedText>
               {!short && <TrailMap stops={STOPS} current={0} variant="horizontal" showDone={false} />}
             </View>
 
             <View
               style={[styles.form, { padding: gutter }]}
               onLayout={(e) => (formY.current = e.nativeEvent.layout.y)}>
-              {fromLogin && !error && !info && (
-                <Banner tone="info">
-                  Bu hesabı henüz doğrulamadın. Daha önce gönderilen kodu gir ya da yeni kod iste.
-                </Banner>
-              )}
-
               {/* key: ekran okuyucu durumu öğrenilince alan bir kez yeniden kurulur ki autoFocus doğru uygulansın
                   (autoFocus yalnız ilk kurulumda işe yarar). Bedeli: bir karelik yeniden kurulma ve odak kaybı;
                   kabul ettik çünkü kullanıcı o an henüz yazmamıştır ve alternatifi ref yönetimi daha karmaşık. */}
@@ -257,7 +277,7 @@ export default function VerifyEmailScreen() {
               </Animated.View>
 
               {/* Tek yuva: hata, yeni kod bilgisinden önce gelir */}
-              {error ? <Banner tone="warning">{error}</Banner> : info ? <Banner tone="info">{info}</Banner> : null}
+              {shownError ? <Banner tone="warning">{shownError}</Banner> : info ? <Banner tone="info">{info}</Banner> : null}
 
               <View style={styles.resendGroup}>
                 <Button
@@ -276,9 +296,11 @@ export default function VerifyEmailScreen() {
                 </View>
                 {/* Hesap numaralandırmayı önlemek için kayıtlı e-posta da bu ekrana gelir (login.tsx);
                     kod gelmeyen gerçek hesap sahibi buradan giriş yapmaya yönlenir. */}
-                <ThemedText type="small" themeColor="textSecondary" style={styles.hintText}>
-                  Kod birkaç dakika içinde gelmezse bu adresle zaten hesabın olabilir; giriş yapmayı dene.
-                </ThemedText>
+                {secondsLeft === 0 && (
+                  <ThemedText type="small" themeColor="textSecondary" style={[styles.hintText, { marginTop: Spacing.two }]}>
+                    Kod birkaç dakika içinde gelmezse bu adresle zaten hesabın olabilir; giriş yapmayı dene.
+                  </ThemedText>
+                )}
               </View>
 
               {/* "E-postayı değiştir": yıkıcı eylem görünümlü quiet Button yerine sakin bir metin bağlantısı.

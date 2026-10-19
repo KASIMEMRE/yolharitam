@@ -174,6 +174,8 @@ export default function LoginScreen() {
                 autoComplete="email"
                 textContentType="emailAddress"
                 returnKeyType="next"
+                // Kayıtta beklentiyi önceden söyle: kod bu adrese e-postayla gelecek
+                hint={mode === 'signup' ? 'Doğrulama kodu bu adrese gelecek.' : undefined}
               />
 
               <TextField
@@ -204,13 +206,6 @@ export default function LoginScreen() {
 
               {/* Hata kutusu */}
               {error && <Banner tone="warning">{error}</Banner>}
-
-              {/* Kayıtta beklentiyi önceden söyle: kod e-postayla gelecek */}
-              {mode === 'signup' && (
-                <ThemedText type="small" themeColor="textSecondary">
-                  Hesabını doğrulamak için e-postana bir kod göndereceğiz.
-                </ThemedText>
-              )}
             </View>
           </ScrollView>
 
