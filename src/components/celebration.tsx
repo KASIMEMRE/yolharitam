@@ -98,7 +98,7 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
     <Modal transparent animationType="none" statusBarTranslucent visible onRequestClose={finish}>
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title} Devam etmek için dokun`}
+      accessibilityLabel={`${title} Devam etmek için dokun.`}
       onPress={finish}
       style={styles.overlay}>
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background }, backdropStyle]} />
