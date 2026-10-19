@@ -29,7 +29,7 @@ export default function RoadmapScreen() {
         <>
           <JourneyCard topicPath={roadmap.topic_path} level={roadmap.level} />
           <Link href="/onboarding" asChild>
-            <Button variant="secondary" icon="🧭" label="Konumu değiştir" />
+            <Button variant="secondary" icon="🧭" label="Konunu değiştir" />
           </Link>
           <FadingDots />
           <LockedCard

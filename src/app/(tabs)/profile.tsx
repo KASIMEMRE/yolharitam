@@ -83,13 +83,13 @@ export default function ProfileScreen() {
           style={[styles.topicCard, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
           <IconTile emoji="🧭" tone="accent" size={48} />
           <View style={styles.topicTexts}>
-            <ThemedText type="cardTitle">Henüz konu seçmedin</ThemedText>
+            <ThemedText type="cardTitle">Henüz bir konu seçmedin</ThemedText>
           </View>
         </View>
       )}
 
       <Link href="/onboarding" asChild>
-        <Button variant="secondary" icon="🧭" label="Konumu değiştir" />
+        <Button variant="secondary" icon="🧭" label="Konunu değiştir" />
       </Link>
 
       <LockedCard
