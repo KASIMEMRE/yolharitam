@@ -34,13 +34,13 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.safeArea}>
         <ThemedView style={styles.heroSection}>
           <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+          <ThemedText type="subtitle" style={styles.title}>
+            Yol Haritam
           </ThemedText>
         </ThemedView>
 
         <ThemedText type="code" style={styles.code}>
-          get started
+          Öğrenmeye Başla
         </ThemedText>
 
         <ThemedView type="backgroundElement" style={styles.stepContainer}>
