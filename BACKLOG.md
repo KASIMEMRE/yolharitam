@@ -5,12 +5,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-### Y-01 · Karşılama ekranını yeni tasarım diline uyarla
-- `src/app/index.tsx`: giriş ekranındaki tasarım dili (accent buton, `RouteSteps` ile 3 adımlı rota) kullanılsın.
-- Uygulamanın ne işe yaradığını tek cümleyle anlatan kısa bir metin.
-- Buton: tema `accent` zemin, `onAccent` yazı.
-- Kabul: Açık ve koyu modda okunaklı; küçük ekranlarda taşma yok.
-
 ### Y-02 · Profil: görünen adı düzenleme
 - Profil ekranında `TextField` ile görünen ad (`profiles.display_name`) düzenlenebilsin, "Kaydet" butonu.
 - Ekran açılınca mevcut değer `profiles` tablosundan okunur.
@@ -62,4 +56,17 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Tamamlanan (PR açıldı)
 
-(henüz yok)
+### Y-01 · Karşılama ekranını yeni tasarım diline uyarla
+- `src/app/index.tsx`: giriş ekranındaki tasarım dili (accent buton, `RouteSteps` ile 3 adımlı rota) kullanılsın.
+- Uygulamanın ne işe yaradığını tek cümleyle anlatan kısa bir metin.
+- Buton: tema `accent` zemin, `onAccent` yazı.
+- Kabul: Açık ve koyu modda okunaklı; küçük ekranlarda taşma yok.
+
+## Öneriler (ekipten)
+
+Sıraya konmadı; önceliği proje sahibi verir.
+
+- **Ortak `PrimaryButton` bileşeni** (Y-01 incelemesinden): `accent` zemin, `onAccent` yazı, `minHeight 52`, basılı ve devre dışı durumları. Aynı stil şu an `index.tsx` ve `login.tsx` içinde iki kez yazılı. Eklenirse AGENTS.md'deki ortak bileşen listesine de yazılmalı.
+- **Rota adımlarını ortak sabite taşı** (Y-01 incelemesinden): `STEPS` dizisi `index.tsx` ve `login.tsx` içinde aynı; `src/constants/` altına alınabilir.
+- **`tsc` CSS hatalarını temizle** (Y-01 testinden): `npx tsc --noEmit` main'de de 2 hata veriyor (`animated-icon.web.tsx` CSS modülü, `theme.ts` içindeki `@/global.css`). CSS için tip bildirimi (`.d.ts`) eklenebilir.
+- **ESLint yapılandırması ekle** (Y-01 testinden): repoda eslint yapılandırması yok; `npx expo lint` ilk çalıştırmada kurulum yapmaya çalışıyor.
