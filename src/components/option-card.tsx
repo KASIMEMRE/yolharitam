@@ -148,7 +148,14 @@ export function OptionCard({
                   height: 14 + i * 6,
                   borderRadius: 3,
                   backgroundColor:
-                    i < ladder ? (selected ? theme.text : theme.borderStrong) : theme.backgroundSelected,
+                    i < ladder
+                      ? selected
+                        ? theme.text
+                        : theme.borderStrong
+                      : // Seçili kartın zemini (accentSoft) üstünde backgroundSelected koyuda kaybolur
+                        selected
+                        ? theme.borderStrong
+                        : theme.backgroundSelected,
                 }}
               />
             ))}

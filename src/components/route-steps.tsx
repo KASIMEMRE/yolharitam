@@ -37,7 +37,7 @@ const TOP_PAD = 28; // 📍 pininin düşeceği boşluk
 
 export function TrailMap({ stops, current, variant = 'vertical', caption = true, showDone = true }: TrailMapProps) {
   return variant === 'vertical' ? (
-    <VerticalTrail stops={stops} current={current} />
+    <VerticalTrail stops={stops} current={current} showDone={showDone} />
   ) : (
     <HorizontalTrail stops={stops} current={current} caption={caption} showDone={showDone} />
   );
@@ -53,7 +53,7 @@ function summary(stops: TrailStop[], current: number) {
   );
 }
 
-function VerticalTrail({ stops, current }: { stops: TrailStop[]; current: number }) {
+function VerticalTrail({ stops, current, showDone }: { stops: TrailStop[]; current: number; showDone: boolean }) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
   const { height, fontScale } = useWindowDimensions();
@@ -105,7 +105,7 @@ function VerticalTrail({ stops, current }: { stops: TrailStop[]; current: number
     const ex = b.x - ux * margin;
     const ey = b.y - uy * margin;
     for (let k = 0; k < 5; k++) {
-      dots.push({ x: sx + ((ex - sx) * k) / 4, y: sy + ((ey - sy) * k) / 4, done: i < current, key: `${i}-${k}` });
+      dots.push({ x: sx + ((ex - sx) * k) / 4, y: sy + ((ey - sy) * k) / 4, done: showDone && i < current, key: `${i}-${k}` });
     }
   }
 
@@ -137,7 +137,7 @@ function VerticalTrail({ stops, current }: { stops: TrailStop[]; current: number
           stops.map((stop, i) => {
             const c = centers[i];
             const isCurrent = i === current;
-            const isDone = i < current;
+            const isDone = showDone && i < current;
             const onLeft = OFFSETS[i % OFFSETS.length] < 0; // soldaysa etiket sağında
             let labelLeft: number;
             let labelWidth: number;

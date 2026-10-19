@@ -47,7 +47,8 @@ export default function LoginScreen() {
   const { width, height } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
   // Kısa ekranda (örn. 320x568) sahne daha az boşluk bıraksın ki şifre alanı ilk ekranda görünsün
-  const stagePad = height < 700 ? Spacing.three : undefined;
+  const short = height < 700;
+  const stagePad = short ? Spacing.two : undefined;
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -113,7 +114,10 @@ export default function LoginScreen() {
                 },
               ]}>
               <Animated.View key={mode} entering={FadeIn.duration(150)}>
-                <ThemedText type="heading" accessibilityRole="header">
+                <ThemedText
+                  type="heading"
+                  accessibilityRole="header"
+                  style={short && { fontSize: 28, lineHeight: 34 }}>
                   {mode === 'login' ? 'Rotana devam et' : 'Rotanı oluşturalım'}
                 </ThemedText>
               </Animated.View>
@@ -239,6 +243,6 @@ const styles = StyleSheet.create({
     borderWidth: Border.thick,
     borderRadius: Radius.md - Spacing.one,
   },
-  showButton: { minHeight: 44, minWidth: 44, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
+  showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });

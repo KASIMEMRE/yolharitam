@@ -52,6 +52,7 @@ export default function OnboardingScreen() {
   function goTo(depth: number) {
     setPath(path.slice(0, depth));
     setLevel(null);
+    setError(null); // eski kayıt hatası, yaprağa tekrar dönünce yeniden görünmesin
   }
 
   // Seçimi veritabanına kaydet, sonra yol haritası ekranına geç
@@ -199,9 +200,6 @@ export default function OnboardingScreen() {
                   actionLabel="Değiştir"
                   onPress={() => goTo(path.length - 1)}
                 />
-                <ThemedText type="cardTitle" accessibilityRole="header" style={styles.sectionTitle}>
-                  Seviyeni seç
-                </ThemedText>
                 <View accessibilityRole="radiogroup" style={styles.list}>
                   {LEVELS.map((item, index) => (
                     <OptionCard
@@ -275,6 +273,5 @@ const styles = StyleSheet.create({
   },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three },
   list: { gap: Spacing.three },
-  sectionTitle: { marginTop: Spacing.three },
   footer: { gap: Spacing.three, paddingVertical: Spacing.three, borderTopWidth: 2 },
 });

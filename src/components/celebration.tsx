@@ -72,7 +72,7 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
     // Ekran okuyucu açıksa daha uzun bekle ki kullanıcı duyurusunu dinleyebilsin
     AccessibilityInfo.isScreenReaderEnabled().then((screenReader) => {
       if (cancelled) return;
-      const duration = screenReader ? 2000 : reduceMotion ? 800 : 1600;
+      const duration = screenReader ? 2000 : reduceMotion ? 800 : 1400;
       timerRef.current = setTimeout(finish, duration);
     });
 
