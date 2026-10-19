@@ -14,6 +14,11 @@ export const Colors = {
     backgroundElement: '#F0F0F3',
     backgroundSelected: '#E0E1E6',
     textSecondary: '#60646C',
+    // Marka renkleri: harita yeşili (ana eylem) ve patika işareti sarısı (aktif durak)
+    accent: '#1E7B6A',
+    onAccent: '#FFFFFF', // accent zemin üstündeki yazı rengi
+    marker: '#E9A23B',
+    warningBackground: '#FBEBD3', // hata/uyarı kutusu zemini
   },
   dark: {
     text: '#ffffff',
@@ -21,6 +26,10 @@ export const Colors = {
     backgroundElement: '#212225',
     backgroundSelected: '#2E3135',
     textSecondary: '#B0B4BA',
+    accent: '#4CC2A6',
+    onAccent: '#03241D',
+    marker: '#F0B455',
+    warningBackground: '#3B2B12',
   },
 } as const;
 

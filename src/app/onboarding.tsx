@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { OptionCard } from '@/components/option-card';
@@ -8,6 +8,8 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { LEVELS } from '@/constants/onboarding';
 import { Spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/supabase';
 import { getTopicChain, TOPICS } from '@/constants/topics';
 
 export default function OnboardingScreen() {
@@ -15,13 +17,16 @@ export default function OnboardingScreen() {
   //    path örnekleri: []  ->  ['tech']  ->  ['tech', 'ai']  ->  ['tech', 'ai', 'llm']
   const [path, setPath] = useState<string[]>([]);
   const [level, setLevel] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { session } = useAuth();
 
   // 2) TÜRETİLMİŞ DEĞERLER: Hepsi path'ten hesaplanıyor.
   const chain = getTopicChain(path); // id'ler -> konu nesneleri
   const current = chain.at(-1); // En son seçilen konu (yoksa undefined)
   const options = current ? current.children : TOPICS; // Şu an gösterilecek seçenekler
   const isLeaf = current !== undefined && !current.children; // En alta inildi mi?
-  const canContinue = isLeaf && level !== null;
+  const canContinue = isLeaf && level !== null && !saving;
 
   // 3) Bir konuya basınca yola ekle (bir seviye aşağı in)
   function selectTopic(id: string) {
@@ -34,9 +39,27 @@ export default function OnboardingScreen() {
     setLevel(null);
   }
 
-  function handleContinue() {
-    if (!isLeaf || !level) return;
-    router.replace({ pathname: '/roadmap', params: { topic: path.join('/'), level } });
+  // Seçimi veritabanına kaydet, sonra yol haritası ekranına geç
+  async function handleContinue() {
+    if (!isLeaf || !level || !session) return;
+    setSaving(true);
+    setError(null);
+
+    const { error } = await supabase.from('roadmaps').insert({
+      user_id: session.user.id, // RLS: sadece kendi id'nle satır ekleyebilirsin
+      topic_path: path.join('/'), // 'tech/ai/llm'
+      level,
+    });
+
+    setSaving(false);
+    if (error) {
+      setError('Kaydedilemedi: ' + error.message);
+      return;
+    }
+    // Onboarding sekmelerin üstünde açıldı: geri dönmek yeterli.
+    // (Yol haritası sekmesi ekrana gelince useFocusEffect ile kendini tazeler.)
+    if (router.canGoBack()) router.back();
+    else router.replace('/roadmap');
   }
 
   return (
@@ -103,12 +126,18 @@ export default function OnboardingScreen() {
           )}
         </ScrollView>
 
+        {error && <ThemedText type="small">{error}</ThemedText>}
+
         <Pressable
           onPress={handleContinue}
           disabled={!canContinue}
           style={({ pressed }) => [pressed && styles.pressed, !canContinue && styles.disabled]}>
           <ThemedView type="backgroundSelected" style={styles.button}>
-            <ThemedText type="smallBold">Yol haritamı oluştur →</ThemedText>
+            {saving ? (
+              <ActivityIndicator />
+            ) : (
+              <ThemedText type="smallBold">Yol haritamı oluştur →</ThemedText>
+            )}
           </ThemedView>
         </Pressable>
       </SafeAreaView>

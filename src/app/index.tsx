@@ -25,7 +25,7 @@ export default function WelcomeScreen() {
         </ThemedText>
 
         {/* Link: başka bir ekrana geçiş. href = gidilecek sayfanın adresi */}
-        <Link href="/onboarding" asChild>
+        <Link href="/login" asChild>
           <Pressable style={({ pressed }) => pressed && styles.pressed}>
             <ThemedView type="backgroundElement" style={styles.button}>
               <ThemedText type="smallBold">Başla →</ThemedText>
