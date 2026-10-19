@@ -1,14 +1,5 @@
-import { useEffect } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, {
-  FadeInDown,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withDelay,
-  withRepeat,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import { IconTile } from '@/components/icon-tile';
 import { StatusChip } from '@/components/level-badge';
@@ -16,8 +7,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Radius, Spacing } from '@/constants/theme';
-import { getTopicChain } from '@/constants/topics';
-import { HUES, getCategoryStyle } from '@/constants/visuals';
+import { describeTopic } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -31,9 +21,8 @@ export default function NewsScreen() {
   const { roadmap } = useLatestRoadmap();
 
   // Konu çipi yalnız GERÇEK seçimi gösterir; yol haritası yoksa çip de yok
-  const topic = roadmap ? getTopicChain(roadmap.topic_path.split('/')).at(-1) : undefined;
-  const category = getCategoryStyle(roadmap?.topic_path);
-  const hue = HUES[category.hue];
+  const { title: topicTitle, category, hue, hasTopic } = describeTopic(roadmap?.topic_path);
+  const topic = roadmap && hasTopic ? { title: topicTitle } : undefined;
 
   return (
     <TabScreen>
@@ -43,7 +32,7 @@ export default function NewsScreen() {
         entering={FadeInDown.duration(300)}
         accessible
         accessibilityRole="text"
-        accessibilityLabel={`Gelişmeler yakında. ${INFO}${topic ? ` Takip edilecek konu: ${topic.title}` : ''}`}
+        accessibilityLabel={`Gelişmeler yakında. ${INFO}${topic ? ` Yayınlanınca haberler bu konudan gelecek: ${topic.title}` : ''}`}
         style={[
           styles.card,
           {
@@ -53,7 +42,8 @@ export default function NewsScreen() {
           },
         ]}>
         <Listening />
-        <StatusChip tone="marker" emoji="⏳" label="Yakında" />
+        {/* Kilitli kartlarla aynı dil: nötr + kilit (sarı yalnız "buradasın" işaretinde) */}
+        <StatusChip tone="neutral" emoji="🔒" label="Yakında" align="center" />
         <ThemedText themeColor="textSecondary" style={styles.info}>
           {INFO}
         </ThemedText>
@@ -61,9 +51,12 @@ export default function NewsScreen() {
         {topic && (
           <View style={[styles.topicChip, { backgroundColor: theme[hue.soft], borderColor: theme[hue.line] }]}>
             <IconTile emoji={category.emoji} tone={category.hue} size={40} />
-            <ThemedText type="small" themeColor={hue.ink} style={styles.topicText}>
-              Takip edilecek konu: <ThemedText type="smallBold">{topic.title}</ThemedText>
-            </ThemedText>
+            <View style={styles.topicTexts}>
+              <ThemedText type="small" themeColor={hue.ink}>
+                Yayınlanınca haberler bu konudan gelecek
+              </ThemedText>
+              <ThemedText type="smallBold">{topic.title}</ThemedText>
+            </View>
           </View>
         )}
       </Animated.View>
@@ -71,43 +64,18 @@ export default function NewsScreen() {
   );
 }
 
-// "Dinliyor" sahnesi: ikonun arkasında genişleyip sönen iki halka (radar gibi).
-// Hareketi azalt açıksa halkalar durur, tek sabit halka kalır.
+// "Dinliyor" sahnesi: ikonun arkasında tek, durağan bir halka. Sürekli genişleyen halkalar
+// "canlı bir şey çalışıyor" izlenimi verirdi; henüz haber akışı olmadığı için hareket yok.
 function Listening() {
-  const reduceMotion = useReducedMotion();
   return (
     <View
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={styles.stage}>
-      {reduceMotion ? (
-        <StaticRing />
-      ) : (
-        <>
-          <Ring delay={0} />
-          <Ring delay={900} />
-        </>
-      )}
+      <StaticRing />
       <IconTile emoji="📰" tone="sky" size={96} />
     </View>
   );
-}
-
-function Ring({ delay }: { delay: number }) {
-  const theme = useTheme();
-  const progress = useSharedValue(0);
-
-  // Ekrandan çıkınca (unmount) animasyon da durur; ayrıca zamanlayıcı tutmuyoruz
-  useEffect(() => {
-    progress.value = withDelay(delay, withRepeat(withTiming(1, { duration: 1800 }), -1));
-  }, [delay, progress]);
-
-  const style = useAnimatedStyle(() => ({
-    opacity: 0.5 * (1 - progress.value),
-    transform: [{ scale: 1 + 0.8 * progress.value }],
-  }));
-
-  return <Animated.View pointerEvents="none" style={[styles.ring, { borderColor: theme.sky }, style]} />;
 }
 
 function StaticRing() {
@@ -137,8 +105,8 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     padding: Spacing.two,
     paddingRight: Spacing.three,
-    borderRadius: Radius.pill,
+    borderRadius: Radius.lg,
     borderWidth: Border.thick,
   },
-  topicText: { flexShrink: 1 },
+  topicTexts: { flexShrink: 1, gap: Spacing.half },
 });

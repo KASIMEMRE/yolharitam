@@ -2,11 +2,10 @@ import { StyleSheet, View } from 'react-native';
 
 import { IconTile } from '@/components/icon-tile';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
-import { HUES, type Hue } from '@/constants/visuals';
-import { useTheme } from '@/hooks/use-theme';
+import { Spacing } from '@/constants/theme';
+import type { Hue } from '@/constants/visuals';
 
-// Sekme ekranlarının ortak başlığı: ikon + küçük üst yazı + büyük başlık + "patika" çizgisi.
+// Sekme ekranlarının ortak başlığı: ikon + küçük üst yazı + büyük başlık .
 type ScreenHeaderProps = {
   title: string;
   eyebrow?: string;
@@ -15,8 +14,6 @@ type ScreenHeaderProps = {
 };
 
 export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent' }: ScreenHeaderProps) {
-  const theme = useTheme();
-
   return (
     <View style={styles.wrapper}>
       <View style={styles.row}>
@@ -32,21 +29,13 @@ export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent' }: ScreenHe
           </ThemedText>
         </View>
       </View>
-      {/* Süs: ince patika çizgisi, solda başlığın rengiyle kısa bir parça */}
-      <View
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-        style={[styles.track, { backgroundColor: theme.border }]}>
-        <View style={[styles.trackFill, { backgroundColor: theme[HUES[hue].line] }]} />
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   wrapper: { gap: Spacing.two },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two },
+  // minHeight 64 (48 ikon + dikey boşluk): ikonsuz başlık (Profil) da diğer sekmelerle aynı yükseklikte olsun, geçişte zıplamasın
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two, minHeight: 64 },
   texts: { flex: 1, minWidth: 0 },
-  track: { height: 4, borderRadius: Radius.pill },
-  trackFill: { width: 48, height: 4, borderRadius: Radius.pill },
 });

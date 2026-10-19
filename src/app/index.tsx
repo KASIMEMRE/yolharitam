@@ -71,6 +71,7 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingTop: Spacing.five, paddingBottom: Spacing.three },
   center: { textAlign: 'center' },
   lead: { alignSelf: 'center', maxWidth: 320, marginTop: Spacing.two },
-  trail: { marginTop: Spacing.four },
+  // Kalan alanda dikey ortala: uzun ekranda patika üstte yapışık kalmasın
+  trail: { flex: 1, justifyContent: 'center', marginTop: Spacing.four },
   footer: { paddingTop: Spacing.two, paddingBottom: Spacing.three },
 });

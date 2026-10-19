@@ -44,8 +44,10 @@ function toTurkish(message: string): string {
 
 export default function LoginScreen() {
   const theme = useTheme();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
+  // Kısa ekranda (örn. 320x568) sahne daha az boşluk bıraksın ki şifre alanı ilk ekranda görünsün
+  const stagePad = height < 700 ? Spacing.three : undefined;
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -95,21 +97,32 @@ export default function LoginScreen() {
         {/* Klavye açılınca içerik yukarı itilsin, alanlar klavyenin altında kalmasın */}
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          // iOS 'padding', Android 'height': Android'de pencere kendiliğinden küçülmeyebilir (edge-to-edge);
+          // 'height' sabit alt butonun klavyenin altında kalmasını önler.
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled">
             {/* SAHNE: kenarlara taşan yumuşak yeşil blok. İçinde başlık ve küçük yatay patika;
                 mod değişince sarı aktif durak yeni adıma kayar. */}
             <View
               style={[
                 styles.stage,
-                { backgroundColor: theme.accentSoft, paddingHorizontal: gutter },
+                {
+                  backgroundColor: theme.accentSoft,
+                  paddingHorizontal: gutter,
+                  ...(stagePad && { paddingTop: stagePad, paddingBottom: stagePad }),
+                },
               ]}>
               <Animated.View key={mode} entering={FadeIn.duration(150)}>
                 <ThemedText type="heading" accessibilityRole="header">
                   {mode === 'login' ? 'Rotana devam et' : 'Rotanı oluşturalım'}
                 </ThemedText>
               </Animated.View>
-              <TrailMap stops={STEPS} current={mode === 'login' ? 1 : 0} variant="horizontal" />
+              <TrailMap
+                stops={STEPS}
+                current={mode === 'login' ? 1 : 0}
+                variant="horizontal"
+                showDone={false}
+              />
             </View>
 
             <View style={[styles.form, { padding: gutter }]}>
@@ -226,6 +239,6 @@ const styles = StyleSheet.create({
     borderWidth: Border.thick,
     borderRadius: Radius.md - Spacing.one,
   },
-  showButton: { minHeight: 44, minWidth: 44, alignItems: 'center', justifyContent: 'center' },
+  showButton: { minHeight: 44, minWidth: 44, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });

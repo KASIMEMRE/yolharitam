@@ -1,4 +1,5 @@
 import type { ThemeColor } from '@/constants/theme';
+import { getTopicChain } from '@/constants/topics';
 
 // Görsel eşleme tabloları: veri dosyaları (topics.ts, onboarding.ts) değişmez,
 // hangi kategorinin hangi emoji/renkle görüneceği SADECE burada tutulur.
@@ -45,4 +46,18 @@ export const DEFAULT_CATEGORY: { emoji: string; hue: Hue } = { emoji: '🧭', hu
 export function getCategoryStyle(topicPath?: string | null) {
   const rootId = topicPath?.split('/')[0] ?? '';
   return CATEGORY_STYLE[rootId] ?? DEFAULT_CATEGORY;
+}
+
+// Yol haritası kaydındaki topic_path'ten ekranların ortak ihtiyacı olan özeti çıkarır:
+// konu adı, üst konular, kategori emojisi ve rengi. Bozuk/bilinmeyen yolda çökmez, genel başlığa düşer.
+export function describeTopic(topicPath?: string | null) {
+  const chain = topicPath ? getTopicChain(topicPath.split('/')) : [];
+  const category = getCategoryStyle(topicPath);
+  return {
+    title: chain.at(-1)?.title ?? 'Seçtiğin konu',
+    parents: chain.slice(0, -1).map((t) => t.title).join(' › '),
+    category,
+    hue: HUES[category.hue],
+    hasTopic: chain.length > 0,
+  };
 }

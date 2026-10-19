@@ -11,8 +11,7 @@ import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Edge, Radius, Spacing } from '@/constants/theme';
-import { getTopicChain } from '@/constants/topics';
-import { HUES, getCategoryStyle } from '@/constants/visuals';
+import { describeTopic } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 
@@ -53,11 +52,7 @@ function JourneyCard({ topicPath, level }: { topicPath: string; level: string })
   const reduceMotion = useReducedMotion();
 
   // Bilinmeyen/bozuk yol gelirse çökmek yerine varsayılan görünüm ve genel başlık kullanılır
-  const chain = getTopicChain(topicPath.split('/'));
-  const category = getCategoryStyle(topicPath);
-  const hue = HUES[category.hue];
-  const title = chain.at(-1)?.title ?? 'Seçtiğin konu';
-  const parents = chain.slice(0, -1).map((t) => t.title).join(' › ');
+  const { title, parents, category, hue } = describeTopic(topicPath);
 
   return (
     <View
@@ -113,7 +108,9 @@ function JourneyCard({ topicPath, level }: { topicPath: string; level: string })
   );
 }
 
-// Süs: karttan kilitli kutuya doğru solan üç nokta (adım sayısı gibi okunmasın diye soluk)
+// Süs: karttan kilitli kutuya inen üç nokta. Hepsi aynı renk ve dikey dizili: sayfalama/ilerleme
+// noktası gibi okunmasın. Hizalama: kilitli kartın ikonunun ortasına denk gelir
+// (kart kenarlığı + iç boşluk + ikon yarısı - nokta yarısı).
 function FadingDots() {
   const theme = useTheme();
   return (
@@ -121,8 +118,8 @@ function FadingDots() {
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
       style={styles.dots}>
-      {[0.6, 0.4, 0.2].map((opacity) => (
-        <View key={opacity} style={[styles.dot, { backgroundColor: theme.borderStrong, opacity }]} />
+      {[0, 1, 2].map((i) => (
+        <View key={i} style={[styles.dot, { backgroundColor: theme.borderStrong }]} />
       ))}
     </View>
   );
@@ -183,7 +180,7 @@ const styles = StyleSheet.create({
   body: { padding: Spacing.three, gap: Spacing.three },
   divider: { height: Border.thin },
   meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.three },
-  dots: { flexDirection: 'row', gap: 6, marginLeft: Spacing.five },
+  dots: { flexDirection: 'column', gap: 6, marginLeft: Border.thick + Spacing.three + 32 - 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   empty: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.five },
   centerText: { textAlign: 'center' },

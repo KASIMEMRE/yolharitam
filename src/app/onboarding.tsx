@@ -104,13 +104,13 @@ export default function OnboardingScreen() {
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={[styles.content, { padding: gutter }]}
+          contentContainerStyle={[styles.content, { padding: gutter, paddingBottom: isLeaf ? gutter : Spacing.four }]}
           pointerEvents={saving ? 'none' : 'auto'}>
           <View style={styles.inner}>
             {/* Başlık + sağda iki adımlı gösterge (1 Konu, 2 Seviye) */}
             <View style={styles.titleRow}>
               <ThemedText type="heading" accessibilityRole="header" style={styles.titleText}>
-                Ne öğrenmek istiyorsun?
+                {isLeaf ? 'Hangi seviyedesin?' : 'Ne öğrenmek istiyorsun?'}
               </ThemedText>
               <StepIndicator current={isLeaf ? 1 : 0} />
             </View>
@@ -120,7 +120,7 @@ export default function OnboardingScreen() {
               <View style={styles.breadcrumb}>
                 <Pressable
                   onPress={() => goTo(0)}
-                  hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                  hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
                   accessibilityRole="button"
                   accessibilityLabel="Geri dön: Tümü"
                   style={[styles.crumb, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -130,6 +130,8 @@ export default function OnboardingScreen() {
                 </Pressable>
                 {chain.map((topic, index) => {
                   const last = index === chain.length - 1;
+                  // Yaprakta seçilen konu zaten özet satırında görünüyor: yoldaki son çipi tekrar etme
+                  if (isLeaf && last) return null;
                   return (
                     <View key={topic.id} style={styles.crumbGroup}>
                       <ThemedText type="small" themeColor="textSecondary">
@@ -137,7 +139,7 @@ export default function OnboardingScreen() {
                       </ThemedText>
                       <Pressable
                         onPress={() => goTo(index + 1)}
-                        hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                        hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
                         accessibilityRole="button"
                         accessibilityLabel={last ? `Şu an: ${topic.title}` : `Geri dön: ${topic.title}`}
                         style={[
@@ -177,6 +179,7 @@ export default function OnboardingScreen() {
                       hue={style.hue}
                       variant={tile ? 'tile' : 'list'}
                       trailing={tile ? 'none' : 'chevron'}
+                      hint={item.children ? 'Alt konuları görmek için dokun' : 'Bu konuyu seçmek için dokun'}
                       index={index}
                       onPress={() => selectTopic(item.id)}
                     />
@@ -220,7 +223,9 @@ export default function OnboardingScreen() {
           </View>
         </ScrollView>
 
-        {/* Alt çubuk: hata + ana buton hep görünür kalır */}
+        {/* Alt çubuk yalnız yaprak adımında (seviye seçilebilirken) görünür; kökte/alt konularda
+            devre dışı bir buton yer kaplamasın */}
+        {isLeaf && (
         <View
           style={[
             styles.footer,
@@ -236,6 +241,7 @@ export default function OnboardingScreen() {
             />
           </Animated.View>
         </View>
+        )}
       </SafeAreaView>
 
       {/* Kutlama yalnız kayıt BAŞARILI olunca açılır; hata yolunda hiç görünmez */}

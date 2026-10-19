@@ -2,7 +2,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { IconTile } from '@/components/icon-tile';
 import { ThemedText } from '@/components/themed-text';
-import { Border, Edge } from '@/constants/theme';
+import { Border } from '@/constants/theme';
 import type { Hue } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -31,10 +31,8 @@ export function Avatar({ email, size = 96, badgeEmoji, badgeHue }: AvatarProps) 
             height: size,
             borderRadius: size / 2,
             backgroundColor: theme.accentSoft,
+            // Avatar basılabilir değil: 3D alt kenar yok, düz 3pt halka
             borderColor: theme.accent,
-            borderBottomColor: theme.accentEdge,
-            // Alt kenar biraz kalın: tüm 3D bileşenlerle aynı "basılabilir" dil
-            borderBottomWidth: Border.chunky + Edge / 2,
           },
         ]}>
         <ThemedText
@@ -56,5 +54,6 @@ export function Avatar({ email, size = 96, badgeEmoji, badgeHue }: AvatarProps) 
 
 const styles = StyleSheet.create({
   circle: { alignItems: 'center', justifyContent: 'center', borderWidth: Border.chunky },
-  badge: { position: 'absolute', right: -4, bottom: 4 },
+  // Rozet harfi kapatmasın diye avatarın sağ alt köşesinden dışarı taşar
+  badge: { position: 'absolute', right: -10, bottom: -6 },
 });

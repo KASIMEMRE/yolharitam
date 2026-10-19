@@ -11,8 +11,7 @@ import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Edge, Radius, Spacing } from '@/constants/theme';
-import { getTopicChain } from '@/constants/topics';
-import { HUES, getCategoryStyle } from '@/constants/visuals';
+import { describeTopic } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
@@ -25,11 +24,7 @@ export default function ProfileScreen() {
   const email = session?.user.email;
 
   // Bozuk/bilinmeyen yol gelirse varsayılan görünüm kullanılır (çökme yok)
-  const chain = roadmap ? getTopicChain(roadmap.topic_path.split('/')) : [];
-  const category = getCategoryStyle(roadmap?.topic_path);
-  const hue = HUES[category.hue];
-  const topicTitle = chain.at(-1)?.title ?? 'Seçtiğin konu';
-  const parents = chain.slice(0, -1).map((t) => t.title).join(' › ');
+  const { title: topicTitle, parents, category, hue } = describeTopic(roadmap?.topic_path);
 
   return (
     <TabScreen>

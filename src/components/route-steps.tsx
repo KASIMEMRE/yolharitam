@@ -28,16 +28,18 @@ type TrailMapProps = {
   current: number; // şu an hangi durak (0'dan başlar)
   variant?: 'vertical' | 'horizontal';
   caption?: boolean; // yatayda aktif adımın adını altta göster
+  // false ise geçilmiş duraklar ✓ yapılmaz (giriş ekranında: bir şey TAMAMLANMIŞ gibi görünmesin)
+  showDone?: boolean;
 };
 
 const OFFSETS = [-72, 56, -40]; // zikzak için her durağın yatay kayması
 const TOP_PAD = 28; // 📍 pininin düşeceği boşluk
 
-export function TrailMap({ stops, current, variant = 'vertical', caption = true }: TrailMapProps) {
+export function TrailMap({ stops, current, variant = 'vertical', caption = true, showDone = true }: TrailMapProps) {
   return variant === 'vertical' ? (
     <VerticalTrail stops={stops} current={current} />
   ) : (
-    <HorizontalTrail stops={stops} current={current} caption={caption} />
+    <HorizontalTrail stops={stops} current={current} caption={caption} showDone={showDone} />
   );
 }
 // Eski adla da kullanılabilsin (ürün belgesi "RouteSteps" diyor)
@@ -96,7 +98,8 @@ function VerticalTrail({ stops, current }: { stops: TrailStop[]; current: number
     const dist = Math.hypot(b.x - a.x, b.y - a.y);
     const ux = (b.x - a.x) / dist;
     const uy = (b.y - a.y) / dist;
-    const margin = STOP / 2 + 4;
+    // +8: noktalar aktif durağın dış halkasına (6px) değmesin
+    const margin = STOP / 2 + 8;
     const sx = a.x + ux * margin;
     const sy = a.y + uy * margin;
     const ex = b.x - ux * margin;
@@ -213,7 +216,17 @@ function VerticalTrail({ stops, current }: { stops: TrailStop[]; current: number
   );
 }
 
-function HorizontalTrail({ stops, current, caption }: { stops: TrailStop[]; current: number; caption: boolean }) {
+function HorizontalTrail({
+  stops,
+  current,
+  caption,
+  showDone,
+}: {
+  stops: TrailStop[];
+  current: number;
+  caption: boolean;
+  showDone: boolean;
+}) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
   const [W, setW] = useState(0);
@@ -279,7 +292,7 @@ function HorizontalTrail({ stops, current, caption }: { stops: TrailStop[]; curr
                         {
                           left: from + ((to - from) * q) / 4 - 3,
                           top: HALO + STOP / 2 - 3,
-                          backgroundColor: i < current ? theme.accent : theme.borderStrong,
+                          backgroundColor: showDone && i < current ? theme.accent : theme.borderStrong,
                         },
                       ]}
                     />
@@ -289,7 +302,7 @@ function HorizontalTrail({ stops, current, caption }: { stops: TrailStop[]; curr
 
               {stops.map((stop, i) => {
                 const isCurrent = i === current;
-                const isDone = i < current;
+                const isDone = showDone && i < current;
                 return (
                   <Animated.View
                     key={stop.label}

@@ -34,6 +34,7 @@ type OptionCardProps = {
   trailing?: 'chevron' | 'check' | 'none';
   ladder?: 1 | 2 | 3; // seviye kartında zorluk merdiveni (ilerleme DEĞİL)
   actionLabel?: string; // compact için sağdaki yazı
+  hint?: string; // ekran okuyucu ipucu (ne olacağını söyler; ekran bilir, kart bilmez)
   index?: number; // liste girişinde sıralı beliriş için
 };
 
@@ -49,6 +50,7 @@ export function OptionCard({
   trailing = 'none',
   ladder,
   actionLabel,
+  hint,
   index = 0,
 }: OptionCardProps) {
   const theme = useTheme();
@@ -98,8 +100,10 @@ export function OptionCard({
 
   // Renkleri duruma göre seç
   let background: string = theme.card;
-  let border: string = tone ? theme.border : theme.borderStrong;
-  let plate: string = tone ? theme.borderEdge : theme.borderStrong;
+  // Seçili olmayan tüm kartlar (kategori de seviye de) aynı sakin kenar dilini kullanır;
+  // seçimi renk + ✓ halkası taşır.
+  let border: string = theme.border;
+  let plate: string = theme.borderEdge;
   if (isCompact) {
     border = theme.border;
   } else if (selected) {
@@ -144,7 +148,7 @@ export function OptionCard({
                   height: 14 + i * 6,
                   borderRadius: 3,
                   backgroundColor:
-                    i < ladder ? (selected ? theme.accent : theme.borderStrong) : theme.border,
+                    i < ladder ? (selected ? theme.text : theme.borderStrong) : theme.backgroundSelected,
                 }}
               />
             ))}
@@ -197,8 +201,9 @@ export function OptionCard({
   return (
     // Dıştaki sarmalayıcı sadece giriş animasyonu için; ölçek animasyonu içteki katmanda
     // (aynı elemanda iki animasyon türü çakışmasın diye).
-    <Animated.View entering={entering} style={isTile && { width: tileWidth }}>
-      <Animated.View style={scaleStyle}>
+    // Tile: aynı satırdaki kartlar eşit yükseklikte olsun diye zincirdeki her katman flex: 1
+    <Animated.View entering={entering} style={isTile && { width: tileWidth, alignSelf: 'stretch' }}>
+      <Animated.View style={[scaleStyle, isTile && styles.fill]}>
         <Pressable
           onPress={onPress}
           onPressIn={() => {
@@ -210,11 +215,11 @@ export function OptionCard({
           }}
           accessibilityRole={role}
           accessibilityLabel={isCompact ? `${title}. Konuyu değiştir` : undefined}
-          accessibilityHint={role === 'button' && !isCompact ? 'Alt konuları görmek için dokun' : undefined}
+          accessibilityHint={hint}
           accessibilityState={role === 'radio' ? { checked: selected } : undefined}
           // Düz renkli zemin için gölge sarmalayıcıya; alt kenar plakası kartın kendi rengi
-          style={[!isCompact && shadow('card'), { borderRadius: radius }]}>
-          <View style={[{ borderRadius: radius }, !isCompact && { backgroundColor: plate }]}>
+          style={[!isCompact && shadow('card'), { borderRadius: radius }, isTile && styles.fill]}>
+          <View style={[{ borderRadius: radius }, !isCompact && { backgroundColor: plate }, isTile && styles.fill]}>
             <Animated.View
               style={[
                 styles.face,
@@ -228,6 +233,7 @@ export function OptionCard({
                   ? styles.compact
                   : [styles.faceFull, { marginBottom: Edge }, isTile ? styles.tile : styles.list],
                 !isCompact && faceStyle,
+                isTile && styles.fill,
               ]}>
               {body}
             </Animated.View>
@@ -245,6 +251,7 @@ const styles = StyleSheet.create({
   tile: { minHeight: 148, flexDirection: 'column', alignItems: 'flex-start', gap: Spacing.two },
   compact: { minHeight: 56, paddingHorizontal: Spacing.three, gap: Spacing.three },
   flex: { flex: 1, minWidth: 0 },
+  fill: { flex: 1 },
   texts: { flex: 1, minWidth: 0, gap: Spacing.half },
   textsTile: { flex: 0, alignSelf: 'stretch' },
   ladder: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.one, marginTop: Spacing.two },

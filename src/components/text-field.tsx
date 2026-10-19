@@ -90,14 +90,16 @@ export function TextField({
 const styles = StyleSheet.create({
   wrapper: { gap: Spacing.two },
   // Halka 4px kalınlığında sabit yer kaplar (şeffafken de), böylece odaklanınca yerleşim zıplamaz.
-  halo: { borderWidth: 4, borderRadius: Radius.md + 4 },
+  // margin -4: halka kutunun DIŞINA taşar; böylece kutu etiket/segment/butonla aynı x hizasında durur.
+  halo: { borderWidth: 4, borderRadius: Radius.md + 4, margin: -4 },
   box: {
     flexDirection: 'row',
     alignItems: 'center',
     minHeight: 56,
     borderRadius: Radius.md,
     borderWidth: Border.thick,
-    paddingHorizontal: Spacing.three,
+    paddingLeft: Spacing.three,
+    paddingRight: Spacing.two, // sağdaki "Göster" kenara yapışmasın
   },
   input: { flex: 1, paddingVertical: Spacing.three, fontSize: 17 },
 });

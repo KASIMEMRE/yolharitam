@@ -24,6 +24,8 @@ type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   icon?: string; // emoji
 };
 
+// Not: <Link asChild> içinde expo-router Pressable'a role="link" ekler; gezinme butonlarının
+// ekran okuyucuda "bağlantı" diye okunması bilinçlidir (gerçekten başka ekrana gidiyorlar).
 // forwardRef: <Link asChild> bu bileşene ref ve href/onPress verebilsin diye gerekli.
 export const Button = forwardRef<View, ButtonProps>(function Button(
   { label, variant = 'primary', loading = false, disabled = false, icon, onPressIn, onPressOut, ...rest },
@@ -56,9 +58,10 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
   if (disabled && !loading) {
     textColor = 'textSecondary';
     if (variant !== 'quiet') {
+      // Pasif buton sakin kalsın (koyu modda parlamasın): zemin + normal kenar + kenar plakası
       face = theme.backgroundSelected;
-      border = theme.borderStrong;
-      plate = theme.borderStrong;
+      border = theme.border;
+      plate = theme.borderEdge;
     }
   }
   const quiet = variant === 'quiet';

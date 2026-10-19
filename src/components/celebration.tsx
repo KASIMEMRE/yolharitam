@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { AccessibilityInfo, Pressable, StyleSheet } from 'react-native';
+import { AccessibilityInfo, Modal, Pressable, StyleSheet } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -15,7 +15,7 @@ import Animated, {
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge } from '@/components/level-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import type { Hue } from '@/constants/visuals';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 
@@ -72,7 +72,7 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
     // Ekran okuyucu açıksa daha uzun bekle ki kullanıcı duyurusunu dinleyebilsin
     AccessibilityInfo.isScreenReaderEnabled().then((screenReader) => {
       if (cancelled) return;
-      const duration = screenReader ? 2000 : reduceMotion ? 800 : 1200;
+      const duration = screenReader ? 2000 : reduceMotion ? 800 : 1600;
       timerRef.current = setTimeout(finish, duration);
     });
 
@@ -93,9 +93,12 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
   const colors = [theme.accent, theme.marker, theme.sky, theme.coral, theme.violet, theme.berry, theme.leaf];
 
   return (
+    // Modal: kutlama native başlık çubuğunu da kaplasın (normal View sadece ekran içeriğini kaplar).
+    // Android geri tuşu da kutlamayı atlar.
+    <Modal transparent animationType="none" statusBarTranslucent visible onRequestClose={finish}>
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel="Devam et"
+      accessibilityLabel={`${title} Devam etmek için dokun`}
       onPress={finish}
       style={styles.overlay}>
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background }, backdropStyle]} />
@@ -106,7 +109,8 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
         ))}
 
       <Animated.View style={[styles.center, tileStyle]}>
-        <Animated.View style={shadow('lifted')}>
+        {/* borderRadius IconTile 96'nın köşesiyle aynı: gölge kare görünmesin */}
+        <Animated.View style={[shadow('lifted'), { borderRadius: Radius.xl }]}>
           <IconTile emoji={emoji} tone={hue} size={96} />
         </Animated.View>
       </Animated.View>
@@ -123,6 +127,7 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
         <LevelBadge levelId={levelId} size="md" />
       </Animated.View>
     </Pressable>
+    </Modal>
   );
 }
 
@@ -130,7 +135,7 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
 function Particle({ index, progress, color }: { index: number; progress: SharedValue<number>; color: string }) {
   const angle = ((index * 15 + JITTER[index % JITTER.length]) * Math.PI) / 180;
   const distance = 110 + (index % 4) * 35;
-  const size = 8 + (index % 3) * 2;
+  const size = 10 + (index % 3) * 3;
   const round = index % 2 === 0;
   const spin = index % 2 === 0 ? 360 : -360;
 
@@ -162,7 +167,7 @@ const styles = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', gap: Spacing.three },
   center: { alignItems: 'center', justifyContent: 'center' },
   text: { paddingHorizontal: Spacing.four },
-  title: { textAlign: 'center' },
+  title: { textAlign: 'center', maxWidth: 320 },
   badge: { alignItems: 'center' },
   particle: { position: 'absolute', left: '50%', top: '42%' },
 });

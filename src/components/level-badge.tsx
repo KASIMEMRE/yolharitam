@@ -50,9 +50,10 @@ type StatusChipProps = {
   label: string;
   emoji?: string;
   tone: 'marker' | 'neutral';
+  align?: 'start' | 'center'; // ortalı kartlarda 'center'
 };
 
-export function StatusChip({ label, emoji, tone }: StatusChipProps) {
+export function StatusChip({ label, emoji, tone, align = 'start' }: StatusChipProps) {
   const theme = useTheme();
   const marker = tone === 'marker';
   return (
@@ -60,6 +61,7 @@ export function StatusChip({ label, emoji, tone }: StatusChipProps) {
       style={[
         styles.chip,
         {
+          alignSelf: align === 'center' ? 'center' : 'flex-start',
           backgroundColor: marker ? theme.markerSoft : theme.backgroundSelected,
           borderColor: marker ? theme.markerEdge : theme.borderStrong,
           paddingVertical: Spacing.one,
