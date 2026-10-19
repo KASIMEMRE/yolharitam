@@ -62,3 +62,19 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Buton: tema `accent` zemin, `onAccent` yazı.
 - Kabul: Açık ve koyu modda okunaklı; küçük ekranlarda taşma yok.
 - Tasarım yenileme PR'ı ile karşılandı (karşılama dahil tüm ekranlar yeniden tasarlandı; PR #1 kapatılabilir).
+
+### TY · Oyunlaştırılmış tasarım yenileme (proje sahibinin doğrudan isteği)
+- Tüm ekranlar (karşılama, giriş, onboarding, Yol Haritam, Gelişmeler, Profil, sekmeler) yeni tasarım sistemiyle yenilendi.
+- Sahte veri yok: ilerleme, haber ve başarım alanları "Yakında" olarak kilitli.
+
+## Öneriler (ekipten)
+
+Sıraya konmadı; önceliği proje sahibi verir.
+
+- **Özel yuvarlak font (Nunito)** (tasarım yenilemesinden): Android'de başlıklar düz Roboto; `@expo-google-fonts/nunito` (yalnız JS, Expo Go uyumlu) ile oyunsu tipografi. Yeni bağımlılık + splash'te font yükleme gerektirir.
+- **ESLint yapılandırması**: repoda `eslint.config.js` yok; AGENTS.md'deki "lint geçmeli" kuralı uygulanamıyor. `eslint-config-expo` eklenmeli.
+- **Ağ hatası ile "kayıt yok" ayrımı**: `useLatestRoadmap` hata durumunu döndürmeli, ekranlar "Yüklenemedi, tekrar dene" göstermeli (Y-07 ile birlikte).
+- **Ortak `TopicCard` bileşeni**: Yol Haritam ve Profil'deki konu kartları benzer stil taşıyor.
+- **Şablon kalıntılarını temizle**: kullanılmayan `external-link.tsx`, `hint-row.tsx`, `AnimatedIcon`, `assets/images/tabIcons/*`; açılış ekranı (`AnimatedSplashOverlay`) hâlâ Expo logosu.
+- **Alt kategori ikonları**: alt kategori listesinde tüm kartlar kategorinin emojisini taşıyor; alt kategoriye özel emoji eklenebilir.
+- **"Yolculuk başlıyor" çipi**: Y-04/Y-05 ile gerçek adımlar gelince kaldırılmalı/güncellenmeli.
