@@ -20,7 +20,11 @@ import { supabase } from '@/lib/supabase';
 
 type Mode = 'login' | 'signup';
 
-const STEPS = ['Hesabını oluştur', 'Konunu ve seviyeni seç', 'Kişisel yol haritanı al'];
+const STEPS = [
+  { emoji: '🔑', label: 'Hesabını oluştur' },
+  { emoji: '🧭', label: 'Konunu ve seviyeni seç' },
+  { emoji: '🗺️', label: 'Kişisel yol haritanı al' },
+];
 
 // Supabase'in İngilizce hata mesajlarını kullanıcının anlayacağı Türkçeye çevir
 function toTurkish(message: string): string {
@@ -93,7 +97,7 @@ export default function LoginScreen() {
               <ThemedText type="subtitle">
                 {mode === 'login' ? 'Rotana devam et' : 'Rotanı oluşturalım'}
               </ThemedText>
-              <RouteSteps steps={STEPS} current={mode === 'login' ? 1 : 0} />
+              <RouteSteps stops={STEPS} current={mode === 'login' ? 1 : 0} />
             </View>
 
             {/* Giriş / Kayıt seçici */}
