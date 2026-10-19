@@ -33,7 +33,7 @@ export const LEVEL_STYLE: Record<string, { emoji: string }> = {
 // bu etiketler nötr kalır, renk yalnız kategoriye aittir.
 export const PHASE_STYLE: Record<Phase, { label: string; emoji: string }> = {
   foundation: { label: 'Temeller', emoji: '🧱' },
-  practice: { label: 'Pratik', emoji: '🔁' },
+  practice: { label: 'Pratik', emoji: '🧪' },
   goal: { label: 'Hedef', emoji: '🎯' },
 };
 
@@ -41,6 +41,13 @@ export const RESOURCE_STYLE: Record<ResourceType, { label: string; emoji: string
   video: { label: 'Video', emoji: '🎬' },
   reading: { label: 'Okuma', emoji: '📖' },
   practice: { label: 'Uygulama', emoji: '🛠️' },
+};
+
+// Tüm adımların kaynak türü aynıysa kartlara çip koymak yerine listenin başında BİR KEZ gösterilen cümle.
+export const RESOURCE_SUMMARY: Record<ResourceType, string> = {
+  video: 'Tüm adımlar: kısa video ders serileriyle ilerle.',
+  reading: 'Tüm adımlar: resmi dokümantasyon ve güncel rehberlerle ilerle.',
+  practice: 'Tüm adımlar: yaparak öğren, sonunda küçük bir çıktı üret.',
 };
 
 // Kategori id'leri topics.ts'teki kök id'lerle birebir aynı.

@@ -6,13 +6,12 @@ import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge, StatusChip } from '@/components/level-badge';
-import { LockedCard } from '@/components/locked-card';
 import { RoadmapStepList, StepListSkeleton } from '@/components/roadmap-step-list';
 import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
-import { findOption, isAnswerId } from '@/constants/roadmap-questions';
+import { findOption, isAnswerId, QUESTIONS, weeklyLabel } from '@/constants/roadmap-questions';
 import { summarizeSteps, type WeeklyHoursId } from '@/constants/roadmap-templates';
 import { Border, Edge, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
@@ -52,9 +51,9 @@ export default function RoadmapScreen() {
   const plan =
     weekly && isAnswerId('goal', roadmap.goal) && isAnswerId('learningStyle', roadmap.learning_style)
       ? [
-          `Haftada ${findOption('weeklyHours', roadmap.weekly_hours)?.title}`,
+          weeklyLabel(roadmap.weekly_hours),
           `Hedef: ${findOption('goal', roadmap.goal)?.title}`,
-          `Tarz: ${findOption('learningStyle', roadmap.learning_style)?.title}`,
+          `Yöntem: ${findOption('learningStyle', roadmap.learning_style)?.title}`,
         ].join(' · ')
       : null;
 
@@ -67,9 +66,16 @@ export default function RoadmapScreen() {
         )
       : null;
 
+  // "Boş" ile "hata" ayrı dallar: hatada "Adımlarımı oluştur" ASLA gösterilmez (yanlış yönlendirir)
+  const noSteps = status === 'ready' && steps.length === 0;
+
   return (
     <TabScreen>
       <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
+
+      {/* Adım yokken asıl eylem "Adımlarını oluştur"dur: kartın ÜSTÜNDE durur, ilk ekranda görünür */}
+      {noSteps && <StepsCtaCard roadmapId={roadmap.id} />}
+
       <JourneyCard
         topicPath={roadmap.topic_path}
         level={roadmap.level}
@@ -79,13 +85,6 @@ export default function RoadmapScreen() {
         showWeeks={weekly !== null}
         summaryLoading={status === 'loading'}
       />
-
-      {/* "Boş" ile "hata" ayrı dallar: hatada "Adımlarımı oluştur" ASLA gösterilmez (yanlış yönlendirir) */}
-      {status === 'ready' && steps.length === 0 && <StepsCtaCard roadmapId={roadmap.id} />}
-
-      <Link href="/onboarding" asChild>
-        <Button variant="secondary" icon="🧭" label="Konunu değiştir" />
-      </Link>
 
       {status === 'loading' && <StepListSkeleton />}
 
@@ -107,14 +106,16 @@ export default function RoadmapScreen() {
             <RoadmapStepList steps={steps} />
           </View>
           {/* İşaretleme henüz yok: dürüstçe "yakında" denir, sahte ilerleme çubuğu yok */}
-          <LockedCard
-            compact
-            emoji="☑️"
-            title="Adımları işaretlemek yakında"
-            description="Tamamladığın adımları buradan işaretleyebileceksin."
-          />
+          <ThemedText type="small" themeColor="textSecondary" style={styles.soon}>
+            🔒 Adımları işaretlemek yakında
+          </ThemedText>
         </>
       )}
+
+      {/* İkincil eylem en sonda: konu değiştirmek nadir bir iş, uzun listenin önüne geçmesin */}
+      <Link href="/onboarding" asChild>
+        <Button variant="text" icon="🧭" label="Konunu değiştir" />
+      </Link>
     </TabScreen>
   );
 }
@@ -174,32 +175,26 @@ function JourneyCard({
             Konun
           </ThemedText>
           <ThemedText type="heading">{title}</ThemedText>
+          {/* Konu yolu bantta başlığın altında: kartı kısaltır, ayrı satır gerekmez */}
+          {parents !== '' && (
+            <ThemedText type="small" themeColor={hue.ink}>
+              {parents}
+            </ThemedText>
+          )}
         </View>
       </View>
 
       <View style={styles.body}>
-        {parents !== '' && (
-          <ThemedText type="small" themeColor="textSecondary">
-            {parents}
-          </ThemedText>
-        )}
-        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+        {/* Seviye rozeti ve plan yan yana (dar ekranda alt alta sarar). Plan = kullanıcının KENDİ
+            cevapları; eski kayıtta cevap yoksa hiç çizilmez. Bilinmeyen seviyede rozet çizilmez. */}
         <View style={styles.meta}>
-          <ThemedText type="eyebrow" themeColor="textSecondary">
-            Seviyen
-          </ThemedText>
-          {/* Bilinmeyen seviyede rozet hiç çizilmez */}
           <LevelBadge levelId={level} size="md" />
-        </View>
-        {/* Plan satırı: kullanıcının KENDİ cevapları. Cevap yoksa (eski kayıt) hiç çizilmez. */}
-        {plan !== null && (
-          <View style={styles.planBox}>
-            <ThemedText type="eyebrow" themeColor="textSecondary">
-              Planın
+          {plan !== null && (
+            <ThemedText type="small" style={styles.planText}>
+              {plan}
             </ThemedText>
-            <ThemedText type="small">{plan}</ThemedText>
-          </View>
-        )}
+          )}
+        </View>
         {summaryLoading && (
           // Yüklenirken çiplerin yerini tutar: içerik gelince kart zıplamasın
           <View style={styles.chips}>
@@ -242,7 +237,7 @@ function StepsCtaCard({ roadmapId }: { roadmapId: string }) {
         <View style={styles.bandTexts}>
           <ThemedText type="cardTitle">Adımlarını oluşturalım</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            3 kısa soruyu yanıtla, sana özel adımlar hazırlansın.
+            {QUESTIONS.length} kısa soruyu yanıtla, sana özel adımlar hazırlansın.
           </ThemedText>
         </View>
       </View>
@@ -306,9 +301,9 @@ const styles = StyleSheet.create({
   // 📍 ikonun sağ üst köşesinde, hafif taşarak durur
   pin: { position: 'absolute', top: -10, right: -8, fontSize: 28, lineHeight: 34 },
   body: { padding: Spacing.three, gap: Spacing.three },
-  divider: { height: Border.thin },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.three },
-  planBox: { gap: Spacing.one },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
+  planText: { flex: 1, minWidth: 120 },
+  soon: { marginTop: Spacing.three },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   cta: { borderWidth: Border.thick, borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.three },
   ctaTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },

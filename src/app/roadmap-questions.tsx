@@ -27,10 +27,9 @@ import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Celebration } from '@/components/celebration';
 import { IconTile } from '@/components/icon-tile';
-import { LevelBadge, StatusChip } from '@/components/level-badge';
+import { LevelBadge } from '@/components/level-badge';
 import { OptionCard } from '@/components/option-card';
 import { Skeleton } from '@/components/skeleton';
-import { StepIndicator } from '@/components/step-indicator';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { TrailDraw } from '@/components/trail-draw';
@@ -38,11 +37,13 @@ import { LEVELS } from '@/constants/onboarding';
 import {
   type Answers,
   DEFAULT_ANSWERS,
+  describeDefaults,
   findOption,
   QUESTIONS,
+  tempoWord,
 } from '@/constants/roadmap-questions';
-import { generateRoadmapSteps, toLevelId } from '@/constants/roadmap-templates';
-import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { generateRoadmapSteps, summarizeSteps, toLevelId } from '@/constants/roadmap-templates';
+import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
@@ -52,6 +53,9 @@ import { classifyError, ERROR_TEXT } from '@/lib/supabase-errors';
 // "Hazırlanıyor" ekranı en az bu kadar görünür: şablon anında üretir ama kullanıcı "bir şey oldu"
 // hissini alsın. Ağ daha yavaşsa ağ süresi geçerlidir (süre = en büyüğü). Hata yolunda BEKLENMEZ.
 const MIN_PREPARING_MS = 1200;
+// Kayıt çağrısı için üst sınır: sunucu yanıt vermezse sonsuza kadar "hazırlanıyor"da kalmayalım.
+// Süre dolunca istek iptal edilir, kullanıcı ağ hatası + "Tekrar dene" görür.
+const SAVE_TIMEOUT_MS = 20000;
 // Bu süreden uzun sürerse dürüst bir ek mesaj gösteririz (yüzde/sahte çubuk yok).
 const SLOW_AFTER_MS = 4000;
 
@@ -75,6 +79,7 @@ export default function RoadmapQuestionsScreen() {
   // roadmapId varsa satırı okuruz (tek doğruluk kaynağı veritabanı satırı), yoksa parametrelerden alırız.
   const [existing, setExisting] = useState<{ topicPath: string; level: string } | null>(null);
   const [existingState, setExistingState] = useState<'loading' | 'ready' | 'missing' | 'error'>('loading');
+  const [existingError, setExistingError] = useState<string>(ERROR_TEXT.other);
   useEffect(() => {
     if (!roadmapId) return;
     let cancelled = false; // ekran kapandıysa ya da id değiştiyse eski cevap state'i ezmesin
@@ -85,7 +90,11 @@ export default function RoadmapQuestionsScreen() {
         .eq('id', roadmapId)
         .maybeSingle();
       if (cancelled) return;
-      if (error) setExistingState('error');
+      if (error) {
+        // Ağ sorunu ile diğer hataları ayır: kullanıcıya doğru cümleyi söyleyelim
+        setExistingError(classifyError(error) === 'network' ? ERROR_TEXT.network : ERROR_TEXT.other);
+        setExistingState('error');
+      }
       else if (!data) setExistingState('missing');
       else {
         setExisting({ topicPath: data.topic_path, level: data.level });
@@ -110,6 +119,7 @@ export default function RoadmapQuestionsScreen() {
   const [preparing, setPreparing] = useState(false);
   const [slow, setSlow] = useState(false);
   const [celebrating, setCelebrating] = useState(false);
+  const [celebrationSubtitle, setCelebrationSubtitle] = useState<string | undefined>(undefined);
 
   // Çift dokunma kilidi: state güncellemesi bir sonraki çizimde olur, ref ANINDA değişir.
   const busyRef = useRef(false);
@@ -127,6 +137,8 @@ export default function RoadmapQuestionsScreen() {
   }, []);
 
   const busy = preparing || celebrating;
+  // Mevcut yol haritası satırı okunana kadar (ya da okunamadıysa) kayıt başlatılamaz: konu ve seviye bilinmiyor
+  const notReady = Boolean(roadmapId) && existingState !== 'ready';
   const question = QUESTIONS[step];
   const selectedId = answers[question.key];
   const answeredCount = Object.keys(answers).length;
@@ -137,14 +149,15 @@ export default function RoadmapQuestionsScreen() {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (busy) return true;
       if (step > 0) {
-        goBackOneQuestion();
+        // Doğrudan state setter'ları: başka bir fonksiyona bağımlı olmadığı için bağımlılık listesi doğru kalır
+        setDirection('back');
+        setError(null);
+        setStep((s) => Math.max(0, s - 1));
         return true;
       }
       return false; // 1. soruda normal davran: seviye sayfasına dön
     });
     return () => subscription.remove();
-    // goBackOneQuestion yalnız step'e bağlı küçük bir sarmalayıcı
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, busy]);
 
   // Soru değişince ekran okuyucu yeni başlığa odaklanır ve soruyu duyurur (ilk açılışta değil).
@@ -157,7 +170,7 @@ export default function RoadmapQuestionsScreen() {
     }
     const node = headingRef.current ? findNodeHandle(headingRef.current) : null;
     if (node) AccessibilityInfo.setAccessibilityFocus(node);
-    AccessibilityInfo.announceForAccessibility(`Soru ${step + 1} / 3: ${QUESTIONS[step].title}`);
+    AccessibilityInfo.announceForAccessibility(`Soru ${step + 1} / ${QUESTIONS.length}: ${QUESTIONS[step].title}`);
   }, [step]);
 
   // Seçim yapılınca ana buton kısa bir "pop" yapsın (hareketi azalt açıksa yapmaz)
@@ -194,9 +207,14 @@ export default function RoadmapQuestionsScreen() {
     router.navigate('/roadmap');
   }
 
-  // Kayıt: üret -> TEK RPC çağrısı. Sonuç: 'ok' | 'exists' (adımlar zaten vardı) | { message } (hata).
-  async function persist(final: Answers): Promise<'ok' | 'exists' | { message: string }> {
+  // Kayıt: üret -> TEK RPC çağrısı. Sonuç: başarı (kutlama özetiyle) | 'exists' (adımlar zaten vardı) | { message } (hata).
+  async function persist(
+    final: Answers
+  ): Promise<{ summary: string } | 'exists' | { message: string }> {
     if (!topicPath || !level) return { message: ERROR_TEXT.other };
+    // 20 sn içinde cevap gelmezse isteği iptal et (AbortError -> "ağ sorunu" olarak sınıflanır)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
     try {
       const steps = await generateRoadmapSteps({
         topicPath,
@@ -218,23 +236,33 @@ export default function RoadmapQuestionsScreen() {
       // RPC = veritabanında tek işlemle çalışan fonksiyon: ya roadmap + cevaplar + adımların HEPSİ
       // yazılır ya hiçbiri. Yarım kayıt ("yol haritası var, adımı yok") bu yüzden oluşamaz.
       const { error: rpcError } = roadmapId
-        ? await supabase.rpc('add_steps_to_roadmap', {
-            p_roadmap_id: roadmapId,
-            p_weekly_hours: final.weeklyHours,
-            p_goal: final.goal,
-            p_learning_style: final.learningStyle,
-            p_steps: payload,
-          })
-        : await supabase.rpc('create_roadmap_with_steps', {
-            p_topic_path: topicPath,
-            p_level: level,
-            p_weekly_hours: final.weeklyHours,
-            p_goal: final.goal,
-            p_learning_style: final.learningStyle,
-            p_steps: payload,
-          });
+        ? await supabase
+            .rpc('add_steps_to_roadmap', {
+              p_roadmap_id: roadmapId,
+              p_weekly_hours: final.weeklyHours,
+              p_goal: final.goal,
+              p_learning_style: final.learningStyle,
+              p_steps: payload,
+            })
+            .abortSignal(controller.signal)
+        : await supabase
+            .rpc('create_roadmap_with_steps', {
+              p_topic_path: topicPath,
+              p_level: level,
+              p_weekly_hours: final.weeklyHours,
+              p_goal: final.goal,
+              p_learning_style: final.learningStyle,
+              p_steps: payload,
+            })
+            .abortSignal(controller.signal);
 
-      if (!rpcError) return 'ok';
+      if (!rpcError) {
+        // Kutlama özeti, kaydedilen adımlardan türetilir (kendi başına bir sayı uydurmayız)
+        const sum = summarizeSteps(steps, final.weeklyHours);
+        return {
+          summary: `${sum.count} adım · yaklaşık ${sum.totalHours} saat · yaklaşık ${sum.weeks} hafta`,
+        };
+      }
       const kind = classifyError(rpcError);
       // Çift dokunma / başka cihaz: adımlar zaten yazılmış. Hata değil, "zaten hazır".
       if (kind === 'duplicate' && roadmapId) return 'exists';
@@ -243,6 +271,8 @@ export default function RoadmapQuestionsScreen() {
       return { message: ERROR_TEXT.other };
     } catch {
       return { message: ERROR_TEXT.other };
+    } finally {
+      clearTimeout(timeout); // zamanlayıcı takılı kalmasın
     }
   }
 
@@ -267,7 +297,7 @@ export default function RoadmapQuestionsScreen() {
     if (!mountedRef.current) return;
     if (slowTimer.current) clearTimeout(slowTimer.current);
 
-    if (typeof outcome === 'object') {
+    if (typeof outcome === 'object' && 'message' in outcome) {
       // Hata hemen gösterilir (yapay bekleme yok); sihirbaz kaldığı yerden devam eder.
       if (delayTimer.current) clearTimeout(delayTimer.current);
       setPreparing(false);
@@ -281,6 +311,7 @@ export default function RoadmapQuestionsScreen() {
       goToRoadmap();
       return;
     }
+    if (typeof outcome === 'object') setCelebrationSubtitle(outcome.summary);
     setCelebrating(true); // kilit açılmaz: kutlama sonrası ekran kapanır
   }
 
@@ -291,6 +322,7 @@ export default function RoadmapQuestionsScreen() {
   }
 
   function handlePrimary() {
+    if (notReady) return;
     // Hata varsa ana buton "Tekrar dene"dir: aynı kaydı yeniden dener
     if (error !== null) {
       save(fillWithDefaults());
@@ -310,13 +342,13 @@ export default function RoadmapQuestionsScreen() {
   const levelTitle = LEVELS.find((l) => l.id === level)?.title;
   // Geniş ekranda varsayılan notu alt çubukta göster; küçük ekran / büyük yazıda içeriğin sonuna al
   const roomyFooter = height >= 700 && fontScale <= 1.15;
+  // Tek açıklama: önerilen değerler (varsayılan tablosundan türetilir) + gerekirse "korunur" cümlesi
   const note =
-    answeredCount > 0
-      ? 'Yanıtladıkların korunur; kalanlar önerilenle dolar.'
-      : 'Önerilenler: 3-5 saat, merak ve gelişim, karışık tarz.';
+    `Önerilen: ${describeDefaults()}.` +
+    (answeredCount > 0 ? ' Yanıtladıkların korunur; kalanlar önerilenle dolar.' : '');
   const isLast = step === QUESTIONS.length - 1;
   const primaryLabel = error !== null ? 'Tekrar dene' : isLast ? 'Adımlarımı oluştur' : 'Devam et';
-  const primaryDisabled = error === null && selectedId === undefined;
+  const primaryDisabled = notReady || (error === null && selectedId === undefined);
 
   // Üst çubuk ayarları: soru ilerlediyse geri = önceki soru; kayıt sürerken geri tamamen kapalı.
   const screenOptions = (
@@ -346,14 +378,14 @@ export default function RoadmapQuestionsScreen() {
   if (!hasInput || existingState === 'missing' || existingState === 'error') {
     const message =
       existingState === 'error'
-        ? ERROR_TEXT.network
+        ? existingError
         : 'Bu yol haritası bulunamadı. Yol Haritam ekranına dönüp tekrar dene.';
     return (
       <ThemedView style={styles.container}>
         {screenOptions}
         <View style={[styles.problem, { padding: gutter }]}>
           <Banner tone="warning">{message}</Banner>
-          <Button label="Yol haritama dön" onPress={() => router.replace('/roadmap')} />
+          <Button label="Yol haritama dön" onPress={goToRoadmap} />
         </View>
       </ThemedView>
     );
@@ -365,61 +397,69 @@ export default function RoadmapQuestionsScreen() {
       emoji={info.category.emoji}
       hue={info.category.hue}
       title="Yol haritan hazır!"
+      subtitle={celebrationSubtitle}
       levelId={level ?? ''}
       onDone={goToRoadmap}
     />
   );
 
-  // "Adımların hazırlanıyor…" anı (kayıt süresince)
+  // "Adımların hazırlanıyor…" anı (kayıt süresince). Satırlar cevapların GERÇEK etkisini anlatır.
   if (preparing || celebrating) {
+    const lines = [
+      `${tempoWord(answers.weeklyHours) ?? 'Seçtiğin'} tempona göre süreler ayarlanıyor`,
+      `Son adımlar ${findOption('goal', answers.goal)?.title ?? 'seçtiğin'} hedefine göre kuruluyor`,
+      `Yöntem: ${findOption('learningStyle', answers.learningStyle)?.title ?? 'seçtiğin yöntem'}`,
+    ];
     return (
       <ThemedView style={styles.container}>
         {screenOptions}
-        <View style={[styles.preparing, { padding: gutter }]}>
-          <Animated.View
-            entering={FadeIn.duration(150)}
-            accessible
-            accessibilityLiveRegion="polite"
-            accessibilityLabel="Adımların hazırlanıyor. Cevaplarına göre sana özel adımlar diziliyor."
-            style={styles.preparingInner}>
-            <View style={[shadow('lifted'), { borderRadius: Radius.xl }]}>
-              <IconTile emoji={info.category.emoji} tone={info.category.hue} size={96} />
-            </View>
-            <View style={styles.center}>
-              <ThemedText type="cardTitle" style={styles.centerText}>
-                {info.title}
+        {/* Kutlama başlayınca arkadaki blok kaldırılır; iki katman üst üste okunmasın */}
+        {!celebrating && (
+          // ScrollView: küçük ekranda ya da büyük yazıda içerik sığmazsa kayabilsin
+          <ScrollView
+            contentContainerStyle={[styles.preparing, { padding: gutter }]}>
+            <Animated.View
+              entering={FadeIn.duration(150)}
+              accessible
+              accessibilityLiveRegion="polite"
+              accessibilityLabel={`Adımların hazırlanıyor. ${lines.join('. ')}.`}
+              style={styles.preparingInner}>
+              <View style={[shadow('lifted'), { borderRadius: Radius.xl }]}>
+                <IconTile emoji={info.category.emoji} tone={info.category.hue} size={height < 700 ? 64 : 96} />
+              </View>
+              <View style={styles.center}>
+                <ThemedText type="cardTitle" style={styles.centerText}>
+                  {info.title}
+                </ThemedText>
+                {/* LevelBadge kendi hizasını başlangıca sabitler; ortalamak için sarmalayıcı gerekir */}
+                <View style={styles.centerSelf}>
+                  <LevelBadge levelId={level} size="sm" />
+                </View>
+              </View>
+              <TrailDraw width={Math.min(width - 2 * gutter, 288)} slow={slow} />
+              <ThemedText type="heading" style={styles.centerText}>
+                Adımların hazırlanıyor…
               </ThemedText>
-              <LevelBadge levelId={level} size="sm" />
-            </View>
-            <TrailDraw width={Math.min(width - 2 * gutter, 288)} slow={slow} />
-            <ThemedText type="heading" style={styles.centerText}>
-              Adımların hazırlanıyor…
-            </ThemedText>
-            <ThemedText themeColor="textSecondary" style={[styles.centerText, styles.preparingSub]}>
-              Cevaplarına göre sana özel adımlar diziliyor.
-            </ThemedText>
-            {/* Cevap çipleri: yalnız kullanıcının GERÇEK cevapları */}
-            <View style={styles.chips}>
-              {QUESTIONS.map((q, i) => {
-                const option = findOption(q.key, answers[q.key]);
-                if (!option) return null;
-                const label = q.key === 'weeklyHours' ? `Haftada ${option.title}` : option.title;
-                return (
+              <View style={styles.lines}>
+                {lines.map((line, i) => (
                   <Animated.View
-                    key={q.key}
-                    entering={FadeIn.duration(reduceMotion ? 150 : 250).delay(reduceMotion ? 0 : i * 120)}>
-                    <StatusChip tone="neutral" emoji={option.emoji} label={label} />
+                    key={line}
+                    // Satırlar 0 / 400 / 800 ms'de belirir; hareketi azalt açıksa hepsi birden
+                    entering={reduceMotion ? FadeIn.duration(150) : FadeIn.duration(250).delay(i * 400)}>
+                    <ThemedText themeColor="textSecondary" style={styles.centerText}>
+                      {line}
+                    </ThemedText>
                   </Animated.View>
-                );
-              })}
-            </View>
-            {slow && (
-              <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
-                Biraz uzun sürüyor, birazdan hazır.
-              </ThemedText>
-            )}
-          </Animated.View>
-        </View>
+                ))}
+              </View>
+              {slow && (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
+                  Biraz uzun sürüyor, birazdan hazır.
+                </ThemedText>
+              )}
+            </Animated.View>
+          </ScrollView>
+        )}
         {celebration}
       </ThemedView>
     );
@@ -433,15 +473,26 @@ export default function RoadmapQuestionsScreen() {
           style={styles.flex}
           contentContainerStyle={[styles.content, { padding: gutter, paddingBottom: Spacing.four }]}>
           <View style={styles.inner}>
-            {/* Gösterge satırı: yeni akışta 3 duraklı gösterge + "Soru n / 3"; mevcut kullanıcı akışında yalnız yazı */}
-            <View style={[styles.indicatorRow, { justifyContent: roadmapId ? 'flex-start' : 'space-between' }]}>
-              {!roadmapId && <StepIndicator current={2} />}
+            {/* Sayaç + 3 parçalı çubuk. Bu SİHİRBAZIN ilerlemesidir (kaçıncı sorudasın); yol haritası
+                ilerlemesi DEĞİL. Çubuk süstür, ekran okuyucu yalnız "Soru n / 3" yazısını okur. */}
+            <View style={styles.indicatorRow}>
               <ThemedText
                 type="eyebrow"
                 themeColor="textSecondary"
-                accessibilityLabel={`Soru ${step + 1} / 3`}>
-                {`Soru ${step + 1} / 3`}
+                accessibilityLabel={`Soru ${step + 1} / ${QUESTIONS.length}`}>
+                {`Soru ${step + 1} / ${QUESTIONS.length}`}
               </ThemedText>
+              <View
+                accessibilityElementsHidden
+                importantForAccessibility="no-hide-descendants"
+                style={styles.segments}>
+                {QUESTIONS.map((q, i) => (
+                  <View
+                    key={q.key}
+                    style={[styles.seg, { backgroundColor: i <= step ? theme.accent : theme.backgroundSelected }]}
+                  />
+                ))}
+              </View>
             </View>
 
             {/* Bağlam çipleri (dokunulmaz): hangi konu ve seviye için cevap veriyorsun */}
@@ -472,6 +523,9 @@ export default function RoadmapQuestionsScreen() {
             )}
 
             {/* key={step}: soru değişince blok yeniden belirir (ileri sağdan, geri soldan) */}
+            {/* Dar ekranda alt çubuk dolmasın diye hata kutusu burada, sorunun üstünde durur */}
+            {error !== null && !roomyFooter && <Banner tone="warning">{error}</Banner>}
+
             <Animated.View
               key={step}
               entering={
@@ -520,34 +574,31 @@ export default function RoadmapQuestionsScreen() {
             styles.footer,
             { paddingHorizontal: gutter, borderTopColor: theme.border, backgroundColor: theme.background },
           ]}>
-          {error !== null && <Banner tone="warning">{error}</Banner>}
+          {error !== null && roomyFooter && <Banner tone="warning">{error}</Banner>}
           <Animated.View style={popStyle}>
             <Button
               label={primaryLabel}
               onPress={handlePrimary}
               disabled={primaryDisabled}
-              accessibilityHint={primaryDisabled ? 'Önce bir seçenek işaretle' : undefined}
+              accessibilityHint={primaryDisabled && !notReady ? 'Önce bir seçenek işaretle' : undefined}
             />
           </Animated.View>
-          <View style={styles.secondaryRow}>
+          {/* Soruları atla: ana butondan UZAK durur (yanlışlıkla basılmasın). Sorular arası geri,
+              üst çubuktaki ‹ ve Android geri tuşuyla yapılır; ayrı "Geri" düğmesi yok. */}
+          <View style={styles.skipBlock}>
             <Button
               variant="text"
-              icon="‹"
-              label="Geri"
-              onPress={() => (step === 0 ? router.back() : goBackOneQuestion())}
-            />
-            <Button
-              variant="text"
-              label="Önerilenlerle oluştur"
-              accessibilityHint="3-5 saat, merak ve gelişim, karışık tarz ile oluşturur"
+              label="Soruları atla"
+              disabled={notReady}
+              accessibilityHint={`Önerilen değerlerle oluşturur: ${describeDefaults()}`}
               onPress={() => save(fillWithDefaults())}
             />
+            {roomyFooter && (
+              <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
+                {note}
+              </ThemedText>
+            )}
           </View>
-          {roomyFooter && (
-            <ThemedText type="small" themeColor="textSecondary" style={styles.centerText}>
-              {note}
-            </ThemedText>
-          )}
         </View>
       </SafeAreaView>
     </ThemedView>
@@ -559,7 +610,9 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { alignItems: 'center' },
   inner: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
-  indicatorRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.two },
+  indicatorRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  segments: { flex: 1, flexDirection: 'row', gap: Spacing.two },
+  seg: { flex: 1, height: 6, borderRadius: 3 },
   contextRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   topicChip: {
     flexDirection: 'row',
@@ -576,20 +629,15 @@ const styles = StyleSheet.create({
   questionBlock: { gap: Spacing.three },
   titles: { gap: Spacing.one },
   options: { gap: Spacing.three },
-  footer: { gap: Spacing.two, paddingVertical: Spacing.three, borderTopWidth: 2 },
-  secondaryRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
+  footer: { gap: Spacing.three, paddingVertical: Spacing.three, borderTopWidth: 2 },
+  skipBlock: { alignItems: 'center', minHeight: MinTouch },
   headerBack: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   headerBackText: { fontSize: 32, lineHeight: 36, fontWeight: '900' },
   problem: { flex: 1, justifyContent: 'center', gap: Spacing.three },
-  preparing: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  preparing: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
   preparingInner: { alignItems: 'center', gap: Spacing.four, maxWidth: 360, width: '100%' },
-  preparingSub: { maxWidth: 300 },
+  lines: { gap: Spacing.one, alignItems: 'center' },
   center: { alignItems: 'center', gap: Spacing.two },
   centerText: { textAlign: 'center' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: Spacing.two },
+  centerSelf: { alignSelf: 'center' },
 });

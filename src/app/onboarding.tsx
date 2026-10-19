@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
@@ -73,6 +73,8 @@ export default function OnboardingScreen() {
 
   return (
     <ThemedView style={styles.container}>
+      {/* Üst başlık adıma göre değişir: konu seçerken "Konunu seç", seviye adımında "Seviyeni seç" */}
+      <Stack.Screen options={{ title: isLeaf ? 'Seviyeni seç' : 'Konunu seç' }} />
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <ScrollView
           style={styles.flex}

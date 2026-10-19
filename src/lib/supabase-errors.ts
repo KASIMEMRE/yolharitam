@@ -14,6 +14,8 @@ const SCHEMA_CODES = ['PGRST202', 'PGRST204', 'PGRST205', '42P01', '42703', '428
 
 export function classifyError(error: DbError): DbErrorKind {
   const code = error?.code;
+  // Zaman aşımında (AbortController) supabase-js "AbortError: …" mesajıyla döner: ağ sorunu sayılır.
+  if (/^AbortError/.test(error?.message ?? '')) return 'network';
   if (code === undefined) return 'other';
   if (SCHEMA_CODES.includes(code)) return 'schema';
   // 23505 = benzersizlik kısıtı ihlali: aynı yol haritası için adımlar zaten var.

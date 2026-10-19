@@ -16,7 +16,7 @@ import { useTheme } from '@/hooks/use-theme';
 //  - primary: ana eylem (yeşil, "3D" alt kenarlı)
 //  - secondary: ikincil eylem (kart rengi, kenarlıklı)
 //  - quiet: arka planı olmayan sessiz eylem (örn. "Çıkış yap"; yıkıcı eylem rengi coralInk)
-//  - text: sade metin eylemi (örn. "Geri", "Önerilenlerle oluştur"); yeşil yazı, zemin yok, 44px dokunma alanı
+//  - text: sade metin eylemi (örn. "Soruları atla"); yeşil yazı, zemin yok, 44px dokunma alanı
 // "3D" his: üstteki yüz, basılınca alt kenar plakasının üstüne 3px iner; bırakınca yaylanarak döner.
 type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   label: string;

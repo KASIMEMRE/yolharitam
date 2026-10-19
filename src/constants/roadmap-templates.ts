@@ -9,8 +9,9 @@
 // için fonksiyon okumak yerine tabloya bakmak yeterli (örn. çarpanlar HOURS_RULES'ta).
 //
 // DİL KURALI: Konu başlığına ASLA ek getirilmez. Türkçede ek ünlü uyumuna bağlıdır ("LLM & Prompt'a",
-// "SQL & Veritabanları'nı" gibi ekleri doğru kuramayız). Bu yüzden başlıklar yalnız
-// `{konu}: …`, `{konu} için …` ya da `{konu} ile …` kalıplarını kullanır.
+// "SQL & Veritabanları'nı" gibi ekleri doğru kuramayız). Bu yüzden konu adı yalnız
+// `{konu} için …` kalıbıyla, anlam gerektiren adımlarda geçer. Diğer başlıklar eylemle başlar
+// ("Gerçek örnekleri incele"): konu adı zaten ekranın üstündeki kartta yazılı, her satırda tekrarlamaya gerek yok.
 
 export type WeeklyHoursId = '1-2' | '3-5' | '6-10' | '10+';
 export type GoalId = 'job' | 'project' | 'exam' | 'curiosity';
@@ -55,13 +56,6 @@ export const HOURS_RULES: Record<WeeklyHoursId, { weekly: number; multiplier: nu
   '10+': { weekly: 12, multiplier: 1.5 },
 };
 
-// --- KURAL 4: kaynak türüne göre tek cümlelik öneri (marka ya da link YOK, yalnız tür) ------
-const RESOURCE_HINT: Record<ResourceType, string> = {
-  video: 'Önerilen kaynak: kısa bir video ders serisi; izlerken sen de dene.',
-  reading: 'Önerilen kaynak: resmi dokümantasyon ya da güncel bir rehber.',
-  practice: 'Önerilen yöntem: yaparak öğren ve sonunda küçük bir çıktı ortaya koy.',
-};
-
 // "Karışık" tarzda Temeller ve Pratik adımları bu sırayla döner.
 const MIXED_CYCLE: ResourceType[] = ['video', 'reading', 'practice'];
 
@@ -80,7 +74,7 @@ type StepTemplate = {
 const FOUNDATION: Record<LevelId, StepTemplate[]> = {
   beginner: [
     {
-      title: (t) => `${t}: büyük resim`,
+      title: () => 'Büyük resmi öğren',
       description: 'Konunun ne işe yaradığını, temel kavramlarını ve kullanıldığı yerleri öğren.',
       baseHours: 3,
     },
@@ -90,14 +84,14 @@ const FOUNDATION: Record<LevelId, StepTemplate[]> = {
       baseHours: 3,
     },
     {
-      title: (t) => `${t}: temel yapı taşları`,
+      title: () => 'Temel yapı taşlarını öğren',
       description: 'En sık kullanılan temel kavramları tek tek öğren, her biri için küçük bir örnek yap.',
       baseHours: 3,
     },
   ],
   intermediate: [
     {
-      title: (t) => `${t}: temelleri gözden geçir`,
+      title: () => 'Temelleri gözden geçir',
       description:
         'Bildiklerini hızlıca sına ve eksik kalan kavramları listele; sonraki adımlar bu listeye dayanır.',
       baseHours: 3,
@@ -105,7 +99,7 @@ const FOUNDATION: Record<LevelId, StepTemplate[]> = {
   ],
   advanced: [
     {
-      title: (t) => `${t}: uzmanlık haritanı çıkar`,
+      title: () => 'Uzmanlık haritanı çıkar',
       description: 'Neyi iyi, neyi yarım bildiğini yaz ve derinleşeceğin alanları seç.',
       baseHours: 3,
     },
@@ -113,27 +107,27 @@ const FOUNDATION: Record<LevelId, StepTemplate[]> = {
 };
 
 const PRACTICE_EXERCISES: StepTemplate = {
-  title: (t) => `${t}: küçük alıştırmalar`,
+  title: () => 'Küçük alıştırmalar yap',
   description: 'Öğrendiklerini kısa, tek amaçlı alıştırmalarla pekiştir.',
   baseHours: 4,
 };
 const PRACTICE_REAL_EXAMPLES: StepTemplate = {
-  title: (t) => `${t}: gerçek örnekleri incele`,
+  title: () => 'Gerçek örnekleri incele',
   description: 'Gerçek bir örneği incele ve sıfırdan kendin yeniden kurmayı dene.',
   baseHours: 4,
 };
 const PRACTICE_ADVANCED_TECHNIQUES: StepTemplate = {
-  title: (t) => `${t}: ileri teknikler ve sık hatalar`,
+  title: () => 'İleri teknikleri ve sık hataları öğren',
   description: 'Sık yapılan hataları ve daha ileri yöntemleri öğren; önceki işlerini bunlarla iyileştir.',
   baseHours: 4,
 };
 const PRACTICE_QUALITY: StepTemplate = {
-  title: (t) => `${t}: kalite ve dayanıklılık`,
+  title: () => 'Kalite ve dayanıklılığı artır',
   description: 'İşini ölç ve test et, zayıf yerlerini düzelt.',
   baseHours: 4,
 };
 const PRACTICE_HARD_PROBLEM: StepTemplate = {
-  title: (t) => `${t}: zor bir problem çöz`,
+  title: () => 'Zor bir problem çöz',
   description: 'Seni zorlayan gerçek bir problemi seç ve baştan sona çöz.',
   baseHours: 4,
 };
@@ -256,7 +250,7 @@ export function generateTemplateSteps(input: RoadmapInput): GeneratedStep[] {
     return {
       position: index + 1,
       title: template.title(topicTitle),
-      description: `${template.description} ${RESOURCE_HINT[resourceType]}`,
+      description: template.description,
       // Math.round pozitif sayıda .5'i yukarı yuvarlar ("yarımlar yukarı" kuralı). En az 1 saat.
       estimatedHours: Math.max(1, Math.round(template.baseHours * multiplier)),
       phase,

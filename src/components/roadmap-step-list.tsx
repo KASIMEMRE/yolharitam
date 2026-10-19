@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import type { Phase, ResourceType } from '@/constants/roadmap-templates';
 import { Border, Radius, Spacing } from '@/constants/theme';
-import { PHASE_STYLE, RESOURCE_STYLE } from '@/constants/visuals';
+import { PHASE_STYLE, RESOURCE_STYLE, RESOURCE_SUMMARY } from '@/constants/visuals';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 
 // Yol haritası adımlarının DİKEY listesi: solda rota rayı (numaralı duraklar + noktalar), sağda düz kartlar.
@@ -26,7 +26,7 @@ export type StepItem = {
 
 const RAIL = 48; // sol sütun genişliği
 const STOP = 40; // durak (numara dairesi) boyutu
-const DOT_PITCH = 14; // rotadaki bir nokta + aralığı (8 + 6)
+const DOT_PITCH = 14; // rotadaki bir nokta + aralığı (5 + 9)
 
 function phaseOf(value: string) {
   return PHASE_STYLE[value as Phase];
@@ -38,9 +38,23 @@ function resourceOf(value: string) {
 export function RoadmapStepList({ steps }: { steps: StepItem[] }) {
   const reduceMotion = useReducedMotion();
   const sorted = [...steps].sort((a, b) => a.position - b.position);
+  // Tüm adımlar aynı kaynak türündeyse her karta aynı çipi basmak gürültü olur: tür listenin başında
+  // BİR KEZ söylenir. Karışıksa (ya da tür bilinmiyorsa) çipler kartlarda kalır.
+  const firstType = sorted[0]?.resource_type;
+  const uniformType =
+    firstType !== undefined &&
+    resourceOf(firstType) !== undefined &&
+    sorted.every((s) => s.resource_type === firstType)
+      ? (firstType as ResourceType)
+      : null;
 
   return (
     <View role="list">
+      {uniformType && (
+        <ThemedText type="small" themeColor="textSecondary" style={styles.uniform}>
+          {RESOURCE_SUMMARY[uniformType]}
+        </ThemedText>
+      )}
       {sorted.map((step, index) => {
         // Evre başlığı yalnız evre DEĞİŞİNCE çizilir (ardışık aynı evre tek başlık altında).
         const showHeader = step.phase !== sorted[index - 1]?.phase && phaseOf(step.phase) !== undefined;
@@ -53,7 +67,12 @@ export function RoadmapStepList({ steps }: { steps: StepItem[] }) {
                   ? FadeIn.duration(150)
                   : FadeInDown.duration(280).springify().damping(16).delay(Math.min(index, 4) * 60)
               }>
-              <StepRow step={step} total={sorted.length} last={index === sorted.length - 1} />
+              <StepRow
+                step={step}
+                total={sorted.length}
+                last={index === sorted.length - 1}
+                showResource={uniformType === null}
+              />
             </Animated.View>
           </View>
         );
@@ -102,7 +121,17 @@ function PhaseHeader({ phase, first }: { phase: string; first: boolean }) {
   );
 }
 
-function StepRow({ step, total, last }: { step: StepItem; total: number; last: boolean }) {
+function StepRow({
+  step,
+  total,
+  last,
+  showResource,
+}: {
+  step: StepItem;
+  total: number;
+  last: boolean;
+  showResource: boolean;
+}) {
   const theme = useTheme();
   const shadow = useShadow();
   const isFirst = step.position === 1;
@@ -119,20 +148,20 @@ function StepRow({ step, total, last }: { step: StepItem; total: number; last: b
   return (
     <View style={styles.row}>
       <View style={styles.rail} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {/* Durak: 1. adım sarı (başlangıç işareti), diğerleri nötr */}
+        {/* Durak: 1. adım sarı (başlangıç işareti), son adım 🏁 (varış), diğerleri nötr numara */}
         <View
           style={[
             styles.stop,
             isFirst
               ? { backgroundColor: theme.marker, borderColor: theme.markerEdge }
-              : { backgroundColor: theme.card, borderColor: theme.borderStrong },
+              : { backgroundColor: theme.card, borderColor: last ? theme.accent : theme.borderStrong },
           ]}>
           <ThemedText
             type="chip"
             allowFontScaling={false}
             themeColor={isFirst ? 'onMarker' : 'text'}
             style={styles.stopText}>
-            {step.position}
+            {last && !isFirst ? '🏁' : step.position}
           </ThemedText>
         </View>
         {!last && <RailDots />}
@@ -145,7 +174,7 @@ function StepRow({ step, total, last }: { step: StepItem; total: number; last: b
           accessibilityLabel={label}
           style={[
             styles.card,
-            { backgroundColor: theme.card, borderColor: isFirst ? theme.markerEdge : theme.border },
+            { backgroundColor: theme.card, borderColor: isFirst ? theme.markerEdge : last ? theme.accent : theme.border },
             shadow('card'),
           ]}>
           <View style={styles.cardInner} importantForAccessibility="no-hide-descendants">
@@ -156,7 +185,7 @@ function StepRow({ step, total, last }: { step: StepItem; total: number; last: b
             </ThemedText>
             <View style={styles.chips}>
               <StatusChip tone="neutral" emoji="⏱" label={hoursText} />
-              {resource && <StatusChip tone="neutral" emoji={resource.emoji} label={resource.label} />}
+              {resource && showResource && <StatusChip tone="neutral" emoji={resource.emoji} label={resource.label} />}
             </View>
           </View>
         </View>
@@ -207,8 +236,10 @@ const styles = StyleSheet.create({
   },
   stopText: { fontSize: 16, lineHeight: 20, fontWeight: 900 },
   // flex:1 + overflow hidden: noktalar satırın kalan boşluğunu doldurur ama satırı UZATMAZ
-  dots: { flex: 1, minHeight: 0, overflow: 'hidden', alignItems: 'center', gap: 6, paddingTop: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
+  // Nokta 5 + aralık 9 = 14: DOT_PITCH ile aynı kalır, rota daha ince ve hafif görünür
+  dots: { flex: 1, minHeight: 0, overflow: 'hidden', alignItems: 'center', gap: 9, paddingTop: 6 },
+  dot: { width: 5, height: 5, borderRadius: 2.5 },
+  uniform: { marginBottom: Spacing.three },
   phaseHeader: {
     flex: 1,
     minWidth: 0,
