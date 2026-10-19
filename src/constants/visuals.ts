@@ -1,3 +1,4 @@
+import type { Phase, ResourceType } from '@/constants/roadmap-templates';
 import type { ThemeColor } from '@/constants/theme';
 import { getTopicChain } from '@/constants/topics';
 
@@ -25,6 +26,21 @@ export const LEVEL_STYLE: Record<string, { emoji: string }> = {
   beginner: { emoji: '🌱' },
   intermediate: { emoji: '🧭' },
   advanced: { emoji: '🏔️' },
+};
+
+// Adım evreleri (Temeller / Pratik / Hedef) ve kaynak türleri (Video / Okuma / Uygulama).
+// Anahtarlar roadmap-templates.ts'teki Phase ve ResourceType ile birebir aynı. Renk ailesi YOK:
+// bu etiketler nötr kalır, renk yalnız kategoriye aittir.
+export const PHASE_STYLE: Record<Phase, { label: string; emoji: string }> = {
+  foundation: { label: 'Temeller', emoji: '🧱' },
+  practice: { label: 'Pratik', emoji: '🔁' },
+  goal: { label: 'Hedef', emoji: '🎯' },
+};
+
+export const RESOURCE_STYLE: Record<ResourceType, { label: string; emoji: string }> = {
+  video: { label: 'Video', emoji: '🎬' },
+  reading: { label: 'Okuma', emoji: '📖' },
+  practice: { label: 'Uygulama', emoji: '🛠️' },
 };
 
 // Kategori id'leri topics.ts'teki kök id'lerle birebir aynı.
