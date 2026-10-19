@@ -1,5 +1,5 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   Keyboard,
@@ -37,6 +37,9 @@ const RESEND_SECONDS = 60; // Supabase'in kendi "60 saniyede bir" kuralıyla uyu
 const MIN_DIGITS = 6; // Panelde kod uzunluğu 6-10 arası ayarlanabilir; bu yüzden aralık kontrol ediyoruz
 const MAX_DIGITS = 10;
 
+// Bu ekranda 1. durak "Hesabını doğrula" olarak görünür; ilerleme iddiası yok (sahte ilerleme olmasın).
+const STOPS = [{ ...AUTH_STEPS[0], label: 'Hesabını doğrula' }, ...AUTH_STEPS.slice(1)];
+
 export default function VerifyEmailScreen() {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
@@ -56,30 +59,36 @@ export default function VerifyEmailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [errorIsCode, setErrorIsCode] = useState(false); // yalnız "kod yanlış" ise alan kırmızı olur
   const [info, setInfo] = useState<string | null>(null);
-  // Girişten geldiyse kullanıcı kodu bulamıyor olabilir: sayaç yok, "Tekrar gönder" hemen aktif.
-  const [secondsLeft, setSecondsLeft] = useState(fromLogin ? 0 : RESEND_SECONDS);
+  // GERİ SAYIM: saniyeyi SAYMAK yerine bitiş zamanını saklarız. iOS uygulama arka plandayken
+  // zamanlayıcıları durdurur; sayarsak geri dönünce sayaç eski değerde takılı kalır. Bitiş zamanı
+  // ise gerçek saate bağlı olduğundan her zaman doğru kalır.
+  // Girişten geldiyse kullanıcı kodu bulamıyor olabilir: bekleme yok, "Tekrar gönder" hemen aktif.
+  const [resendAt, setResendAt] = useState(fromLogin ? 0 : Date.now() + RESEND_SECONDS * 1000);
+  const [now, setNow] = useState(Date.now());
+  const secondsLeft = Math.max(0, Math.ceil((resendAt - now) / 1000));
   // null = henüz bilmiyoruz. Ekran okuyucu açıksa alana otomatik odaklanmayız (başlığı duymadan atlamasın).
   const [screenReader, setScreenReader] = useState<boolean | null>(null);
 
   const canVerify = code.length >= MIN_DIGITS && code.length <= MAX_DIGITS && !busy && !resending;
 
   useEffect(() => {
-    AccessibilityInfo.isScreenReaderEnabled().then(setScreenReader);
+    AccessibilityInfo.isScreenReaderEnabled()
+      .then(setScreenReader)
+      .catch(() => setScreenReader(false));
   }, []);
 
-  // GERİ SAYIM: saniyede bir kendini yeniden kuran tek seferlik zamanlayıcı.
-  // - Bağımlılık [secondsLeft]: sayı her değiştiğinde efekt yeniden çalışır ve bir sonraki saniyeyi kurar.
-  // - return () => clearTimeout(id) temizliği şart: kullanıcı ekrandan çıkarsa (geri tuşu ya da doğrulama
-  //   sonrası ekran düşerse) bekleyen zamanlayıcı kapanmazsa, ekran yok olduktan sonra setState çağırır.
+  // Her saniye `now`'u güncelleyen tek seferlik zamanlayıcı. Bağımlılık [secondsLeft, resendAt]:
+  // her tikte efekt yeniden çalışıp bir sonrakini kurar. clearTimeout temizliği şart: ekran kapanırsa
+  // (geri tuşu ya da doğrulama sonrası) bekleyen zamanlayıcı ekran yok olduktan sonra çalışmasın.
   useEffect(() => {
     if (secondsLeft <= 0) return;
     const id = setTimeout(() => {
       // Sayaç sıfıra inerken ekran okuyucuya TEK SEFER haber ver (her saniye anons etmek rahatsız eder).
       if (secondsLeft === 1) AccessibilityInfo.announceForAccessibility('Kodu tekrar gönderebilirsin');
-      setSecondsLeft(secondsLeft - 1);
+      setNow(Date.now());
     }, 1000);
     return () => clearTimeout(id);
-  }, [secondsLeft]);
+  }, [secondsLeft, resendAt]);
 
   // Yanlış kodda alan iki kez hafifçe titrer (Hareketi Azalt açıksa titremez).
   const shake = useSharedValue(0);
@@ -110,9 +119,6 @@ export default function VerifyEmailScreen() {
     return () => sub.remove();
   }, [reduceMotion, screenReader]);
 
-  // Bu ekranda 1. durak "Hesabını doğrula" olarak görünür; ilerleme iddiası yok (sahte ilerleme olmasın).
-  const stops = useMemo(() => [{ ...AUTH_STEPS[0], emoji: '🔑', label: 'Hesabını doğrula' }, ...AUTH_STEPS.slice(1)], []);
-
   // E-posta parametresi yoksa (örn. ekran doğrudan açıldı) çökmek yerine girişe dön.
   // Bu satır tüm hook'lardan SONRA durmalı: hook'ları koşullu çağırmak React kurallarına aykırıdır.
   if (!email) return <Redirect href="/login" />;
@@ -123,20 +129,22 @@ export default function VerifyEmailScreen() {
     setError(null);
     setInfo(null);
 
-    const { error } = await supabase.auth.verifyOtp({ email, token: code, type: 'signup' });
+    const { data, error } = await supabase.auth.verifyOtp({ email, token: code, type: 'signup' });
     if (error) {
       setError(toTurkish(error, 'verify'));
       const isCodeError = authErrorKind(error) === 'code';
       setErrorIsCode(isCodeError);
       if (isCodeError) playShake();
       setBusy(false); // kod alanı korunur, kullanıcı düzeltip tekrar deneyebilir
+    } else if (!data.session) {
+      // Beklenmedik: hata yok ama oturum da yok. Kullanıcı çıkmaza girmesin, şifreyle girmeye yönlendir.
+      setError('Doğrulandı ama giriş tamamlanamadı. Giriş ekranından şifrenle gir.');
+      setBusy(false);
     }
-    // BAŞARI DALINDA HİÇBİR ŞEY YAPMIYORUZ: ne router.replace ne setState.
-    // verifyOtp oturumu kaydeder -> auth-context onAuthStateChange ile session'ı günceller ->
-    // _layout'taki Stack.Protected (guard={!session}) bu ekranı kendiliğinden kaldırıp onboarding'i açar.
-    // Yönlendirmeyi elle yazarsak oturumla çelişebilir; ayrıca ekran zaten kapanacağı için
-    // burada setBusy çağırmak "unmount olmuş bileşeni güncelleme" uyarısına yol açardı.
-    // Bu yüzden buton, ekran kapanana kadar yükleniyor halinde kalır.
+    // BAŞARIDA ne router.replace ne setBusy(false): verifyOtp oturumu kaydeder -> auth-context
+    // onAuthStateChange ile session'ı günceller -> _layout'taki Stack.Protected bu ekranı kendiliğinden
+    // kapatıp onboarding'i açar. Yönlendirmeyi elle yazarsak oturumla çelişebilir. busy'yi sıfırlamıyoruz
+    // çünkü ekran kapanana kadar buton bir an aktif görünüp çift basışa izin vermesin.
   }
 
   async function handleResend() {
@@ -149,11 +157,16 @@ export default function VerifyEmailScreen() {
     if (error) {
       setError(toTurkish(error, 'resend'));
       setErrorIsCode(false);
+      // Bekletme yalnız limit hatasında: ağ/diğer hatada istek hiç gitmemiş olabilir, kullanıcı hemen yeniden denesin.
+      if (authErrorKind(error) === 'rateLimit') setResendAt(Date.now() + RESEND_SECONDS * 1000);
     } else {
-      setInfo('Yeni kod gönderildi. En son gelen kodu kullan.');
+      const message = 'Yeni kod gönderildi. En son gelen kodu kullan.';
+      setInfo(message);
+      // iOS'ta Banner'ın live region'ı okunmayabilir; elle duyuruyoruz.
+      AccessibilityInfo.announceForAccessibility(message);
+      setResendAt(Date.now() + RESEND_SECONDS * 1000);
     }
-    // Başarıda da hatada da 60 sn bekletiriz: art arda basıp e-posta kotasını bitirmeyi önler.
-    setSecondsLeft(RESEND_SECONDS);
+    setNow(Date.now());
     setResending(false);
   }
 
@@ -198,20 +211,21 @@ export default function VerifyEmailScreen() {
                   {email}
                 </ThemedText>
               </View>
-              {!short && <TrailMap stops={stops} current={0} variant="horizontal" showDone={false} />}
+              {!short && <TrailMap stops={STOPS} current={0} variant="horizontal" showDone={false} />}
             </View>
 
             <View
               style={[styles.form, { padding: gutter }]}
               onLayout={(e) => (formY.current = e.nativeEvent.layout.y)}>
-              {fromLogin && (
+              {fromLogin && !error && !info && (
                 <Banner tone="info">
                   Bu hesabı henüz doğrulamadın. Daha önce gönderilen kodu gir ya da yeni kod iste.
                 </Banner>
               )}
 
               {/* key: ekran okuyucu durumu öğrenilince alan bir kez yeniden kurulur ki autoFocus doğru uygulansın
-                  (autoFocus yalnız ilk kurulumda işe yarar). Bu an kullanıcı henüz bir şey yazmamıştır. */}
+                  (autoFocus yalnız ilk kurulumda işe yarar). Bedeli: bir karelik yeniden kurulma ve odak kaybı;
+                  kabul ettik çünkü kullanıcı o an henüz yazmamıştır ve alternatifi ref yönetimi daha karmaşık. */}
               <Animated.View
                 key={String(screenReader === false)}
                 style={shakeStyle}
@@ -234,10 +248,11 @@ export default function VerifyEmailScreen() {
                   autoCorrect={false}
                   autoFocus={screenReader === false}
                   returnKeyType="done"
+                  // iOS number-pad'de Return tuşu yok; bu yalnız Android/donanım klavyesi için. Asıl yol "Doğrula" butonu.
                   onSubmitEditing={() => canVerify && handleVerify()}
                   accessibilityHint="E-postana gelen kodu yaz"
                   maxFontSizeMultiplier={1.3}
-                  style={[styles.codeInput, { fontFamily: Fonts?.rounded }]}
+                  style={[styles.codeInput, code.length === 0 && styles.codeEmpty, { fontFamily: Fonts?.rounded }]}
                 />
               </Animated.View>
 
@@ -259,6 +274,11 @@ export default function VerifyEmailScreen() {
                     {resendHint}
                   </ThemedText>
                 </View>
+                {/* Hesap numaralandırmayı önlemek için kayıtlı e-posta da bu ekrana gelir (login.tsx);
+                    kod gelmeyen gerçek hesap sahibi buradan giriş yapmaya yönlenir. */}
+                <ThemedText type="small" themeColor="textSecondary" style={styles.hintText}>
+                  Kod birkaç dakika içinde gelmezse bu adresle zaten hesabın olabilir; giriş yapmayı dene.
+                </ThemedText>
               </View>
 
               {/* "E-postayı değiştir": yıkıcı eylem görünümlü quiet Button yerine sakin bir metin bağlantısı.
@@ -269,7 +289,7 @@ export default function VerifyEmailScreen() {
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel="E-postayı değiştir"
-                accessibilityHint="Kayıt ekranına döner"
+                accessibilityHint="Önceki ekrana döner"
                 style={styles.link}>
                 <ThemedText
                   type="smallBold"
@@ -317,7 +337,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
   },
   emailEmoji: { fontSize: 18, lineHeight: 22 },
-  emailText: { flexShrink: 1 }, // uzun adres kutu içinde alt satıra sarılır
+  emailText: { flexShrink: 1, minWidth: 0 }, // uzun adres kutu içinde alt satıra sarılır
   form: { gap: Spacing.four },
   // Kod tek bir "değer" olduğu için ortalı ve geniş harf aralıklı. paddingLeft, letterSpacing'in
   // son rakamdan sonra bıraktığı boşluğu dengeler (görsel ortalama).
@@ -327,8 +347,12 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: Spacing.two,
     paddingLeft: Spacing.two,
+    paddingRight: Spacing.two,
+    minWidth: 0,
     fontVariant: ['tabular-nums'],
   },
+  // Boşken placeholder "Kod" küçük ve normal yazı; rakamlar gelince büyük stil devreye girer
+  codeEmpty: { fontSize: 17, fontWeight: '600', letterSpacing: 0 },
   resendGroup: { gap: Spacing.two },
   hintSlot: { minHeight: 40 }, // 2 satırlık yer ayrılır: metin değişince yerleşim zıplamaz
   hintText: { textAlign: 'center', fontVariant: ['tabular-nums'] },

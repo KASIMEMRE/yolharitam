@@ -21,7 +21,7 @@ import { ThemedView } from '@/components/themed-view';
 import { AUTH_STEPS } from '@/constants/auth-steps';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { ALREADY_REGISTERED_MESSAGE, isEmailNotConfirmed, toTurkish } from '@/lib/auth-errors';
+import { isEmailNotConfirmed, toTurkish } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
 type Mode = 'login' | 'signup';
@@ -79,13 +79,13 @@ export default function LoginScreen() {
       const { data, error } = await supabase.auth.signUp(credentials);
       if (error) {
         setError(toTurkish(error, 'signup'));
-      } else if (data.user?.identities?.length === 0) {
-        // Güvenlik deseni: "E-posta onayı" açıkken, zaten doğrulanmış bir e-postayla kayıt denenirse
-        // Supabase hesabın varlığını sızdırmamak için hata DÖNMEZ; sahte bir kullanıcı döner ve
-        // `identities` boş dizi olur, e-posta gönderilmez. Bunu yakalamazsak kullanıcı hiç gelmeyecek
-        // bir kodu bekler. Bu kontrol `!data.session`ten ÖNCE olmalı (ikisinde de session yoktur).
-        setError(ALREADY_REGISTERED_MESSAGE);
       } else if (!data.session) {
+        // KULLANICI VARLIĞINI SIZDIRMAMA: "Confirm email" açıkken, zaten doğrulanmış bir e-postayla kayıt
+        // denenirse Supabase hata dönmez; sahte kullanıcı döner (`identities` boş dizi) ve e-posta gitmez.
+        // Bunu "bu e-posta kayıtlı" diye açıkça söylersek herkes bir e-postanın üye olup olmadığını
+        // öğrenebilir (hesap numaralandırma). Bu yüzden yeni kayıtla AYNI yola gidiyoruz: iki durum
+        // dışarıdan ayırt edilemez. Kod ekranı da "kod gelmezse zaten hesabın olabilir" diyerek
+        // gerçek sahibini yönlendirir. (`identities` kontrolüne bu yüzden artık gerek yok.)
         goToVerify('signup', credentials.email);
       }
       // data.session doluysa (panelde "Confirm email" kapalı) Stack.Protected içeri alır.
@@ -253,6 +253,6 @@ const styles = StyleSheet.create({
     borderWidth: Border.thick,
     borderRadius: Radius.md - Spacing.one,
   },
-  showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
+  showButton: { minHeight: 44, minWidth: 44, flexShrink: 0, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });

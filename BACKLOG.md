@@ -67,6 +67,10 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Tüm ekranlar (karşılama, giriş, onboarding, Yol Haritam, Gelişmeler, Profil, sekmeler) yeni tasarım sistemiyle yenilendi.
 - Sahte veri yok: ilerleme, haber ve başarım alanları "Yakında" olarak kilitli.
 
+### OTP-01 · E-posta doğrulaması kodla
+- Kayıttan sonra e-postaya gelen kod `src/app/verify-email.tsx` ekranında girilir (`verifyOtp`); "Tekrar gönder" 60 sn geri sayımlıdır.
+- Girişte "Email not confirmed" hatası kod ekranına yönlendirir; hata çevirileri `src/lib/auth-errors.ts` içinde ortaklaştı.
+
 ## Öneriler (ekipten)
 
 Sıraya konmadı; önceliği proje sahibi verir.
@@ -78,7 +82,6 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Şablon kalıntılarını temizle**: kullanılmayan `external-link.tsx`, `hint-row.tsx`, `AnimatedIcon`, `assets/images/tabIcons/*`; açılış ekranı (`AnimatedSplashOverlay`) hâlâ Expo logosu.
 - **Alt kategori ikonları**: alt kategori listesinde tüm kartlar kategorinin emojisini taşıyor; alt kategoriye özel emoji eklenebilir.
 - **"Yolculuk başlıyor" çipi**: Y-04/Y-05 ile gerçek adımlar gelince kaldırılmalı/güncellenmeli.
-
-### OTP-01 · E-posta doğrulaması kodla
-- Kayıttan sonra e-postaya gelen kod `src/app/verify-email.tsx` ekranında girilir (`verifyOtp`); "Tekrar gönder" 60 sn geri sayımlıdır.
-- Girişte "Email not confirmed" hatası kod ekranına yönlendirir; hata çevirileri `src/lib/auth-errors.ts` içinde ortaklaştı.
+- **Şifremi unuttum akışı**: OTP altyapısı hazır (`verifyOtp` type 'recovery'). Ortak `AuthScreenLayout`: login ve verify-email iskeleti tekrar ediyor.
+- **CAPTCHA ve rate limit**: kayıt/doğrulama için CAPTCHA ve Supabase rate limit ayarlarının gözden geçirilmesi.
+- **Özel SMTP**: Supabase'e özel SMTP bağlanması (varsayılan e-posta limiti çok düşük).

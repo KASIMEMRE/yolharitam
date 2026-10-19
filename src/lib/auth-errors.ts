@@ -43,9 +43,18 @@ export function toTurkish(error: AuthLikeError, context: AuthContext = 'login'):
 
   if (kind === 'code') return 'Kod hatalı ya da süresi dolmuş. Kodu kontrol et ya da yeni kod iste.';
   if (kind === 'rateLimit') {
-    return context === 'verify' || context === 'resend'
-      ? 'Çok sık kod istedin ya da e-posta gönderim sınırına ulaşıldı. Birkaç dakika bekleyip tekrar dene.'
-      : 'Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar dene.';
+    if (context === 'verify' || context === 'resend') {
+      // Doğrulamada "çok fazla deneme" ile e-posta gönderim sınırı farklı şeylerdir.
+      if (code === 'over_request_rate_limit' && context === 'verify') {
+        return 'Çok fazla deneme yaptın. Biraz bekleyip tekrar dene.';
+      }
+      // Mesajda "...only request this after 42 seconds" gibi bir süre varsa kullanıcıya söyleriz.
+      const seconds = /after (\d+) second/.exec(m)?.[1];
+      return seconds
+        ? `${seconds} saniye sonra tekrar dene.`
+        : 'Çok sık kod istedin. Bir dakika bekleyip tekrar dene.';
+    }
+    return 'Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar dene.';
   }
   if (kind === 'network') return 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';
 
@@ -53,12 +62,14 @@ export function toTurkish(error: AuthLikeError, context: AuthContext = 'login'):
     return 'E-posta veya şifre hatalı.';
   }
   if (code === 'user_already_exists' || code === 'email_exists' || m.includes('already registered')) {
-    return 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
+    return ALREADY_REGISTERED_MESSAGE;
   }
   if (code === 'email_address_invalid') return 'Bu e-posta adresi geçerli görünmüyor.';
   if (code === 'email_address_not_authorized') return 'Bu adrese şu an e-posta gönderemiyoruz.';
   if (code === 'weak_password' || m.includes('password should be at least')) {
-    return 'Şifre çok kısa. En az 6 karakter olmalı.';
+    return m.includes('at least 6') || m.includes('password should be at least')
+      ? 'Şifre çok kısa. En az 6 karakter olmalı.'
+      : 'Şifre yeterince güçlü değil. Daha uzun yap; harf, rakam ve işaret karıştır.';
   }
 
   // Tanımadığımız hata: kullanıcıya İngilizce ham mesaj göstermeyiz; geliştirici konsoldan görür.
@@ -66,8 +77,8 @@ export function toTurkish(error: AuthLikeError, context: AuthContext = 'login'):
   return 'Bir sorun oluştu. Biraz sonra tekrar dene.';
 }
 
-// Kayıtta "e-posta zaten kayıtlı" mesajı iki yerden (hata + identities kontrolü) kullanılıyor.
-export const ALREADY_REGISTERED_MESSAGE = 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
+// Yalnız toTurkish içinde kullanılır: "Confirm email" KAPALIYKEN Supabase açık `user_already_exists` hatası döner.
+const ALREADY_REGISTERED_MESSAGE = 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
 
 // "Giriş yapılamadı: e-posta doğrulanmamış" hatası mı? Bu durumda hata kutusu yerine kod ekranına gideriz.
 export function isEmailNotConfirmed(error: AuthLikeError): boolean {
