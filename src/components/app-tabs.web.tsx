@@ -6,15 +6,15 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
-import { SymbolView } from 'expo-symbols';
-import { Pressable, useColorScheme, View, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 
-import { ExternalLink } from './external-link';
 import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
 
-import { Colors, MaxContentWidth, Spacing } from '@/constants/theme';
+import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
+// Web'deki sekme çubuğu (geliştirme/önizleme için). Geniş ekranda üstte yüzen kapsül,
+// dar ekranda altta tam genişlik çubuk. Emoji kullanıyoruz: ek ikon paketi gerekmez.
 export default function AppTabs() {
   return (
     <Tabs>
@@ -22,13 +22,13 @@ export default function AppTabs() {
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="roadmap" href="/roadmap" asChild>
-            <TabButton>Yol Haritam</TabButton>
+            <TabButton emoji="🗺️">Yol Haritam</TabButton>
           </TabTrigger>
           <TabTrigger name="news" href="/news" asChild>
-            <TabButton>Gelişmeler</TabButton>
+            <TabButton emoji="📰">Gelişmeler</TabButton>
           </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
-            <TabButton>Profil</TabButton>
+            <TabButton emoji="👤">Profil</TabButton>
           </TabTrigger>
         </CustomTabList>
       </TabList>
@@ -36,83 +36,97 @@ export default function AppTabs() {
   );
 }
 
-export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+export function TabButton({
+  children,
+  isFocused,
+  emoji,
+  ...props
+}: TabTriggerSlotProps & { emoji?: string }) {
+  const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const narrow = width < 600;
+
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
-      <ThemedView
-        type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
-        style={styles.tabButtonView}>
-        <ThemedText type="small" themeColor={isFocused ? 'text' : 'textSecondary'}>
-          {children}
-        </ThemedText>
-      </ThemedView>
+    <Pressable
+      {...props}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: !!isFocused }}
+      style={[
+        styles.tab,
+        narrow && styles.tabNarrow,
+        {
+          backgroundColor: isFocused ? theme.accentSoft : 'transparent',
+          borderColor: isFocused ? theme.accent : 'transparent',
+        },
+      ]}>
+      <Text allowFontScaling={false} style={narrow ? styles.emojiNarrow : styles.emoji}>
+        {emoji}
+      </Text>
+      <ThemedText
+        type={isFocused ? 'smallBold' : 'small'}
+        themeColor={isFocused ? 'accentInk' : 'textSecondary'}
+        style={narrow && styles.labelNarrow}>
+        {children}
+      </ThemedText>
     </Pressable>
   );
 }
 
 export function CustomTabList(props: TabListProps) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const narrow = width < 600;
 
   return (
-    <View {...props} style={styles.tabListContainer}>
-      <ThemedView type="backgroundElement" style={styles.innerContainer}>
-        <ThemedText type="smallBold" style={styles.brandText}>
-          Yol Haritam
-        </ThemedText>
-
+    <View
+      {...props}
+      style={[styles.container, narrow ? styles.containerBottom : styles.containerTop]}
+      pointerEvents="box-none">
+      <View
+        style={[
+          styles.inner,
+          { backgroundColor: theme.card },
+          narrow
+            ? { borderTopWidth: Border.thick, borderTopColor: theme.border }
+            : { borderWidth: Border.thick, borderColor: theme.border, borderRadius: Radius.xl, maxWidth: MaxContentWidth },
+          narrow && styles.innerNarrow,
+        ]}>
+        {!narrow && (
+          <ThemedText type="cardTitle" style={styles.brand}>
+            🧭 Yol Haritam
+          </ThemedText>
+        )}
         {props.children}
-
-        <ExternalLink href="https://docs.expo.dev" asChild>
-          <Pressable style={styles.externalPressable}>
-            <ThemedText type="link">Docs</ThemedText>
-            <SymbolView
-              tintColor={colors.text}
-              name={{ ios: 'arrow.up.right.square', web: 'link' }}
-              size={12}
-            />
-          </Pressable>
-        </ExternalLink>
-      </ThemedView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  tabListContainer: {
-    position: 'absolute',
-    width: '100%',
-    padding: Spacing.three,
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexDirection: 'row',
-  },
-  innerContainer: {
-    paddingVertical: Spacing.two,
-    paddingHorizontal: Spacing.five,
-    borderRadius: Spacing.five,
+  container: { position: 'absolute', width: '100%', flexDirection: 'row', justifyContent: 'center' },
+  containerTop: { top: 0, padding: Spacing.three },
+  containerBottom: { bottom: 0 },
+  inner: {
     flexDirection: 'row',
     alignItems: 'center',
     flexGrow: 1,
     gap: Spacing.two,
-    maxWidth: MaxContentWidth,
-  },
-  brandText: {
-    marginRight: 'auto',
-  },
-  pressed: {
-    opacity: 0.7,
-  },
-  tabButtonView: {
-    paddingVertical: Spacing.one,
+    paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
-    borderRadius: Spacing.three,
   },
-  externalPressable: {
+  innerNarrow: { paddingHorizontal: Spacing.two },
+  brand: { marginRight: 'auto' },
+  tab: {
+    minHeight: 48,
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.one,
-    marginLeft: Spacing.three,
+    gap: Spacing.two,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.md,
+    borderWidth: Border.thick,
   },
+  tabNarrow: { flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 0, paddingHorizontal: Spacing.one },
+  emoji: { fontSize: 18 },
+  emojiNarrow: { fontSize: 22, lineHeight: 26 },
+  labelNarrow: { fontSize: 13, lineHeight: 16 },
 });

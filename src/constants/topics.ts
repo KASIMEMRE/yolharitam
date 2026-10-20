@@ -16,11 +16,11 @@ export const TOPICS: Topic[] = [
   {
     id: 'tech',
     title: 'Teknoloji',
-    description: 'Yazılım, veri, yapay zeka',
+    description: 'Yazılım, veri, yapay zekâ',
     children: [
       {
         id: 'ai',
-        title: 'Yapay Zeka',
+        title: 'Yapay Zekâ',
         description: 'Modeller, uygulamalar, otomasyon',
         children: [
           { id: 'llm', title: 'LLM & Prompt', description: 'Büyük dil modelleriyle çalışmak' },
@@ -175,7 +175,7 @@ export const TOPICS: Topic[] = [
         description: 'Düşünmenin dili',
         children: [
           { id: 'statistics', title: 'İstatistik', description: 'Veriden sonuç çıkarmak' },
-          { id: 'linear-algebra', title: 'Lineer Cebir', description: "AI'ın matematiği" },
+          { id: 'linear-algebra', title: 'Lineer Cebir', description: "AI'nın matematiği" },
           { id: 'calculus', title: 'Kalkülüs', description: 'Türev, integral, değişim' },
         ],
       },

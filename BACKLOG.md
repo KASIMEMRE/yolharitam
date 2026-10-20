@@ -5,12 +5,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-### Y-01 · Karşılama ekranını yeni tasarım diline uyarla
-- `src/app/index.tsx`: giriş ekranındaki tasarım dili (accent buton, `RouteSteps` ile 3 adımlı rota) kullanılsın.
-- Uygulamanın ne işe yaradığını tek cümleyle anlatan kısa bir metin.
-- Buton: tema `accent` zemin, `onAccent` yazı.
-- Kabul: Açık ve koyu modda okunaklı; küçük ekranlarda taşma yok.
-
 ### Y-02 · Profil: görünen adı düzenleme
 - Profil ekranında `TextField` ile görünen ad (`profiles.display_name`) düzenlenebilsin, "Kaydet" butonu.
 - Ekran açılınca mevcut değer `profiles` tablosundan okunur.
@@ -18,7 +12,7 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Kabul: Kaydetme sırasında yükleniyor durumu, hata olursa Türkçe mesaj.
 
 ### Y-03 · Onboarding'i yeni tasarım diline uyarla + konu araması
-- Seçili kartlar ve buton `accent` rengini kullansın.
+- ✅ "Tasarım diline uyarla" kısmı tasarım yenileme PR'ı ile karşılandı (seçili kartlar ve buton `accent`). Kalan: arama.
 - Üstte bir arama kutusu (`TextField`): yazınca tüm ağaçtaki YAPRAK konular arasında başlığa göre arasın,
   sonuçta tam yolu göstersin (örn. "Teknoloji › Yapay Zeka › RAG"); sonuca basınca doğrudan seviye seçimine geçsin.
 - Türkçe karakterlere duyarsız arama (ı/i, ş/s vb.) için küçük bir yardımcı fonksiyon.
@@ -51,7 +45,7 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ### Y-08 · Uygulama kimliği
 - `app.json`: görünen ad "Yol Haritam", splash arka planı ve Android ikon zemini tema `accent` ile uyumlu.
-- Sekme ikonları: şablondan kalan ikonlar yerine sekmelere uygun ikonlar (Expo Go uyumlu yöntemle).
+- ✅ Sekme ikonları tasarım yenileme PR'ı ile karşılandı (`sf` + `md` ikonlar). Kalan: yukarıdaki `app.json` maddesi.
 
 ### Y-09 · "Gelişmeler" sekmesi: veri modeli ve kaynak listesi 🗄️
 - Migration: `news_sources` (id, name, url, rss_url, topic_paths text[]) ve `news_items`
@@ -62,4 +56,25 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Tamamlanan (PR açıldı)
 
-(henüz yok)
+### Y-01 · Karşılama ekranını yeni tasarım diline uyarla
+- `src/app/index.tsx`: giriş ekranındaki tasarım dili (accent buton, `RouteSteps` ile 3 adımlı rota) kullanılsın.
+- Uygulamanın ne işe yaradığını tek cümleyle anlatan kısa bir metin.
+- Buton: tema `accent` zemin, `onAccent` yazı.
+- Kabul: Açık ve koyu modda okunaklı; küçük ekranlarda taşma yok.
+- Tasarım yenileme PR'ı ile karşılandı (karşılama dahil tüm ekranlar yeniden tasarlandı; PR #1 kapatılabilir).
+
+### TY · Oyunlaştırılmış tasarım yenileme (proje sahibinin doğrudan isteği)
+- Tüm ekranlar (karşılama, giriş, onboarding, Yol Haritam, Gelişmeler, Profil, sekmeler) yeni tasarım sistemiyle yenilendi.
+- Sahte veri yok: ilerleme, haber ve başarım alanları "Yakında" olarak kilitli.
+
+## Öneriler (ekipten)
+
+Sıraya konmadı; önceliği proje sahibi verir.
+
+- **Özel yuvarlak font (Nunito)** (tasarım yenilemesinden): Android'de başlıklar düz Roboto; `@expo-google-fonts/nunito` (yalnız JS, Expo Go uyumlu) ile oyunsu tipografi. Yeni bağımlılık + splash'te font yükleme gerektirir.
+- **ESLint yapılandırması**: repoda `eslint.config.js` yok; AGENTS.md'deki "lint geçmeli" kuralı uygulanamıyor. `eslint-config-expo` eklenmeli.
+- **Ağ hatası ile "kayıt yok" ayrımı**: `useLatestRoadmap` hata durumunu döndürmeli, ekranlar "Yüklenemedi, tekrar dene" göstermeli (Y-07 ile birlikte).
+- **Ortak `TopicCard` bileşeni**: Yol Haritam ve Profil'deki konu kartları benzer stil taşıyor.
+- **Şablon kalıntılarını temizle**: kullanılmayan `external-link.tsx`, `hint-row.tsx`, `AnimatedIcon`, `assets/images/tabIcons/*`; açılış ekranı (`AnimatedSplashOverlay`) hâlâ Expo logosu.
+- **Alt kategori ikonları**: alt kategori listesinde tüm kartlar kategorinin emojisini taşıyor; alt kategoriye özel emoji eklenebilir.
+- **"Yolculuk başlıyor" çipi**: Y-04/Y-05 ile gerçek adımlar gelince kaldırılmalı/güncellenmeli.
