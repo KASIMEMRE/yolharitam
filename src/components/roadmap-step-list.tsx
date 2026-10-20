@@ -200,9 +200,9 @@ function StepRow({
   const prevCompleted = useRef(completed);
   useEffect(() => {
     if (prevCompleted.current !== completed && completed && !reduceMotion) {
-      scale.value = withSequence(withTiming(1.2, { duration: 120 }), withTiming(1, { duration: 160 }));
+      scale.set(withSequence(withTiming(1.2, { duration: 120 }), withTiming(1, { duration: 160 })));
     } else {
-      scale.value = withTiming(1, { duration: 100 });
+      scale.set(withTiming(1, { duration: 100 }));
     }
     prevCompleted.current = completed;
   }, [completed, reduceMotion, scale]);

@@ -22,7 +22,7 @@ export function ProgressSummary({ done, total, remainingHours }: Props) {
   // Çubuk genişliği yumuşakça değişir; reduce motion açıksa anında
   const fill = useSharedValue(ratio);
   useEffect(() => {
-    fill.value = reduceMotion ? ratio : withTiming(ratio, { duration: 300 });
+    fill.set(reduceMotion ? ratio : withTiming(ratio, { duration: 300 }));
   }, [ratio, reduceMotion, fill]);
   const fillStyle = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
 

@@ -6,6 +6,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
+// NOT (Y-10): Profil'in Başarımlar bölümü gerçek rozetlere geçince bu bileşeni kullanan ekran kalmadı.
+// Gelecekte "yakında" gerektiren bir özellik için yedek olarak bırakıldı; gerekmezse silinebilir.
 // Henüz çalışmayan özellikler için DÜRÜST yer tutucu: soluk zemin, kesikli kenar, kilit ve "Yakında".
 // Bilerek ilerleme halkası/sayı/çubuk YOK; yoksa çalışıyormuş gibi görünürdü.
 // Pressable değil: basılabilir gibi durup hiçbir şey yapmasın.
