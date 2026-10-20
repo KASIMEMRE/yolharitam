@@ -86,13 +86,13 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
       accessibilityState={{ disabled: inactive, busy: loading }}
       onPressIn={(e) => {
         setPressed(true);
-        if (!quiet) offset.value = reduceMotion ? Edge - 1 : withTiming(Edge - 1, { duration: 60 });
+        if (!quiet) offset.set(reduceMotion ? Edge - 1 : withTiming(Edge - 1, { duration: 60 }));
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
         setPressed(false);
         if (!quiet) {
-          offset.value = reduceMotion ? 0 : withSpring(0, { damping: 14, stiffness: 320, mass: 0.6 });
+          offset.set(reduceMotion ? 0 : withSpring(0, { damping: 14, stiffness: 320, mass: 0.6 }));
         }
         onPressOut?.(e);
       }}
