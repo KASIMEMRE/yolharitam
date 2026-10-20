@@ -37,6 +37,8 @@ export const ERROR_TEXT = {
   loadSchema: 'Adımlar şu an yüklenemiyor. Veritabanı güncellemesi bekleniyor olabilir.',
   network: 'Bağlantı sorunu var. İnternetini kontrol edip tekrar dene.',
   other: 'Bir şeyler ters gitti. Biraz sonra tekrar dene.',
+  // Profil'de başarımlar okunurken
+  achievementsFailed: 'Başarımların yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   markSchema: 'İşaret kaydedilemedi. Veritabanı güncellemesi bekleniyor olabilir.',

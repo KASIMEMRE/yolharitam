@@ -69,6 +69,11 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Kabul: Uygulama kapanıp açılınca ilerleme korunur.
 - ✅ Adım kartı onay kutusu (insert/delete ile `step_progress`), iyimser güncelleme, `ProgressSummary` (N / M + çubuk + kalan süre), "Sıradaki adım", "Evre tamamlandı", yol bitince `Celebration`.
 
+### Y-10 · Başarımlar
+- Profil'deki kilitli "Başarımlar" kartı yerine 9 gerçek rozet (`src/constants/achievements.ts`, saf hesap) ve `use-achievements` hook'u.
+- Rozetler veritabanında saklanmaz, adım/ilerleme verisinden her açılışta türetilir (tablo/migration yok); bir adımın işareti geri alınırsa rozet kaybolabilir.
+- Kazanılanlar renkli, kazanılmayanlar soluk + nasıl kazanılacağı + gerçek ilerleme ("2 / 3 adım"). "Rozet kazanıldı" bildirimi kapsam dışı.
+
 ## Öneriler (ekipten)
 
 Sıraya konmadı; önceliği proje sahibi verir.
