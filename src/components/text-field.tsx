@@ -73,7 +73,7 @@ export function TextField({
               rest.onBlur?.(e);
             }}
           />
-          {right}
+          {right && <View style={styles.rightSlot}>{right}</View>}
         </Animated.View>
       </View>
       {hint && (
@@ -101,5 +101,9 @@ const styles = StyleSheet.create({
     paddingLeft: Spacing.three,
     paddingRight: Spacing.two, // sağdaki "Göster" kenara yapışmasın
   },
-  input: { flex: 1, paddingVertical: Spacing.three, fontSize: 17 },
+  // minWidth: 0 -> web'de <input>'un varsayılan genişliği (≈20 karakter) yüzünden alan daralamıyordu;
+  // dar ekranda "Göster" taşıyıp sayfa yatay kayıyordu.
+  input: { flex: 1, minWidth: 0, paddingVertical: Spacing.three, fontSize: 17 },
+  // Sağdaki öğe (örn. "Göster") küçülmesin; yer kıt kalırsa daralan şey metin alanı olur.
+  rightSlot: { flexShrink: 0 },
 });

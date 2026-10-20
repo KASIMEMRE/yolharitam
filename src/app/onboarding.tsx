@@ -1,6 +1,6 @@
-import { router, Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -11,6 +11,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
+import { HeaderBackButton } from '@/components/header-back-button';
 import { OptionCard } from '@/components/option-card';
 import { StepIndicator } from '@/components/step-indicator';
 import { ThemedText } from '@/components/themed-text';
@@ -20,12 +21,38 @@ import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { HUES, LEVEL_STYLE, getCategoryStyle } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 import { getTopicChain, TOPICS } from '@/constants/topics';
+import { resetWizardDone } from '@/lib/wizard-done';
 
 export default function OnboardingScreen() {
-  // 1) STATE: Seçilen konu yolu (id listesi) ve seviye.
+  // 1) Seçilen konu yolu artık ROUTE PARAMETRESİNDE ("?path=tech/ai"), seviye ise state'te.
   //    path örnekleri: []  ->  ['tech']  ->  ['tech', 'ai']  ->  ['tech', 'ai', 'llm']
-  const [path, setPath] = useState<string[]>([]);
+  //    Neden parametre? Web'de adres çubuğu/tarayıcı geçmişi kategori adımlarını bilsin, geri tuşu
+  //    bir üst kategoriye dönsün. Bozuk bir değer gelirse geçerli kısmı kadarını kullanırız.
+  const params = useLocalSearchParams<{ path?: string }>();
+  const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
+  const path = useMemo(
+    () => getTopicChain(rawPath ? rawPath.split('/').filter(Boolean) : []).map((t) => t.id),
+    [rawPath]
+  );
   const [level, setLevel] = useState<string | null>(null);
+
+  // Yeni bir akış başlıyor: önceki sihirbaz kayıtlarını unut (bkz. wizard-done.ts)
+  useEffect(() => {
+    resetWizardDone();
+  }, []);
+
+  // Yolu değiştirmenin tek kapısı.
+  //  - Web: yeni geçmiş girdisi (push) açılır, tarayıcı geri tuşu bir üst kategoriye döner.
+  //  - Native: yığına ekran EKLEMEDEN yalnız parametre güncellenir (setParams). Böylece üstteki geri
+  //    düğmesi eskisi gibi onboarding'den çıkar; push yapsaydık native geri davranışı değişirdi.
+  function changePath(next: string[], mode: 'push' | 'set') {
+    const value = next.length > 0 ? next.join('/') : undefined;
+    if (Platform.OS === 'web' && mode === 'push') {
+      router.push({ pathname: '/onboarding', params: value ? { path: value } : {} });
+    } else {
+      router.setParams({ path: value });
+    }
+  }
 
   // 2) TÜRETİLMİŞ DEĞERLER: Hepsi path'ten hesaplanıyor.
   const chain = getTopicChain(path); // id'ler -> konu nesneleri
@@ -36,12 +63,12 @@ export default function OnboardingScreen() {
 
   // 3) Bir konuya basınca yola ekle (bir seviye aşağı in)
   function selectTopic(id: string) {
-    setPath([...path, id]);
+    changePath([...path, id], 'push');
   }
 
   // 4) Üstteki yol (breadcrumb) üzerindeki bir adıma basınca oraya geri dön
   function goTo(depth: number) {
-    setPath(path.slice(0, depth));
+    changePath(path.slice(0, depth), 'set');
     setLevel(null);
   }
 
@@ -74,7 +101,21 @@ export default function OnboardingScreen() {
   return (
     <ThemedView style={styles.container}>
       {/* Üst başlık adıma göre değişir: konu seçerken "Konunu seç", seviye adımında "Seviyeni seç" */}
-      <Stack.Screen options={{ title: isLeaf ? 'Seviyeni seç' : 'Konunu seç' }} />
+      {/* Web'de varsayılan geri oku 30x30 kadar küçük; 44x44'lük kendi düğmemizi koyarız (native aynı kalır) */}
+      <Stack.Screen
+        options={{
+          title: isLeaf ? 'Seviyeni seç' : 'Konunu seç',
+          headerLeft:
+            Platform.OS === 'web'
+              ? () => (
+                  <HeaderBackButton
+                    onPress={() => (router.canGoBack() ? router.back() : router.replace('/roadmap'))}
+                    label="Geri dön"
+                  />
+                )
+              : undefined,
+        }}
+      />
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <ScrollView
           style={styles.flex}

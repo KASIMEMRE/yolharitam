@@ -82,14 +82,17 @@ export function TrailDraw({ width, slow = false }: TrailDrawProps) {
                 : { backgroundColor: theme.accentSoft, borderColor: theme.accent },
             ]}>
             {i === 0 && arrived && (
-              <Animated.Text
-                allowFontScaling={false}
+              // Dış sarmalayıcı yalnız `entering` animasyonunu taşır, iç metin yalnız opacity (nabız) taşır.
+              // İkisi aynı öğede olursa Reanimated "opacity layout animation tarafından ezilebilir" uyarısı verir.
+              <Animated.View
                 entering={
                   reduceMotion ? FadeIn.duration(150) : FadeInDown.springify().damping(8).stiffness(220)
                 }
-                style={[styles.pin, pinStyle]}>
-                📍
-              </Animated.Text>
+                style={styles.pin}>
+                <Animated.Text allowFontScaling={false} style={[styles.pinText, pinStyle]}>
+                  📍
+                </Animated.Text>
+              </Animated.View>
             )}
           </Animated.View>
         </View>
@@ -114,5 +117,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pin: { position: 'absolute', top: -26, fontSize: 22, lineHeight: 28 },
+  pin: { position: 'absolute', top: -26 },
+  pinText: { fontSize: 22, lineHeight: 28 },
 });

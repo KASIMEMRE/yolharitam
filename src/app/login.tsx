@@ -20,6 +20,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
+import { isAuthRetryableFetchError, type AuthError } from '@supabase/supabase-js';
 
 type Mode = 'login' | 'signup';
 
@@ -30,16 +31,30 @@ const STEPS = [
 ];
 
 // Supabase'in İngilizce hata mesajlarını kullanıcının anlayacağı Türkçeye çevir
-function toTurkish(message: string): string {
-  const m = message.toLowerCase();
+// Ağ hatası tarayıcıya göre farklı yazılır: Chrome "Failed to fetch", Safari "Load failed",
+// Firefox "NetworkError…". Bu yüzden hepsini tek yerde tanıyoruz.
+const NETWORK_TEXT = 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';
+
+function toTurkish(error: AuthError): string {
+  // supabase-js'in "isteği sunucuya ulaştıramadım" işareti: metne bakmadan en güvenilir yol
+  if (isAuthRetryableFetchError(error)) return NETWORK_TEXT;
+  const m = error.message.toLowerCase();
   if (m.includes('invalid login credentials')) return 'E-posta veya şifre hatalı.';
   if (m.includes('already registered')) return 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
   if (m.includes('email not confirmed'))
     return 'E-postanı henüz onaylamadın. Gelen kutundaki bağlantıya tıkla, sonra giriş yap.';
   if (m.includes('rate limit') || m.includes('too many'))
     return 'Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar dene.';
-  if (m.includes('network')) return 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';
-  return message; // Tanımadığımız bir hata: orijinalini göster
+  if (
+    m.includes('network') ||
+    m.includes('failed to fetch') ||
+    m.includes('load failed') ||
+    m.includes('networkerror')
+  )
+    return NETWORK_TEXT;
+  // Tanımadığımız hatayı ham İngilizce göstermeyiz; ayrıntı yalnız geliştirici konsoluna gider.
+  console.warn('Tanınmayan giriş hatası:', error.message);
+  return 'Bir sorun oluştu. Biraz sonra tekrar dene.';
 }
 
 export default function LoginScreen() {
@@ -77,12 +92,12 @@ export default function LoginScreen() {
 
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword(credentials);
-      if (error) setError(toTurkish(error.message));
+      if (error) setError(toTurkish(error));
       // Başarılıysa Stack.Protected bizi otomatik içeri alır.
     } else {
       const { data, error } = await supabase.auth.signUp(credentials);
       if (error) {
-        setError(toTurkish(error.message));
+        setError(toTurkish(error));
       } else if (!data.session) {
         setNotice(`Onay bağlantısı ${credentials.email} adresine gönderildi. Bağlantıya tıkladıktan sonra giriş yap.`);
         setMode('login');

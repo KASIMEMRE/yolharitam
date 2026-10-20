@@ -1,11 +1,10 @@
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   BackHandler,
   findNodeHandle,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,6 +26,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Celebration } from '@/components/celebration';
+import { HeaderBackButton } from '@/components/header-back-button';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge } from '@/components/level-badge';
 import { OptionCard } from '@/components/option-card';
@@ -50,6 +50,7 @@ import { useShadow, useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { classifyError, ERROR_TEXT } from '@/lib/supabase-errors';
+import { isWizardDone, markWizardDone } from '@/lib/wizard-done';
 
 // "Hazırlanıyor" ekranı en az bu kadar görünür: şablon anında üretir ama kullanıcı "bir şey oldu"
 // hissini alsın. Ağ daha yavaşsa ağ süresi geçerlidir (süre = en büyüğü). Hata yolunda BEKLENMEZ.
@@ -137,6 +138,11 @@ export default function RoadmapQuestionsScreen() {
     };
   }, []);
 
+  // Bu sihirbaz bu yol haritası için daha önce bitirildiyse (web geri tuşuyla dönüldü) yeniden kayıt yapma.
+  // Yalnız ilk çizimde hesaplanır: kayıt bitince state'imiz kendi kendimizi yönlendirmesin.
+  const wizardKey = roadmapId ?? `${first(params.topicPath) ?? ''}|${first(params.level) ?? ''}`;
+  const [alreadyDone] = useState(() => isWizardDone(wizardKey));
+
   const busy = preparing || celebrating;
   // Mevcut yol haritası satırı okunana kadar (ya da okunamadıysa) kayıt başlatılamaz: konu ve seviye bilinmiyor
   const notReady = Boolean(roadmapId) && existingState !== 'ready';
@@ -169,7 +175,8 @@ export default function RoadmapQuestionsScreen() {
       firstRender.current = false;
       return;
     }
-    // findNodeHandle web'de yok (çağırınca çöker); odak taşıma yalnız telefonda yapılır.
+    // findNodeHandle react-native-web'de yok (çöker); odak taşıma yalnız mobilde yapılır.
+    // Web'de aşağıdaki duyuru yeterli.
     if (Platform.OS !== 'web') {
       const node = headingRef.current ? findNodeHandle(headingRef.current) : null;
       if (node) AccessibilityInfo.setAccessibilityFocus(node);
@@ -206,9 +213,12 @@ export default function RoadmapQuestionsScreen() {
   // Yol Haritam sekmesine dön. Yığındaki tüm ekranları (onboarding, bu ekran) kapatıp sekmelere iner,
   // sonra Yol Haritam sekmesini açar. Yalnız `back()` kullansaydık yeni akışta kullanıcı seviye
   // sayfasında kalırdı. Profil'den açıldıysa da doğru sekmeye gider.
+  // Web'de yığın tek ekranlı olabilir; dismissAll o zaman "POP_TO_TOP işlenmedi" hatası verir,
+  // bu yüzden önce canDismiss ile bakıyoruz. Sonra replace: tarayıcı geçmişinde biten sihirbaz
+  // (kutlama) kalmasın, geri tuşu ona dönmesin.
   function goToRoadmap() {
-    router.dismissAll();
-    router.navigate('/roadmap');
+    if (router.canDismiss()) router.dismissAll();
+    router.replace('/roadmap');
   }
 
   // Kayıt: üret -> TEK RPC çağrısı. Sonuç: başarı (kutlama özetiyle) | 'exists' (adımlar zaten vardı) | { message } (hata).
@@ -311,6 +321,7 @@ export default function RoadmapQuestionsScreen() {
     }
     await minDelay;
     if (!mountedRef.current) return;
+    markWizardDone(wizardKey);
     if (outcome === 'exists') {
       goToRoadmap();
       return;
@@ -358,25 +369,29 @@ export default function RoadmapQuestionsScreen() {
   const screenOptions = (
     <Stack.Screen
       options={{
-        title: 'Sana özel adımlar',
+        // Kutlama sırasında başlık boş: arkada soluk "Sana özel adımlar" görünmesin
+        title: celebrating ? '' : 'Sana özel adımlar',
         headerBackVisible: !busy && step === 0,
         gestureEnabled: !busy && step === 0,
-        headerLeft:
-          !busy && step > 0
-            ? () => (
-                <Pressable
-                  onPress={goBackOneQuestion}
-                  accessibilityRole="button"
-                  accessibilityLabel="Önceki soru"
-                  hitSlop={8}
-                  style={styles.headerBack}>
-                  <Text style={[styles.headerBackText, { color: theme.accentInk }]}>‹</Text>
-                </Pressable>
-              )
-            : undefined,
+        // Soru ilerlediyse geri = önceki soru. İlk soruda native'in kendi geri okunu bırakırız;
+        // web'deki varsayılan ok küçük (30x30) olduğu için orada 44x44'lük kendi düğmemizi koyarız.
+        headerLeft: busy
+          ? undefined
+          : step > 0
+            ? () => <HeaderBackButton onPress={goBackOneQuestion} label="Önceki soru" />
+            : Platform.OS === 'web'
+              ? () => (
+                  <HeaderBackButton
+                    onPress={() => (router.canGoBack() ? router.back() : router.replace('/roadmap'))}
+                    label="Geri dön"
+                  />
+                )
+              : undefined,
       }}
     />
   );
+
+  if (alreadyDone) return <Redirect href="/roadmap" />;
 
   // Giriş bilgisi eksikse ya da satır okunamadıysa: kısa bir açıklama ve çıkış yolu
   if (!hasInput || existingState === 'missing' || existingState === 'error') {
@@ -635,8 +650,6 @@ const styles = StyleSheet.create({
   options: { gap: Spacing.three },
   footer: { gap: Spacing.three, paddingVertical: Spacing.three, borderTopWidth: 2 },
   skipBlock: { alignItems: 'center', minHeight: MinTouch },
-  headerBack: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  headerBackText: { fontSize: 32, lineHeight: 36, fontWeight: '900' },
   problem: { flex: 1, justifyContent: 'center', gap: Spacing.three },
   preparing: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },
   preparingInner: { alignItems: 'center', gap: Spacing.four, maxWidth: 360, width: '100%' },

@@ -10,12 +10,18 @@ const supabasePublishableKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
 
 // Uygulamanın Supabase ile konuştuğu TEK nesne. Her yerden bunu import edeceğiz.
 // <Database> sayesinde TypeScript tablolarımızı ve sütunlarımızı tanır.
+// Web'de Expo Router sayfaları önce Node'da (sunucu tarafı render) çalıştırır.
+// Node'da `window` yoktur; AsyncStorage web'de window.localStorage kullandığı için
+// orada çağrılırsa "window is not defined" ile çöker. Bu yüzden sunucuda depolama
+// vermiyoruz ve oturum saklama/yenilemeyi kapatıyoruz (sunucuda oturum zaten olmaz).
+const isServer = typeof window === 'undefined';
+
 export const supabase = createClient<Database>(supabaseUrl, supabasePublishableKey, {
   auth: {
-    storage: AsyncStorage, // Oturumu telefonda sakla: uygulama kapanınca çıkış yapılmasın
-    autoRefreshToken: true, // Oturum anahtarı süresi dolmadan kendiliğinden yenilensin
-    persistSession: true,
-    detectSessionInUrl: false, // Bu web'e özgü bir ayar; mobilde kapalı
+    storage: isServer ? undefined : AsyncStorage, // Oturumu cihazda sakla: uygulama kapanınca çıkış yapılmasın
+    autoRefreshToken: !isServer, // Oturum anahtarı süresi dolmadan kendiliğinden yenilensin
+    persistSession: !isServer,
+    detectSessionInUrl: false, // Giriş e-posta linkiyle değil kodla/şifreyle yapılıyor; adres çubuğunu taramaya gerek yok
   },
 });
 
