@@ -9,17 +9,18 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
-import { Border, Edge, Radius, Spacing } from '@/constants/theme';
+import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// Uygulamanın tek buton bileşeni. Üç çeşit:
+// Uygulamanın tek buton bileşeni. Dört çeşit:
 //  - primary: ana eylem (yeşil, "3D" alt kenarlı)
 //  - secondary: ikincil eylem (kart rengi, kenarlıklı)
-//  - quiet: arka planı olmayan sessiz eylem (örn. "Çıkış yap")
+//  - quiet: arka planı olmayan sessiz eylem (örn. "Çıkış yap"; yıkıcı eylem rengi coralInk)
+//  - text: sade metin eylemi (örn. "Soruları atla"); yeşil yazı, zemin yok, 44px dokunma alanı
 // "3D" his: üstteki yüz, basılınca alt kenar plakasının üstüne 3px iner; bırakınca yaylanarak döner.
 type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   label: string;
-  variant?: 'primary' | 'secondary' | 'quiet';
+  variant?: 'primary' | 'secondary' | 'quiet' | 'text';
   loading?: boolean;
   icon?: string; // emoji
 };
@@ -43,7 +44,7 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
   let face: string = theme.accent;
   let border: string = theme.accent;
   let plate: string = theme.accentEdge;
-  let textColor: 'onAccent' | 'text' | 'coralInk' | 'textSecondary' = 'onAccent';
+  let textColor: 'onAccent' | 'text' | 'coralInk' | 'accentInk' | 'textSecondary' = 'onAccent';
   if (variant === 'secondary') {
     face = theme.card;
     border = theme.border;
@@ -54,18 +55,26 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
     border = 'transparent';
     plate = 'transparent';
     textColor = 'coralInk';
+  } else if (variant === 'text') {
+    face = pressed ? theme.accentSoft : 'transparent';
+    border = 'transparent';
+    plate = 'transparent';
+    textColor = 'accentInk';
   }
   if (disabled && !loading) {
     textColor = 'textSecondary';
-    if (variant !== 'quiet') {
+    if (variant !== 'quiet' && variant !== 'text') {
       // Pasif buton sakin kalsın (koyu modda parlamasın): zemin + normal kenar + kenar plakası
       face = theme.backgroundSelected;
       border = theme.border;
       plate = theme.borderEdge;
     }
   }
-  const quiet = variant === 'quiet';
-  const spinnerColor = theme[variant === 'primary' ? 'onAccent' : textColor === 'coralInk' ? 'coralInk' : 'text'];
+  const isText = variant === 'text';
+  // quiet ve text'te 3D alt kenar plakası ve basılınca inme efekti yok
+  const quiet = variant === 'quiet' || isText;
+  const spinnerColor =
+    theme[variant === 'primary' ? 'onAccent' : textColor === 'coralInk' || textColor === 'accentInk' ? textColor : 'text'];
 
   return (
     <Pressable
@@ -87,12 +96,12 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
         }
         onPressOut?.(e);
       }}
-      style={styles.pressable}>
+      style={[styles.pressable, isText && styles.pressableText]}>
       <View style={[styles.plate, !quiet && { backgroundColor: plate }]}>
         <Animated.View
           style={[
             styles.face,
-            quiet ? styles.faceQuiet : { marginBottom: Edge },
+            isText ? styles.faceText : quiet ? styles.faceQuiet : { marginBottom: Edge },
             { backgroundColor: face, borderColor: border },
             !quiet && faceStyle,
           ]}>
@@ -100,8 +109,8 @@ export const Button = forwardRef<View, ButtonProps>(function Button(
             <ActivityIndicator color={spinnerColor} />
           ) : (
             <>
-              {icon && <ThemedText type="button">{icon}</ThemedText>}
-              <ThemedText type="button" themeColor={textColor} style={styles.label}>
+              {icon && <ThemedText type={isText ? 'smallBold' : 'button'}>{icon}</ThemedText>}
+              <ThemedText type={isText ? 'smallBold' : 'button'} themeColor={textColor} style={styles.label}>
                 {label}
               </ThemedText>
             </>
@@ -126,5 +135,8 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   faceQuiet: { minHeight: 48 },
+  // text: ortalı, küçük yazı; dokunma alanı en az MinTouch (44)
+  pressableText: { alignSelf: 'center' },
+  faceText: { minHeight: MinTouch, paddingHorizontal: Spacing.three },
   label: { textAlign: 'center', flexShrink: 1 },
 });
