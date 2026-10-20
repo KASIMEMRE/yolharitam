@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -17,45 +18,13 @@ import { TrailMap } from '@/components/route-steps';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AUTH_STEPS } from '@/constants/auth-steps';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { isEmailNotConfirmed, toTurkish } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
-import { isAuthRetryableFetchError, type AuthError } from '@supabase/supabase-js';
 
 type Mode = 'login' | 'signup';
-
-const STEPS = [
-  { emoji: '🔑', label: 'Hesabını oluştur' },
-  { emoji: '🧭', label: 'Konunu ve seviyeni seç' },
-  { emoji: '🗺️', label: 'Kişisel yol haritanı al' },
-];
-
-// Supabase'in İngilizce hata mesajlarını kullanıcının anlayacağı Türkçeye çevir
-// Ağ hatası tarayıcıya göre farklı yazılır: Chrome "Failed to fetch", Safari "Load failed",
-// Firefox "NetworkError…". Bu yüzden hepsini tek yerde tanıyoruz.
-const NETWORK_TEXT = 'İnternet bağlantısı yok gibi görünüyor. Bağlantını kontrol et.';
-
-function toTurkish(error: AuthError): string {
-  // supabase-js'in "isteği sunucuya ulaştıramadım" işareti: metne bakmadan en güvenilir yol
-  if (isAuthRetryableFetchError(error)) return NETWORK_TEXT;
-  const m = error.message.toLowerCase();
-  if (m.includes('invalid login credentials')) return 'E-posta veya şifre hatalı.';
-  if (m.includes('already registered')) return 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
-  if (m.includes('email not confirmed'))
-    return 'E-postanı henüz onaylamadın. Gelen kutundaki bağlantıya tıkla, sonra giriş yap.';
-  if (m.includes('rate limit') || m.includes('too many'))
-    return 'Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar dene.';
-  if (
-    m.includes('network') ||
-    m.includes('failed to fetch') ||
-    m.includes('load failed') ||
-    m.includes('networkerror')
-  )
-    return NETWORK_TEXT;
-  // Tanımadığımız hatayı ham İngilizce göstermeyiz; ayrıntı yalnız geliştirici konsoluna gider.
-  console.warn('Tanınmayan giriş hatası:', error.message);
-  return 'Bir sorun oluştu. Biraz sonra tekrar dene.';
-}
 
 export default function LoginScreen() {
   const theme = useTheme();
@@ -70,7 +39,6 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
 
   // Türetilmiş değerler
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
@@ -80,30 +48,51 @@ export default function LoginScreen() {
   function switchMode(next: Mode) {
     setMode(next);
     setError(null);
-    setNotice(null);
+  }
+
+  // Kod ekranına git. `push` kullanıyoruz (replace DEĞİL): geri dönünce bu ekran ve yazılan e-posta
+  // yığında durur, "E-postayı değiştir" tam olarak buraya döner. Şifreyi taşımayız (verifyOtp istemez).
+  // Başarıdan sonra `router.replace` ile içeri girmeyi de elle yapmıyoruz: kod doğrulanınca oturum
+  // oluşur, Stack.Protected (_layout.tsx) kullanıcıyı kendisi içeri alır. Tek doğruluk kaynağı oturumdur.
+  function goToVerify(from: 'login' | 'signup', mail: string) {
+    setPassword('');
+    router.push({ pathname: '/verify-email', params: { email: mail, from } });
   }
 
   async function handleSubmit() {
     setBusy(true);
     setError(null);
-    setNotice(null);
 
     const credentials = { email: email.trim(), password };
 
     if (mode === 'login') {
       const { error } = await supabase.auth.signInWithPassword(credentials);
-      if (error) setError(toTurkish(error));
+      if (error && isEmailNotConfirmed(error)) {
+        // Hesap var ama doğrulanmamış (şifre doğru). Çıkmaz yerine kod ekranına yolla.
+        // Burada otomatik "tekrar gönder" YOK: e-posta kotasını yer, önceki kod hâlâ geçerli olabilir.
+        goToVerify('login', credentials.email);
+      } else if (error) {
+        setError(toTurkish(error, 'login'));
+      }
       // Başarılıysa Stack.Protected bizi otomatik içeri alır.
     } else {
       const { data, error } = await supabase.auth.signUp(credentials);
       if (error) {
-        setError(toTurkish(error));
+        setError(toTurkish(error, 'signup'));
       } else if (!data.session) {
-        setNotice(`Onay bağlantısı ${credentials.email} adresine gönderildi. Bağlantıya tıkladıktan sonra giriş yap.`);
-        setMode('login');
+        // KULLANICI VARLIĞINI SIZDIRMAMA: "Confirm email" açıkken, zaten doğrulanmış bir e-postayla kayıt
+        // denenirse Supabase hata dönmez; sahte kullanıcı döner (`identities` boş dizi) ve e-posta gitmez.
+        // Bunu "bu e-posta kayıtlı" diye açıkça söylersek herkes bir e-postanın üye olup olmadığını
+        // öğrenebilir (hesap numaralandırma). Bu yüzden yeni kayıtla AYNI yola gidiyoruz: iki durum
+        // dışarıdan ayırt edilemez. Kod ekranı da "kod gelmezse zaten hesabın olabilir" diyerek
+        // gerçek sahibini yönlendirir. (`identities` kontrolüne bu yüzden artık gerek yok.)
+        goToVerify('signup', credentials.email);
       }
+      // data.session doluysa (panelde "Confirm email" kapalı) Stack.Protected içeri alır.
     }
 
+    // Başarıda ekran Stack.Protected ile kapanabilir; ama kod ekranına push'ta bu ekran yığında kalır,
+    // geri dönülünce buton takılı kalmasın diye busy burada sıfırlanır.
     setBusy(false);
   }
 
@@ -137,7 +126,7 @@ export default function LoginScreen() {
                 </ThemedText>
               </Animated.View>
               <TrailMap
-                stops={STEPS}
+                stops={AUTH_STEPS}
                 current={mode === 'login' ? 1 : 0}
                 variant="horizontal"
                 showDone={false}
@@ -185,6 +174,8 @@ export default function LoginScreen() {
                 autoComplete="email"
                 textContentType="emailAddress"
                 returnKeyType="next"
+                // Kayıtta beklentiyi önceden söyle: kod bu adrese e-postayla gelecek
+                hint={mode === 'signup' ? 'Doğrulama kodu bu adrese gelecek.' : undefined}
               />
 
               <TextField
@@ -213,9 +204,8 @@ export default function LoginScreen() {
                 }
               />
 
-              {/* Hata ve bilgi kutuları */}
+              {/* Hata kutusu */}
               {error && <Banner tone="warning">{error}</Banner>}
-              {notice && <Banner tone="info">{notice}</Banner>}
             </View>
           </ScrollView>
 
@@ -258,6 +248,6 @@ const styles = StyleSheet.create({
     borderWidth: Border.thick,
     borderRadius: Radius.md - Spacing.one,
   },
-  showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
+  showButton: { minHeight: 44, minWidth: 44, flexShrink: 0, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });

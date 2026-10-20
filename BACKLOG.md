@@ -74,13 +74,19 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Rozetler veritabanında saklanmaz, adım/ilerleme verisinden her açılışta türetilir (tablo/migration yok); bir adımın işareti geri alınırsa rozet kaybolabilir.
 - Kazanılanlar renkli, kazanılmayanlar soluk + nasıl kazanılacağı + gerçek ilerleme ("2 / 3 adım"). "Rozet kazanıldı" bildirimi kapsam dışı.
 
+### OTP-01 · E-posta doğrulaması kodla
+- Kayıttan sonra e-postaya gelen kod `src/app/verify-email.tsx` ekranında girilir (`verifyOtp`); "Tekrar gönder" 60 sn geri sayımlıdır.
+- Girişte "Email not confirmed" hatası kod ekranına yönlendirir; hata çevirileri `src/lib/auth-errors.ts` içinde ortaklaştı.
+
 ## Öneriler (ekipten)
 
 Sıraya konmadı; önceliği proje sahibi verir.
 
 - **Özel yuvarlak font (Nunito)** (tasarım yenilemesinden): Android'de başlıklar düz Roboto; `@expo-google-fonts/nunito` (yalnız JS, Expo Go uyumlu) ile oyunsu tipografi. Yeni bağımlılık + splash'te font yükleme gerektirir.
-- **ESLint yapılandırması**: repoda `eslint.config.js` yok; AGENTS.md'deki "lint geçmeli" kuralı uygulanamıyor. `eslint-config-expo` eklenmeli.
 - **Ağ hatası ile "kayıt yok" ayrımı**: `useLatestRoadmap` hata durumunu döndürmeli, ekranlar "Yüklenemedi, tekrar dene" göstermeli (Y-07 ile birlikte).
 - **Ortak `TopicCard` bileşeni**: Yol Haritam ve Profil'deki konu kartları benzer stil taşıyor.
 - **Şablon kalıntılarını temizle**: kullanılmayan `external-link.tsx`, `hint-row.tsx`, `AnimatedIcon`, `assets/images/tabIcons/*`; açılış ekranı (`AnimatedSplashOverlay`) hâlâ Expo logosu.
 - **Alt kategori ikonları**: alt kategori listesinde tüm kartlar kategorinin emojisini taşıyor; alt kategoriye özel emoji eklenebilir.
+- **Şifremi unuttum akışı**: OTP altyapısı hazır (`verifyOtp` type 'recovery'). Ortak `AuthScreenLayout`: login ve verify-email iskeleti tekrar ediyor.
+- **CAPTCHA ve rate limit**: kayıt/doğrulama için CAPTCHA ve Supabase rate limit ayarlarının gözden geçirilmesi.
+- **Özel SMTP**: Supabase'e özel SMTP bağlanması (varsayılan e-posta limiti çok düşük).
