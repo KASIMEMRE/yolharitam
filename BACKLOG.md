@@ -5,12 +5,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-### Y-02 · Profil: görünen adı düzenleme
-- Profil ekranında `TextField` ile görünen ad (`profiles.display_name`) düzenlenebilsin, "Kaydet" butonu.
-- Ekran açılınca mevcut değer `profiles` tablosundan okunur.
-- Yol Haritam sekmesinin başlığında "Merhaba, <ad>" gösterilsin (ad yoksa gösterme).
-- Kabul: Kaydetme sırasında yükleniyor durumu, hata olursa Türkçe mesaj.
-
 ### Y-03 · Onboarding'i yeni tasarım diline uyarla + konu araması
 - ✅ "Tasarım diline uyarla" kısmı tasarım yenileme PR'ı ile karşılandı (seçili kartlar ve buton `accent`). Kalan: arama.
 - Üstte bir arama kutusu (`TextField`): yazınca tüm ağaçtaki YAPRAK konular arasında başlığa göre arasın,
@@ -74,6 +68,13 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Rozetler veritabanında saklanmaz, adım/ilerleme verisinden her açılışta türetilir (tablo/migration yok); bir adımın işareti geri alınırsa rozet kaybolabilir.
 - Kazanılanlar renkli, kazanılmayanlar soluk + nasıl kazanılacağı + gerçek ilerleme ("2 / 3 adım"). "Rozet kazanıldı" bildirimi kapsam dışı.
 
+### Y-02 · Profil: görünen adı düzenleme
+- Profil'de "Görünen ad" kartı (`TextField` + "Kaydet"); ad `profiles.display_name` alanından okunur/yazılır (şema değişikliği yok).
+  Yol Haritam başlığında "Merhaba, <ad>" gösterilir (ad yoksa hiç çizilmez). Okuma ortak `use-display-name` hook'unda.
+- Kaydetme: yükleniyor durumu, kırpılmış ad, Türkçe başarı/hata Banner'ı (`Banner` yeni `success` tonu).
+- Seçilen yorumlar: ad silinemez (boş kayıt engellenir); 40 karakter sınırı yalnız uygulamada (veritabanı kısıtı yok);
+  değişmemişken "Kaydet" pasif. Not: `ScreenHeader` minimum yüksekliği 64 -> 72 oldu (tüm sekme başlıkları 8 pt uzadı).
+
 ## Öneriler (ekipten)
 
 Sıraya konmadı; önceliği proje sahibi verir.
@@ -84,3 +85,7 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Ortak `TopicCard` bileşeni**: Yol Haritam ve Profil'deki konu kartları benzer stil taşıyor.
 - **Şablon kalıntılarını temizle**: kullanılmayan `external-link.tsx`, `hint-row.tsx`, `AnimatedIcon`, `assets/images/tabIcons/*`; açılış ekranı (`AnimatedSplashOverlay`) hâlâ Expo logosu.
 - **Alt kategori ikonları**: alt kategori listesinde tüm kartlar kategorinin emojisini taşıyor; alt kategoriye özel emoji eklenebilir.
+- **Görünen ad için veritabanı kısıtı** (Y-02'den): `check (char_length(display_name) <= 40)` migration'ı; şu an sınır yalnız uygulamada.
+- **Okuma hatasında "Tekrar dene" ve kısa zaman aşımı** (Y-02'den): supabase-js GET isteklerini birkaç kez yeniden denediği için "Adın yüklenemedi" uyarısı ~7 sn sonra çıkıyor (Y-07 ile birlikte ele alınabilir).
+- **Pasif buton kontrastı** (Y-02'den): `Button` pasifken etiket koyu modda zor seçiliyor; disabled etiket rengi `textSecondary`'ye yaklaştırılabilir.
+- **Selamlamayı belirginleştirme** (Y-02'den): "Merhaba, <ad>" eyebrow'u küçük ve silik; tema renkleriyle bir kademe daha belirgin yapılabilir.

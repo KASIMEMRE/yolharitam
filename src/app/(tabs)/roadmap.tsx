@@ -18,6 +18,7 @@ import { findOption, isAnswerId, QUESTIONS, weeklyLabel } from '@/constants/road
 import { summarizeSteps, type WeeklyHoursId } from '@/constants/roadmap-templates';
 import { Border, Edge, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
+import { useDisplayName } from '@/hooks/use-display-name';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useRoadmapSteps } from '@/hooks/use-roadmap-steps';
 import { useShadow, useTheme } from '@/hooks/use-theme';
@@ -27,6 +28,10 @@ export default function RoadmapScreen() {
   // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda:
   // src/hooks/use-latest-roadmap.ts (yol haritası) ve src/hooks/use-roadmap-steps.ts (adımlar)
   const { roadmap, loading } = useLatestRoadmap();
+  // Hook erken return'lerden ÖNCE çağrılır (hook kuralı). Ad hatası başlığı bozmaz: ad yoksa selamlama çizilmez.
+  const { name } = useDisplayName();
+  const trimmedName = name?.trim();
+  const greeting = trimmedName ? `Merhaba, ${trimmedName}` : undefined;
   const { steps, status, retrying, retry, completedIds, toggleStep, markError } = useRoadmapSteps(roadmap?.id);
   // Kutlama yalnız bu oturumda "tamamlanmamış → tamamlanmış" GEÇİŞİNDE açılır (ekranı her açışta değil)
   const [celebrating, setCelebrating] = useState(false);
@@ -41,7 +46,7 @@ export default function RoadmapScreen() {
   if (loading) {
     return (
       <TabScreen>
-        <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
+        <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />
         <JourneySkeleton />
         <StepListSkeleton />
       </TabScreen>
@@ -51,7 +56,7 @@ export default function RoadmapScreen() {
   if (!roadmap) {
     return (
       <TabScreen>
-        <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
+        <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />
         <EmptyState />
       </TabScreen>
     );
@@ -87,7 +92,7 @@ export default function RoadmapScreen() {
 
   return (
     <TabScreen>
-      <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
+      <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />
 
       {/* Adım yokken asıl eylem "Adımlarını oluştur"dur: kartın ÜSTÜNDE durur, ilk ekranda görünür */}
       {noSteps && <StepsCtaCard roadmapId={roadmap.id} />}

@@ -18,7 +18,12 @@ export function TabScreen({ children }: { children: ReactNode }) {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.container} edges={['top']}>
+        {/* Klavye açıkken butona tek dokunuşla basılsın (handled), kaydırınca klavye kapansın,
+            odaklı alan klavyenin altında kalmasın (automaticallyAdjustKeyboardInsets) */}
         <ScrollView
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
           contentContainerStyle={{
             padding: gutter,
             paddingTop: gutter + webTop,
