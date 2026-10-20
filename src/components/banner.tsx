@@ -4,19 +4,21 @@ import { ThemedText } from '@/components/themed-text';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// Hata (warning) ve bilgi (info) kutusu. Ekran okuyucu içeriği değişince okusun diye live region.
+// Hata (warning), bilgi (info) ve başarı (success) kutusu. Ekran okuyucu içeriği değişince okusun diye live region.
 type BannerProps = {
-  tone: 'warning' | 'info';
+  tone: 'warning' | 'info' | 'success';
   children: string;
 };
 
 export function Banner({ tone, children }: BannerProps) {
   const theme = useTheme();
   const warning = tone === 'warning';
+  const success = tone === 'success';
 
   return (
     <View
-      accessibilityRole="alert"
+      // Başarı "alert" (acil uyarı) gibi okunmasın; yalnız live region yeter
+      accessibilityRole={success ? undefined : 'alert'}
       accessibilityLiveRegion="polite"
       style={[
         styles.box,
@@ -31,7 +33,7 @@ export function Banner({ tone, children }: BannerProps) {
         importantForAccessibility="no"
         allowFontScaling={false}
         style={styles.emoji}>
-        {warning ? '⚠️' : '✉️'}
+        {warning ? '⚠️' : success ? '✅' : '✉️'}
       </Text>
       <ThemedText type="small" style={styles.text}>
         {children}

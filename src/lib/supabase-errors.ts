@@ -39,6 +39,9 @@ export const ERROR_TEXT = {
   other: 'Bir şeyler ters gitti. Biraz sonra tekrar dene.',
   // Profil'de başarımlar okunurken
   achievementsFailed: 'Başarımların yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  // Profil'de görünen ad okunurken / kaydedilirken
+  profileLoadFailed: 'Adın yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  profileSaveFailed: 'Adın kaydedilemedi. Biraz sonra tekrar dene.',
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   markSchema: 'İşaret kaydedilemedi. Veritabanı güncellemesi bekleniyor olabilir.',
