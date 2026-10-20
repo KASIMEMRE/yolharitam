@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -24,6 +24,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { isEmailNotConfirmed, toTurkish } from '@/lib/auth-errors';
 import { supabase } from '@/lib/supabase';
 
+// Giriş modunda ilk durak "hesap oluştur" değil "giriş yap" (etiketler benzersiz kalmalı: React key)
+const LOGIN_STOPS = [{ ...AUTH_STEPS[0], label: 'Giriş yap' }, ...AUTH_STEPS.slice(1)];
+
 type Mode = 'login' | 'signup';
 
 export default function LoginScreen() {
@@ -39,6 +42,12 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Hata kutusu formun en altında; küçük ekranlarda görünür alanın dışında kalabiliyor.
+  // Hata çıkınca sayfayı en alta kaydırıyoruz ki kullanıcı mesajı mutlaka görsün.
+  const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (error) scrollRef.current?.scrollToEnd({ animated: true });
+  }, [error]);
 
   // Türetilmiş değerler
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
@@ -105,7 +114,7 @@ export default function LoginScreen() {
           // iOS 'padding', Android 'height': Android'de pencere kendiliğinden küçülmeyebilir (edge-to-edge);
           // 'height' sabit alt butonun klavyenin altında kalmasını önler.
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          <ScrollView style={styles.flex} keyboardShouldPersistTaps="handled">
+          <ScrollView ref={scrollRef} style={styles.flex} keyboardShouldPersistTaps="handled">
             {/* SAHNE: kenarlara taşan yumuşak yeşil blok. İçinde başlık ve küçük yatay patika;
                 mod değişince sarı aktif durak yeni adıma kayar. */}
             <View
@@ -125,9 +134,12 @@ export default function LoginScreen() {
                   {mode === 'login' ? 'Rotana devam et' : 'Rotanı oluşturalım'}
                 </ThemedText>
               </Animated.View>
+              {/* Kullanıcı bu ekranda hesap adımındadır: aktif durak hep ilk durak.
+                  (Önceden girişte 2. durak vurgulanıyor ve "Konunu ve seviyeni seç" yazıyordu;
+                  o sırada e-posta/şifre girildiği için yanlış yönlendiriyordu.) */}
               <TrailMap
-                stops={AUTH_STEPS}
-                current={mode === 'login' ? 1 : 0}
+                stops={mode === 'login' ? LOGIN_STOPS : AUTH_STEPS}
+                current={0}
                 variant="horizontal"
                 showDone={false}
               />
