@@ -37,5 +37,7 @@ export const ERROR_TEXT = {
   loadSchema: 'Adımlar şu an yüklenemiyor. Veritabanı güncellemesi bekleniyor olabilir.',
   network: 'Bağlantı sorunu var. İnternetini kontrol edip tekrar dene.',
   other: 'Bir şeyler ters gitti. Biraz sonra tekrar dene.',
+  // Adım işaretlenirken
+  markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   session: 'Oturumun kapanmış. Lütfen yeniden giriş yap.',
 } as const;

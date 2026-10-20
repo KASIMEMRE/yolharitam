@@ -1,21 +1,32 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  ZoomIn,
+} from 'react-native-reanimated';
 
 import { StatusChip } from '@/components/level-badge';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import type { Phase, ResourceType } from '@/constants/roadmap-templates';
-import { Border, Radius, Spacing } from '@/constants/theme';
+import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { PHASE_STYLE, RESOURCE_STYLE, RESOURCE_SUMMARY } from '@/constants/visuals';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 
-// Yol haritası adımlarının DİKEY listesi: solda rota rayı (numaralı duraklar + noktalar), sağda düz kartlar.
-// Salt GÖRÜNTÜLEME: adımlar dokunulabilir görünmez (şevron/basma efekti yok), tamamlandı ✓ ve ilerleme
-// yok; işaretleme Y-05'in işi. "Buradan başla" yalnız başlangıç noktasını gösterir, "şu an buradasın" demez.
+// Yol haritası adımlarının DİKEY listesi: solda rota rayı (numaralı duraklar + noktalar), sağda kartlar.
+// Her kart DOKUNULABİLİR bir onay kutusudur (Y-05): dokununca adım tamamlandı ↔ tamamlanmadı olur.
+// Tamamlanan durak ✓ ve accent rengi alır; "Sıradaki adım" vurgusu ilk tamamlanmamış adımdadır.
+// Durum yalnız renkle değil ✓ simgesi ve "Tamamlandı" çipiyle de belli edilir (renk körlüğü için).
 // Veritabanından gelen satırların `phase`/`resource_type` alanları string; bilinmeyen değerde (örn. ileride
 // bozuk yapay zekâ çıktısı) başlık/çip çizilmez ama uygulama çökmez.
 export type StepItem = {
+  id: string;
   position: number;
   title: string;
   description: string;
@@ -35,7 +46,15 @@ function resourceOf(value: string) {
   return RESOURCE_STYLE[value as ResourceType];
 }
 
-export function RoadmapStepList({ steps }: { steps: StepItem[] }) {
+export function RoadmapStepList({
+  steps,
+  completedIds,
+  onToggle,
+}: {
+  steps: StepItem[];
+  completedIds: Set<string>;
+  onToggle: (stepId: string) => void;
+}) {
   const reduceMotion = useReducedMotion();
   const sorted = [...steps].sort((a, b) => a.position - b.position);
   // Tüm adımlar aynı kaynak türündeyse her karta aynı çipi basmak gürültü olur: tür listenin başında
@@ -47,6 +66,12 @@ export function RoadmapStepList({ steps }: { steps: StepItem[] }) {
     sorted.every((s) => s.resource_type === firstType)
       ? (firstType as ResourceType)
       : null;
+
+  // Sıradaki adım = ilk tamamlanmamış adım (hepsi bitmişse yok)
+  const nextId = sorted.find((s) => !completedIds.has(s.id))?.id;
+  // Evre tamamlandı = o evrenin TÜM adımları işaretli. Evre başına bir kez hesaplanır.
+  const phaseDone = new Map<string, boolean>();
+  for (const s of sorted) phaseDone.set(s.phase, (phaseDone.get(s.phase) ?? true) && completedIds.has(s.id));
 
   return (
     <View role="list">
@@ -60,7 +85,7 @@ export function RoadmapStepList({ steps }: { steps: StepItem[] }) {
         const showHeader = step.phase !== sorted[index - 1]?.phase && phaseOf(step.phase) !== undefined;
         return (
           <View key={step.position}>
-            {showHeader && <PhaseHeader phase={step.phase} first={index === 0} />}
+            {showHeader && <PhaseHeader phase={step.phase} first={index === 0} done={phaseDone.get(step.phase) === true} />}
             <Animated.View
               entering={
                 reduceMotion
@@ -69,9 +94,13 @@ export function RoadmapStepList({ steps }: { steps: StepItem[] }) {
               }>
               <StepRow
                 step={step}
-                total={sorted.length}
                 last={index === sorted.length - 1}
                 showResource={uniformType === null}
+                completed={completedIds.has(step.id)}
+                isNext={step.id === nextId}
+                // Hiçbir adım işaretli değilken ilk adımda "Sıradaki" yerine "Buradan başla" yazar
+                isStart={step.id === nextId && step.position === 1 && completedIds.size === 0}
+                onToggle={onToggle}
               />
             </Animated.View>
           </View>
@@ -97,7 +126,8 @@ function RailDots() {
   );
 }
 
-function PhaseHeader({ phase, first }: { phase: string; first: boolean }) {
+function PhaseHeader({ phase, first, done }: { phase: string; first: boolean; done: boolean }) {
+  const reduceMotion = useReducedMotion();
   const theme = useTheme();
   const style = phaseOf(phase);
   if (!style) return null;
@@ -115,6 +145,12 @@ function PhaseHeader({ phase, first }: { phase: string; first: boolean }) {
           {style.emoji}
         </Text>
         <ThemedText type="eyebrow">{style.label}</ThemedText>
+        {done && (
+          // Evre bitince çip yaylanarak belirir (hafif kutlama); reduce motion'da sade solma
+          <Animated.View entering={reduceMotion ? FadeIn.duration(150) : ZoomIn.springify().damping(9)}>
+            <StatusChip tone="accent" emoji="✓" label="Evre tamamlandı" />
+          </Animated.View>
+        )}
         <View style={[styles.phaseLine, { backgroundColor: theme.border }]} />
       </View>
     </View>
@@ -123,62 +159,96 @@ function PhaseHeader({ phase, first }: { phase: string; first: boolean }) {
 
 function StepRow({
   step,
-  total,
   last,
   showResource,
+  completed,
+  isNext,
+  isStart,
+  onToggle,
 }: {
   step: StepItem;
-  total: number;
   last: boolean;
   showResource: boolean;
+  completed: boolean;
+  isNext: boolean;
+  isStart: boolean;
+  onToggle: (stepId: string) => void;
 }) {
   const theme = useTheme();
   const shadow = useShadow();
-  const isFirst = step.position === 1;
+  const reduceMotion = useReducedMotion();
   const resource = resourceOf(step.resource_type);
   const hoursText = `${step.estimated_hours} saat`;
 
-  // Ekran okuyucu: kart tek öğe olarak okunur. TrailMap'teki "şu an" ifadesi bilerek kullanılmaz.
+  // Mikro animasyon: durak yalnız KULLANICI işaretleyince "pop" yapar. İlk çizimde (liste yüklenirken
+  // zaten tamamlanmış adımlar) oynamasın diye önceki değer ref'te tutulur.
+  const scale = useSharedValue(1);
+  const prevCompleted = useRef(completed);
+  useEffect(() => {
+    if (prevCompleted.current !== completed && completed && !reduceMotion) {
+      scale.value = withSequence(withSpring(1.25, { damping: 6, stiffness: 300 }), withSpring(1));
+    }
+    prevCompleted.current = completed;
+  }, [completed, reduceMotion, scale]);
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  // Ekran okuyucu: kart tek bir onay kutusu olarak okunur (durumu accessibilityState söyler).
   const label =
-    `Adım ${step.position} / ${total}: ${step.title}. ${hoursText}.` +
+    `Adım ${step.position}: ${step.title}. ` +
+    (completed ? 'Tamamlandı.' : 'Tamamlanmadı. İşaretlemek için çift dokun.') +
+    ` ${hoursText}.` +
     (resource ? ` ${resource.label}.` : '') +
-    (isFirst ? ' Buradan başla.' : '') +
+    (isStart ? ' Buradan başla.' : isNext ? ' Sıradaki adım.' : '') +
     ` ${step.description}`;
+
+  // Kart kenarı: tamamlandı = accent, sıradaki = sarı (marker), son adım = accent, diğerleri nötr
+  const borderColor = completed ? theme.accent : isNext ? theme.markerEdge : last ? theme.accent : theme.border;
 
   return (
     <View style={styles.row}>
       <View style={styles.rail} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {/* Durak: 1. adım sarı (başlangıç işareti), son adım 🏁 (varış), diğerleri nötr numara */}
-        <View
+        {/* Durak: tamamlandı ✓ (accent) · sıradaki adım sarı · son adım 🏁 · diğerleri nötr numara */}
+        <Animated.View
           style={[
             styles.stop,
-            isFirst
-              ? { backgroundColor: theme.marker, borderColor: theme.markerEdge }
-              : { backgroundColor: theme.card, borderColor: last ? theme.accent : theme.borderStrong },
+            completed
+              ? { backgroundColor: theme.accent, borderColor: theme.accentEdge }
+              : isNext
+                ? { backgroundColor: theme.marker, borderColor: theme.markerEdge }
+                : { backgroundColor: theme.card, borderColor: last ? theme.accent : theme.borderStrong },
+            popStyle,
           ]}>
           <ThemedText
             type="chip"
             allowFontScaling={false}
-            themeColor={isFirst ? 'onMarker' : 'text'}
+            themeColor={completed ? 'onAccent' : isNext ? 'onMarker' : 'text'}
             style={styles.stopText}>
-            {last && !isFirst ? '🏁' : step.position}
+            {completed ? '✓' : last && !isNext ? '🏁' : step.position}
           </ThemedText>
-        </View>
+        </Animated.View>
         {!last && <RailDots />}
       </View>
 
-      <View style={styles.cardColumn}>
-        <View
-          role="listitem"
-          accessible
+      <View style={styles.cardColumn} role="listitem">
+        {/* Tüm kart basılabilir (telefonda rahat hedef); yanlış dokunma riskini tek dokunuşla geri alma karşılar */}
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: completed }}
           accessibilityLabel={label}
-          style={[
+          onPress={() => onToggle(step.id)}
+          style={({ pressed }) => [
             styles.card,
-            { backgroundColor: theme.card, borderColor: isFirst ? theme.markerEdge : last ? theme.accent : theme.border },
+            {
+              backgroundColor: completed ? theme.accentSoft : theme.card,
+              borderColor,
+              transform: [{ translateY: pressed ? 2 : 0 }],
+            },
             shadow('card'),
           ]}>
           <View style={styles.cardInner} importantForAccessibility="no-hide-descendants">
-            {isFirst && <StatusChip tone="marker" emoji="📍" label="Buradan başla" />}
+            {isStart && <StatusChip tone="marker" emoji="📍" label="Buradan başla" />}
+            {isNext && !isStart && <StatusChip tone="marker" emoji="📍" label="Sıradaki adım" />}
+            {completed && <StatusChip tone="accent" emoji="✓" label="Tamamlandı" />}
             <ThemedText type="cardTitle">{step.title}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
               {step.description}
@@ -188,7 +258,7 @@ function StepRow({
               {resource && showResource && <StatusChip tone="neutral" emoji={resource.emoji} label={resource.label} />}
             </View>
           </View>
-        </View>
+        </Pressable>
       </View>
     </View>
   );
@@ -256,6 +326,7 @@ const styles = StyleSheet.create({
     borderWidth: Border.thick,
     borderRadius: Radius.md,
     padding: Spacing.three,
+    minHeight: MinTouch,
   },
   cardInner: { gap: Spacing.two },
   skeletonCard: { minHeight: 148, gap: Spacing.two },
