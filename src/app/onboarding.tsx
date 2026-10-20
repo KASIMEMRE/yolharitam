@@ -66,7 +66,7 @@ export default function OnboardingScreen() {
   const pop = useSharedValue(1);
   useEffect(() => {
     if (level !== null && !reduceMotion) {
-      pop.value = withSequence(withTiming(1.03, { duration: 100 }), withTiming(1, { duration: 120 }));
+      pop.set(withSequence(withTiming(1.03, { duration: 100 }), withTiming(1, { duration: 120 })));
     }
   }, [level, reduceMotion, pop]);
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));

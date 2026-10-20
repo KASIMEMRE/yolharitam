@@ -80,9 +80,9 @@ function VerticalTrail({ stops, current, showDone }: { stops: TrailStop[]; curre
   const pulse = useSharedValue(1);
   useEffect(() => {
     if (W === 0 || reduceMotion) return;
-    pinOpacity.value = withDelay(300, withTiming(1, { duration: 120 }));
-    pinY.value = withDelay(300, withSpring(0, { damping: 8, stiffness: 220 }));
-    pulse.value = withDelay(550, withSequence(withTiming(1.15, { duration: 150 }), withTiming(1, { duration: 150 })));
+    pinOpacity.set(withDelay(300, withTiming(1, { duration: 120 })));
+    pinY.set(withDelay(300, withSpring(0, { damping: 8, stiffness: 220 })));
+    pulse.set(withDelay(550, withSequence(withTiming(1.15, { duration: 150 }), withTiming(1, { duration: 150 }))));
   }, [W, reduceMotion, pinY, pinOpacity, pulse]);
   const pinStyle = useAnimatedStyle(() => ({
     opacity: pinOpacity.value,
@@ -243,10 +243,10 @@ function HorizontalTrail({
   useEffect(() => {
     if (W === 0) return;
     if (!placed.current || reduceMotion) {
-      markerX.value = target; // ilk çizimde animasyonsuz doğrudan yerine
+      markerX.set(target); // ilk çizimde animasyonsuz doğrudan yerine
       placed.current = true;
     } else {
-      markerX.value = withSpring(target, { damping: 16, stiffness: 260, mass: 0.8 });
+      markerX.set(withSpring(target, { damping: 16, stiffness: 260, mass: 0.8 }));
     }
   }, [W, target, reduceMotion, markerX]);
   const markerStyle = useAnimatedStyle(() => ({ transform: [{ translateX: markerX.value }] }));

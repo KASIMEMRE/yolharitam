@@ -44,7 +44,7 @@ export function TextField({
   }));
 
   function animateTo(value: 0 | 1) {
-    focus.value = reduceMotion ? value : withTiming(value, { duration: 150 });
+    focus.set(reduceMotion ? value : withTiming(value, { duration: 150 }));
   }
 
   return (
