@@ -1,0 +1,6 @@
+# Satır sonlarını depoda hep LF tut: Windows (CRLF) ile ajan ortamı (LF) arasındaki
+# sahte "değişti" farklarını önler.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary

@@ -26,6 +26,8 @@ type CelebrationProps = {
   emoji: string;
   hue: Hue;
   title: string;
+  // İsteğe bağlı özet satırı (örn. "7 adım · yaklaşık 26 saat · yaklaşık 7 hafta"); varsa altına "dokun" ipucu da gelir
+  subtitle?: string;
   levelId: string;
   onDone: () => void;
 };
@@ -34,7 +36,7 @@ const PARTICLE_COUNT = 24;
 // Math.random yerine sabit sapma tablosu: her seferinde aynı, tahmin edilebilir görüntü
 const JITTER = [0, 6, -4, 9, -7, 3];
 
-export function Celebration({ visible, emoji, hue, title, levelId, onDone }: CelebrationProps) {
+export function Celebration({ visible, emoji, hue, title, subtitle, levelId, onDone }: CelebrationProps) {
   const theme = useTheme();
   const shadow = useShadow();
   const reduceMotion = useReducedMotion();
@@ -61,13 +63,16 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
   useEffect(() => {
     if (!visible) return;
     let cancelled = false;
+    // Sözleşme: her visible=true geçişinde "bitti" bayrağı sıfırlanır; yoksa ikinci açılışta
+    // finish() hemen dönerdi ve kutlama kapanmazdı.
+    doneRef.current = false;
 
-    backdrop.value = withTiming(0.96, { duration: 150 });
+    backdrop.set(withTiming(0.96, { duration: 150 }));
     if (!reduceMotion) {
-      tileScale.value = withSpring(1, { damping: 9, stiffness: 180, mass: 0.8 });
-      progress.value = withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) });
+      tileScale.set(withSpring(1, { damping: 9, stiffness: 180, mass: 0.8 }));
+      progress.set(withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) }));
     }
-    AccessibilityInfo.announceForAccessibility(title);
+    AccessibilityInfo.announceForAccessibility(subtitle ? `${title} ${subtitle}` : title);
 
     // Ekran okuyucu açıksa daha uzun bekle ki kullanıcı duyurusunu dinleyebilsin
     AccessibilityInfo.isScreenReaderEnabled().then((screenReader) => {
@@ -98,7 +103,7 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
     <Modal transparent animationType="none" statusBarTranslucent visible onRequestClose={finish}>
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${title} Devam etmek için dokun`}
+      accessibilityLabel={`${title}${subtitle ? ` ${subtitle}.` : ''} Devam etmek için dokun.`}
       onPress={finish}
       style={styles.overlay}>
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: theme.background }, backdropStyle]} />
@@ -121,6 +126,14 @@ export function Celebration({ visible, emoji, hue, title, levelId, onDone }: Cel
         <ThemedText type="heading" style={styles.title}>
           {title}
         </ThemedText>
+        {subtitle && (
+          <>
+            <ThemedText style={styles.title}>{subtitle}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.title}>
+              Devam etmek için dokun
+            </ThemedText>
+          </>
+        )}
       </Animated.View>
 
       <Animated.View entering={FadeIn.duration(reduceMotion ? 150 : 250).delay(reduceMotion ? 0 : 400)} style={styles.badge}>
@@ -166,7 +179,7 @@ function Particle({ index, progress, color }: { index: number; progress: SharedV
 const styles = StyleSheet.create({
   overlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', gap: Spacing.three },
   center: { alignItems: 'center', justifyContent: 'center' },
-  text: { paddingHorizontal: Spacing.four },
+  text: { paddingHorizontal: Spacing.four, gap: Spacing.one },
   title: { textAlign: 'center', maxWidth: 320 },
   badge: { alignItems: 'center' },
   particle: { position: 'absolute', left: '50%', top: '42%' },

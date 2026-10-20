@@ -1,52 +1,176 @@
 import { Link } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
+import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { Celebration } from '@/components/celebration';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge, StatusChip } from '@/components/level-badge';
-import { LockedCard } from '@/components/locked-card';
+import { ProgressSummary } from '@/components/progress-summary';
+import { RoadmapStepList, StepListSkeleton } from '@/components/roadmap-step-list';
 import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
+import { findOption, isAnswerId, QUESTIONS, weeklyLabel } from '@/constants/roadmap-questions';
+import { summarizeSteps, type WeeklyHoursId } from '@/constants/roadmap-templates';
 import { Border, Edge, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
+import { useRoadmapSteps } from '@/hooks/use-roadmap-steps';
 import { useShadow, useTheme } from '@/hooks/use-theme';
+import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 export default function RoadmapScreen() {
-  // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'ta: src/hooks/use-latest-roadmap.ts
+  // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda:
+  // src/hooks/use-latest-roadmap.ts (yol haritası) ve src/hooks/use-roadmap-steps.ts (adımlar)
   const { roadmap, loading } = useLatestRoadmap();
+  const { steps, status, retrying, retry, completedIds, toggleStep, markError } = useRoadmapSteps(roadmap?.id);
+  // Kutlama yalnız bu oturumda "tamamlanmamış → tamamlanmış" GEÇİŞİNDE açılır (ekranı her açışta değil)
+  const [celebrating, setCelebrating] = useState(false);
+
+  // Dokunulan adımı işaretler/geri alır. Kayıt BAŞARILI olup tüm adımlar bitmişse kutlama açılır
+  // (hook "allDone" bilgisini döndürür); istek başarısız olursa (adım geri alınır) kutlama hiç çıkmaz.
+  async function onToggle(stepId: string) {
+    const res = await toggleStep(stepId);
+    if (res?.ok && res.allDone) setCelebrating(true);
+  }
+
+  if (loading) {
+    return (
+      <TabScreen>
+        <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
+        <JourneySkeleton />
+        <StepListSkeleton />
+      </TabScreen>
+    );
+  }
+
+  if (!roadmap) {
+    return (
+      <TabScreen>
+        <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
+        <EmptyState />
+      </TabScreen>
+    );
+  }
+
+  // Cevap sütunları migration uygulanmadan `undefined` gelebilir, eski kayıtlarda NULL'dır:
+  // yalnız GEÇERLİ bir seçenek kimliği varsa kullanırız.
+  const weekly = isAnswerId('weeklyHours', roadmap.weekly_hours) ? (roadmap.weekly_hours as WeeklyHoursId) : null;
+  const plan =
+    weekly && isAnswerId('goal', roadmap.goal) && isAnswerId('learningStyle', roadmap.learning_style)
+      ? [
+          weeklyLabel(roadmap.weekly_hours),
+          `Hedef: ${findOption('goal', roadmap.goal)?.title}`,
+          `Yöntem: ${findOption('learningStyle', roadmap.learning_style)?.title}`,
+        ].join(' · ')
+      : null;
+
+  // Özet sayılar HER ZAMAN adımlardan türetilir (kaydedilmez): adımlar değişse de doğru kalır.
+  const summary =
+    status === 'ready' && steps.length > 0
+      ? summarizeSteps(
+          steps.map((s) => ({ estimatedHours: s.estimated_hours })),
+          weekly ?? '3-5'
+        )
+      : null;
+
+  // completedIds hook'ta zaten yalnız mevcut adımlara süzülür (silinmiş adım id'leri sayıyı şişirmez)
+  const completedCount = completedIds.size;
+  const topic = describeTopic(roadmap.topic_path);
+
+  // "Boş" ile "hata" ayrı dallar: hatada "Adımlarımı oluştur" ASLA gösterilmez (yanlış yönlendirir)
+  const noSteps = status === 'ready' && steps.length === 0;
 
   return (
     <TabScreen>
       <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
 
-      {loading ? (
-        <JourneySkeleton />
-      ) : roadmap ? (
-        <>
-          <JourneyCard topicPath={roadmap.topic_path} level={roadmap.level} />
-          <Link href="/onboarding" asChild>
-            <Button variant="secondary" icon="🧭" label="Konumu değiştir" />
-          </Link>
-          <FadingDots />
-          <LockedCard
-            emoji="🥾"
-            title="Adımların yakında burada"
-            description="Kişisel yol haritanın adımları hazırlanınca burada görünecek."
-          />
-        </>
-      ) : (
-        <EmptyState />
+      {/* Adım yokken asıl eylem "Adımlarını oluştur"dur: kartın ÜSTÜNDE durur, ilk ekranda görünür */}
+      {noSteps && <StepsCtaCard roadmapId={roadmap.id} />}
+
+      <JourneyCard
+        topicPath={roadmap.topic_path}
+        level={roadmap.level}
+        plan={plan}
+        summary={summary}
+        // hafta özeti yalnız haftalık süre biliniyorsa gösterilir (tahmini hafta ona bağlı)
+        showWeeks={weekly !== null}
+        summaryLoading={status === 'loading'}
+      />
+
+      {status === 'loading' && <StepListSkeleton />}
+
+      {(status === 'schema' || status === 'network' || status === 'error') && (
+        <View style={styles.errorBox}>
+          <Banner tone="warning">
+            {status === 'schema' ? ERROR_TEXT.loadSchema : status === 'network' ? ERROR_TEXT.network : ERROR_TEXT.other}
+          </Banner>
+          <Button variant="secondary" icon="🔄" label="Tekrar dene" loading={retrying} onPress={retry} />
+        </View>
       )}
+
+      {status === 'ready' && steps.length > 0 && (
+        <>
+          <View style={styles.stepsSection}>
+            <ThemedText type="cardTitle" accessibilityRole="header">
+              Adımların
+            </ThemedText>
+            <ProgressSummary
+              done={completedCount}
+              total={steps.length}
+              remainingHours={steps.filter((s) => !completedIds.has(s.id)).reduce((t, s) => t + s.estimated_hours, 0)}
+            />
+            {/* İşaret kaydedilemezse adım geri alınır; hata mesajı DOKUNULAN kartın hemen altında çıkar */}
+            <RoadmapStepList steps={steps} completedIds={completedIds} onToggle={onToggle} markError={markError} />
+          </View>
+        </>
+      )}
+
+      {/* Her açılışta TAZE mount: Celebration iç durumu (bitti bayrağı, animasyon değerleri) sıfırdan başlar.
+          Ayrıca adım durumundan bağımsız: liste dalının dışında durur. */}
+      {celebrating && (
+        <Celebration
+          visible
+          emoji={topic.category.emoji}
+          hue={topic.category.hue}
+          title="Yol haritanı tamamladın!"
+          subtitle="Bütün adımları bitirdin. İstersen yeni bir konu seçip yola devam edebilirsin."
+          levelId={roadmap.level}
+          onDone={() => setCelebrating(false)}
+        />
+      )}
+
+      {/* İkincil eylem en sonda: konu değiştirmek nadir bir iş, uzun listenin önüne geçmesin */}
+      <Link href="/onboarding" asChild>
+        <Button variant="text" icon="🧭" label="Konunu değiştir" />
+      </Link>
     </TabScreen>
   );
 }
 
-// Yolculuk kartı: konu, konu yolu, seviye. İlerleme yüzdesi/halkası YOK: böyle bir veri henüz yok.
-function JourneyCard({ topicPath, level }: { topicPath: string; level: string }) {
+type Summary = { count: number; totalHours: number; weeks: number };
+
+// Yolculuk kartı: konu, konu yolu, seviye, (varsa) plan ve adım özeti (toplam). İlerleme (N / M + çubuk)
+// kartta değil "Adımların" bölümünde gösterilir; veri step_progress'ten gelir.
+function JourneyCard({
+  topicPath,
+  level,
+  plan,
+  summary,
+  showWeeks,
+  summaryLoading,
+}: {
+  topicPath: string;
+  level: string;
+  plan: string | null;
+  summary: Summary | null;
+  showWeeks: boolean;
+  summaryLoading: boolean;
+}) {
   const theme = useTheme();
   const shadow = useShadow();
   const reduceMotion = useReducedMotion();
@@ -83,45 +207,76 @@ function JourneyCard({ topicPath, level }: { topicPath: string; level: string })
             Konun
           </ThemedText>
           <ThemedText type="heading">{title}</ThemedText>
+          {/* Konu yolu bantta başlığın altında: kartı kısaltır, ayrı satır gerekmez */}
+          {parents !== '' && (
+            <ThemedText type="small" themeColor={hue.ink}>
+              {parents}
+            </ThemedText>
+          )}
         </View>
       </View>
 
       <View style={styles.body}>
-        {parents !== '' && (
-          <ThemedText type="small" themeColor="textSecondary">
-            {parents}
-          </ThemedText>
-        )}
-        <View style={[styles.divider, { backgroundColor: theme.border }]} />
+        {/* Seviye rozeti ve plan yan yana (dar ekranda alt alta sarar). Plan = kullanıcının KENDİ
+            cevapları; eski kayıtta cevap yoksa hiç çizilmez. Bilinmeyen seviyede rozet çizilmez. */}
         <View style={styles.meta}>
-          <ThemedText type="eyebrow" themeColor="textSecondary">
-            Seviyen
-          </ThemedText>
-          {/* Bilinmeyen seviyede rozet hiç çizilmez */}
           <LevelBadge levelId={level} size="md" />
+          {plan !== null && (
+            <ThemedText type="small" style={styles.planText}>
+              {plan}
+            </ThemedText>
+          )}
         </View>
-        <Animated.View entering={FadeIn.delay(reduceMotion ? 0 : 450)}>
-          <StatusChip tone="marker" emoji="📍" label="Yolculuk başlıyor" />
-        </Animated.View>
+        {summaryLoading && (
+          // Yüklenirken çiplerin yerini tutar: içerik gelince kart zıplamasın
+          <View style={styles.chips}>
+            <Skeleton width={80} height={28} radius={Radius.pill} />
+            <Skeleton width={130} height={28} radius={Radius.pill} />
+            <Skeleton width={130} height={28} radius={Radius.pill} />
+          </View>
+        )}
+        {summary && (
+          <Animated.View entering={FadeIn.delay(reduceMotion ? 0 : 450)}>
+            {/* Üç çip tek öğe olarak okunur; tek tek okunmaları gürültü olurdu */}
+            <View
+              accessible
+              accessibilityLabel={
+                `${summary.count} adım, yaklaşık ${summary.totalHours} saat` +
+                (showWeeks ? `, yaklaşık ${summary.weeks} hafta` : '')
+              }
+              style={styles.chips}>
+              <StatusChip tone="neutral" emoji="🧭" label={`${summary.count} adım`} />
+              <StatusChip tone="neutral" emoji="⏱" label={`yaklaşık ${summary.totalHours} saat`} />
+              {showWeeks && <StatusChip tone="neutral" emoji="📅" label={`yaklaşık ${summary.weeks} hafta`} />}
+            </View>
+          </Animated.View>
+        )}
       </View>
     </View>
   );
 }
 
-// Süs: karttan kilitli kutuya inen üç nokta. Hepsi aynı renk ve dikey dizili: sayfalama/ilerleme
-// noktası gibi okunmasın. Hizalama: kilitli kartın ikonunun ortasına denk gelir
-// (kart kenarlığı + iç boşluk + ikon yarısı - nokta yarısı).
-function FadingDots() {
+// Yol haritası var ama adımı yok (soru akışından önce oluşmuş kayıt ya da yarım kalmış kurulum):
+// kullanıcıyı aynı soru ekranına, mevcut kaydın id'siyle gönderir. Kilitli kart DEĞİL, aktif eylem.
+function StepsCtaCard({ roadmapId }: { roadmapId: string }) {
   const theme = useTheme();
   return (
-    <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={styles.dots}>
-      {[0, 1, 2].map((i) => (
-        <View key={i} style={[styles.dot, { backgroundColor: theme.borderStrong }]} />
-      ))}
-    </View>
+    <Animated.View
+      entering={FadeInDown.duration(280)}
+      style={[styles.cta, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
+      <View style={styles.ctaTop}>
+        <IconTile emoji="🥾" tone="accent" size={64} />
+        <View style={styles.bandTexts}>
+          <ThemedText type="cardTitle">Adımlarını oluşturalım</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {QUESTIONS.length} kısa soruyu yanıtla, sana özel adımlar hazırlansın.
+          </ThemedText>
+        </View>
+      </View>
+      <Link href={{ pathname: '/roadmap-questions', params: { roadmapId } }} asChild>
+        <Button label="Adımlarımı oluştur" />
+      </Link>
+    </Animated.View>
   );
 }
 
@@ -178,10 +333,13 @@ const styles = StyleSheet.create({
   // 📍 ikonun sağ üst köşesinde, hafif taşarak durur
   pin: { position: 'absolute', top: -10, right: -8, fontSize: 28, lineHeight: 34 },
   body: { padding: Spacing.three, gap: Spacing.three },
-  divider: { height: Border.thin },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.three },
-  dots: { flexDirection: 'column', gap: 6, marginLeft: Border.thick + Spacing.three + 32 - 4 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
+  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
+  planText: { flex: 1, minWidth: 120 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  cta: { borderWidth: Border.thick, borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.three },
+  ctaTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  stepsSection: { gap: Spacing.three },
+  errorBox: { gap: Spacing.three },
   empty: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.five },
   centerText: { textAlign: 'center' },
 });

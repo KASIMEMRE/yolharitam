@@ -1,6 +1,6 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useState } from 'react';
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -10,9 +10,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
-import { Celebration } from '@/components/celebration';
+import { HeaderBackButton } from '@/components/header-back-button';
 import { OptionCard } from '@/components/option-card';
 import { StepIndicator } from '@/components/step-indicator';
 import { ThemedText } from '@/components/themed-text';
@@ -21,66 +20,64 @@ import { LEVELS } from '@/constants/onboarding';
 import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { HUES, LEVEL_STYLE, getCategoryStyle } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
-import { useAuth } from '@/lib/auth-context';
-import { supabase } from '@/lib/supabase';
 import { getTopicChain, TOPICS } from '@/constants/topics';
+import { resetWizardDone } from '@/lib/wizard-done';
 
 export default function OnboardingScreen() {
-  // 1) STATE: Seçilen konu yolu (id listesi) ve seviye.
+  // 1) Seçilen konu yolu artık ROUTE PARAMETRESİNDE ("?path=tech/ai"), seviye ise state'te.
   //    path örnekleri: []  ->  ['tech']  ->  ['tech', 'ai']  ->  ['tech', 'ai', 'llm']
-  const [path, setPath] = useState<string[]>([]);
+  //    Neden parametre? Web'de adres çubuğu/tarayıcı geçmişi kategori adımlarını bilsin, geri tuşu
+  //    bir üst kategoriye dönsün. Bozuk bir değer gelirse geçerli kısmı kadarını kullanırız.
+  const params = useLocalSearchParams<{ path?: string }>();
+  const rawPath = Array.isArray(params.path) ? params.path[0] : params.path;
+  const path = useMemo(
+    () => getTopicChain(rawPath ? rawPath.split('/').filter(Boolean) : []).map((t) => t.id),
+    [rawPath]
+  );
   const [level, setLevel] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { session } = useAuth();
-  // Kayıt başarılı olunca kısa kutlama göstermek için (hata olursa hiç true olmaz)
-  const [celebrating, setCelebrating] = useState(false);
+
+  // Yeni bir akış başlıyor: önceki sihirbaz kayıtlarını unut (bkz. wizard-done.ts)
+  useEffect(() => {
+    resetWizardDone();
+  }, []);
+
+  // Yolu değiştirmenin tek kapısı.
+  //  - Web: yeni geçmiş girdisi (push) açılır, tarayıcı geri tuşu bir üst kategoriye döner.
+  //  - Native: yığına ekran EKLEMEDEN yalnız parametre güncellenir (setParams). Böylece üstteki geri
+  //    düğmesi eskisi gibi onboarding'den çıkar; push yapsaydık native geri davranışı değişirdi.
+  function changePath(next: string[], mode: 'push' | 'set') {
+    const value = next.length > 0 ? next.join('/') : undefined;
+    if (Platform.OS === 'web' && mode === 'push') {
+      router.push({ pathname: '/onboarding', params: value ? { path: value } : {} });
+    } else {
+      router.setParams({ path: value });
+    }
+  }
 
   // 2) TÜRETİLMİŞ DEĞERLER: Hepsi path'ten hesaplanıyor.
   const chain = getTopicChain(path); // id'ler -> konu nesneleri
   const current = chain.at(-1); // En son seçilen konu (yoksa undefined)
   const options = current ? current.children : TOPICS; // Şu an gösterilecek seçenekler
   const isLeaf = current !== undefined && !current.children; // En alta inildi mi?
-  const canContinue = isLeaf && level !== null && !saving && !celebrating;
+  const canContinue = isLeaf && level !== null;
 
   // 3) Bir konuya basınca yola ekle (bir seviye aşağı in)
   function selectTopic(id: string) {
-    setPath([...path, id]);
+    changePath([...path, id], 'push');
   }
 
   // 4) Üstteki yol (breadcrumb) üzerindeki bir adıma basınca oraya geri dön
   function goTo(depth: number) {
-    setPath(path.slice(0, depth));
+    changePath(path.slice(0, depth), 'set');
     setLevel(null);
-    setError(null); // eski kayıt hatası, yaprağa tekrar dönünce yeniden görünmesin
   }
 
-  // Seçimi veritabanına kaydet, sonra yol haritası ekranına geç
-  async function handleContinue() {
-    if (!isLeaf || !level || !session) return;
-    setSaving(true);
-    setError(null);
-
-    const { error } = await supabase.from('roadmaps').insert({
-      user_id: session.user.id, // RLS: sadece kendi id'nle satır ekleyebilirsin
-      topic_path: path.join('/'), // 'tech/ai/llm'
-      level,
-    });
-
-    setSaving(false);
-    if (error) {
-      setError('Kaydedilemedi: ' + error.message);
-      return;
-    }
-    // Kayıt başarılı: önce kısa kutlama göster; bittiğinde finishCelebration ekranı kapatır.
-    setCelebrating(true);
-  }
-
-  // Kutlama bitince eski davranış: Onboarding sekmelerin üstünde açıldı, geri dönmek yeterli.
-  // (Yol haritası sekmesi ekrana gelince useFocusEffect ile kendini tazeler.)
-  function finishCelebration() {
-    if (router.canGoBack()) router.back();
-    else router.replace('/roadmap');
+  // "Devam et": veritabanına HİÇBİR ŞEY yazılmaz, 3 soruya geçilir. Kayıt son sorudan sonra tek seferde
+  // yapılır; böylece soruları yarıda bırakan kullanıcıda adımsız "yetim" yol haritası oluşmaz.
+  // push kullanıyoruz (replace değil): sorulardan geri gelince konu ve seviye seçimin korunur.
+  function handleContinue() {
+    if (!isLeaf || !level) return;
+    router.push({ pathname: '/roadmap-questions', params: { topicPath: path.join('/'), level } });
   }
 
   // Görünümle ilgili değerler
@@ -88,6 +85,7 @@ export default function OnboardingScreen() {
   const reduceMotion = useReducedMotion();
   const { width, fontScale } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
+  const inlineIndicator = width >= 360 && fontScale <= 1.3;
   // Kategori görünümü (emoji + renk) her derinlikte yoldaki İLK parçadan gelir
   const category = getCategoryStyle(path[0]);
 
@@ -95,25 +93,42 @@ export default function OnboardingScreen() {
   const pop = useSharedValue(1);
   useEffect(() => {
     if (level !== null && !reduceMotion) {
-      pop.value = withSequence(withTiming(1.03, { duration: 100 }), withTiming(1, { duration: 120 }));
+      pop.set(withSequence(withTiming(1.03, { duration: 100 }), withTiming(1, { duration: 120 })));
     }
   }, [level, reduceMotion, pop]);
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }] }));
 
   return (
     <ThemedView style={styles.container}>
+      {/* Üst başlık adıma göre değişir: konu seçerken "Konunu seç", seviye adımında "Seviyeni seç" */}
+      {/* Web'de varsayılan geri oku 30x30 kadar küçük; 44x44'lük kendi düğmemizi koyarız (native aynı kalır) */}
+      <Stack.Screen
+        options={{
+          title: isLeaf ? 'Seviyeni seç' : 'Konunu seç',
+          headerLeft:
+            Platform.OS === 'web'
+              ? () => (
+                  <HeaderBackButton
+                    onPress={() => (router.canGoBack() ? router.back() : router.replace('/roadmap'))}
+                    label="Geri dön"
+                  />
+                )
+              : undefined,
+        }}
+      />
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
         <ScrollView
           style={styles.flex}
-          contentContainerStyle={[styles.content, { padding: gutter, paddingBottom: isLeaf ? gutter : Spacing.four }]}
-          pointerEvents={saving ? 'none' : 'auto'}>
+          contentContainerStyle={[styles.content, { padding: gutter, paddingBottom: isLeaf ? gutter : Spacing.four }]}>
           <View style={styles.inner}>
-            {/* Başlık + sağda iki adımlı gösterge (1 Konu, 2 Seviye) */}
-            <View style={styles.titleRow}>
+            {/* Başlık + üç adımlı gösterge (1 Konu, 2 Seviye, 3 Sorular). Dar ekranda ya da büyük yazıda
+                gösterge başlığın ÜSTÜNE geçer; yoksa başlık çok dar kalıp 4 satıra çıkardı. */}
+            <View style={inlineIndicator ? styles.titleRow : styles.titleColumn}>
+              {!inlineIndicator && <StepIndicator current={isLeaf ? 1 : 0} />}
               <ThemedText type="heading" accessibilityRole="header" style={styles.titleText}>
                 {isLeaf ? 'Hangi seviyedesin?' : 'Ne öğrenmek istiyorsun?'}
               </ThemedText>
-              <StepIndicator current={isLeaf ? 1 : 0} />
+              {inlineIndicator && <StepIndicator current={isLeaf ? 1 : 0} />}
             </View>
 
             {/* BREADCRUMB: Tümü › Teknoloji › Yapay Zeka (her adıma basılabilir). Kökteyken gizli. */}
@@ -229,28 +244,12 @@ export default function OnboardingScreen() {
             styles.footer,
             { paddingHorizontal: gutter, borderTopColor: theme.border, backgroundColor: theme.background },
           ]}>
-          {error && <Banner tone="warning">{error}</Banner>}
           <Animated.View style={popStyle}>
-            <Button
-              label="Yol haritamı oluştur"
-              onPress={handleContinue}
-              disabled={!canContinue && !saving}
-              loading={saving}
-            />
+            <Button label="Devam et" onPress={handleContinue} disabled={!canContinue} />
           </Animated.View>
         </View>
         )}
       </SafeAreaView>
-
-      {/* Kutlama yalnız kayıt BAŞARILI olunca açılır; hata yolunda hiç görünmez */}
-      <Celebration
-        visible={celebrating}
-        emoji={category.emoji}
-        hue={category.hue}
-        title="Harika! Yolculuğun başlıyor."
-        levelId={level ?? ''}
-        onDone={finishCelebration}
-      />
     </ThemedView>
   );
 }
@@ -262,6 +261,7 @@ const styles = StyleSheet.create({
   content: { alignItems: 'center' },
   inner: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  titleColumn: { gap: Spacing.three, alignItems: 'flex-start' },
   titleText: { flex: 1, minWidth: 0 },
   breadcrumb: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   crumbGroup: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },

@@ -68,28 +68,28 @@ export function OptionCard({
 
   function shake() {
     if (reduceMotion) return;
-    wobble.value = withSequence(
+    wobble.set(withSequence(
       withTiming(-8, { duration: 50 }),
       withTiming(8, { duration: 50 }),
       withTiming(-4, { duration: 50 }),
       withTiming(0, { duration: 50 })
-    );
+    ));
   }
 
   // Seçili durum false -> true olunca: kart yaylanır, ikon sallanır. İlk çizimde çalışmaz.
   const wasSelected = useRef(selected);
   useEffect(() => {
     if (selected && !wasSelected.current && !reduceMotion) {
-      scale.value = withSequence(
+      scale.set(withSequence(
         withSpring(1.03, { damping: 12, stiffness: 260 }),
         withSpring(1, { damping: 14, stiffness: 220 })
-      );
-      wobble.value = withSequence(
+      ));
+      wobble.set(withSequence(
         withTiming(-8, { duration: 50 }),
         withTiming(8, { duration: 50 }),
         withTiming(-4, { duration: 50 }),
         withTiming(0, { duration: 50 })
-      );
+      ));
     }
     wasSelected.current = selected;
   }, [selected, reduceMotion, scale, wobble]);
@@ -214,11 +214,11 @@ export function OptionCard({
         <Pressable
           onPress={onPress}
           onPressIn={() => {
-            press.value = reduceMotion ? Edge - 1 : withTiming(Edge - 1, { duration: 60 });
+            press.set(reduceMotion ? Edge - 1 : withTiming(Edge - 1, { duration: 60 }));
             if (isTile) shake();
           }}
           onPressOut={() => {
-            press.value = reduceMotion ? 0 : withSpring(0, { damping: 14, stiffness: 320, mass: 0.6 });
+            press.set(reduceMotion ? 0 : withSpring(0, { damping: 14, stiffness: 320, mass: 0.6 }));
           }}
           accessibilityRole={role}
           accessibilityLabel={isCompact ? `${title}. Konuyu değiştir` : undefined}

@@ -70,6 +70,8 @@ function RootStack() {
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="onboarding" options={{ title: 'Konunu seç' }} />
+        {/* 3 soru + "adımların hazırlanıyor" anı. Başlık ve geri düğmesini ekranın kendisi ayarlar. */}
+        <Stack.Screen name="roadmap-questions" options={{ title: 'Sana özel adımlar' }} />
       </Stack.Protected>
     </Stack>
   );

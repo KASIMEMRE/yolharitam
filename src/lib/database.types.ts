@@ -38,28 +38,114 @@ export type Database = {
       roadmaps: {
         Row: {
           created_at: string
+          goal: string | null
           id: string
+          learning_style: string | null
           level: string
           topic_path: string
           user_id: string
+          weekly_hours: string | null
         }
         Insert: {
           created_at?: string
+          goal?: string | null
           id?: string
+          learning_style?: string | null
           level: string
           topic_path: string
           user_id: string
+          weekly_hours?: string | null
         }
         Update: {
           created_at?: string
+          goal?: string | null
           id?: string
+          learning_style?: string | null
           level?: string
           topic_path?: string
           user_id?: string
+          weekly_hours?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "roadmaps_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      roadmap_steps: {
+        Row: {
+          created_at: string
+          description: string
+          estimated_hours: number
+          id: string
+          phase: string
+          position: number
+          resource_type: string
+          roadmap_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          estimated_hours: number
+          id?: string
+          phase: string
+          position: number
+          resource_type: string
+          roadmap_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          estimated_hours?: number
+          id?: string
+          phase?: string
+          position?: number
+          resource_type?: string
+          roadmap_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roadmap_steps_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      step_progress: {
+        Row: {
+          completed_at: string
+          step_id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          step_id: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          step_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "step_progress_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "roadmap_steps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "step_progress_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -72,7 +158,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      add_steps_to_roadmap: {
+        Args: {
+          p_goal: string
+          p_learning_style: string
+          p_roadmap_id: string
+          p_steps: Json
+          p_weekly_hours: string
+        }
+        Returns: undefined
+      }
+      create_roadmap_with_steps: {
+        Args: {
+          p_goal: string
+          p_learning_style: string
+          p_level: string
+          p_steps: Json
+          p_topic_path: string
+          p_weekly_hours: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

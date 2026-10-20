@@ -49,21 +49,22 @@ export function LevelBadge({ levelId, size = 'sm' }: LevelBadgeProps) {
 type StatusChipProps = {
   label: string;
   emoji?: string;
-  tone: 'marker' | 'neutral';
+  tone: 'marker' | 'neutral' | 'accent'; // accent = başarı/tamamlandı
   align?: 'start' | 'center'; // ortalı kartlarda 'center'
 };
 
 export function StatusChip({ label, emoji, tone, align = 'start' }: StatusChipProps) {
   const theme = useTheme();
   const marker = tone === 'marker';
+  const accent = tone === 'accent';
   return (
     <View
       style={[
         styles.chip,
         {
           alignSelf: align === 'center' ? 'center' : 'flex-start',
-          backgroundColor: marker ? theme.markerSoft : theme.backgroundSelected,
-          borderColor: marker ? theme.markerEdge : theme.borderStrong,
+          backgroundColor: marker ? theme.markerSoft : accent ? theme.accentSoft : theme.backgroundSelected,
+          borderColor: marker ? theme.markerEdge : accent ? theme.accent : theme.borderStrong,
           paddingVertical: Spacing.one,
           paddingHorizontal: Spacing.two,
         },
@@ -73,7 +74,7 @@ export function StatusChip({ label, emoji, tone, align = 'start' }: StatusChipPr
           {emoji}
         </Text>
       )}
-      <ThemedText type="chip" themeColor={marker ? 'markerInk' : 'text'} maxFontSizeMultiplier={1.3}>
+      <ThemedText type="chip" themeColor={marker ? 'markerInk' : accent ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
         {label}
       </ThemedText>
     </View>

@@ -1,11 +1,11 @@
 import { Link } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { AchievementsSection } from '@/components/achievements-section';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge } from '@/components/level-badge';
-import { LockedCard } from '@/components/locked-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
@@ -83,21 +83,17 @@ export default function ProfileScreen() {
           style={[styles.topicCard, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
           <IconTile emoji="🧭" tone="accent" size={48} />
           <View style={styles.topicTexts}>
-            <ThemedText type="cardTitle">Henüz konu seçmedin</ThemedText>
+            <ThemedText type="cardTitle">Henüz bir konu seçmedin</ThemedText>
           </View>
         </View>
       )}
 
       <Link href="/onboarding" asChild>
-        <Button variant="secondary" icon="🧭" label="Konumu değiştir" />
+        <Button variant="secondary" icon="🧭" label="Konunu değiştir" />
       </Link>
 
-      <LockedCard
-        compact
-        emoji="🏆"
-        title="Başarımlar"
-        description="Öğrenmeye başladıkça rozetlerin burada toplanacak."
-      />
+      {/* Rozetler kendi hook'uyla yüklenir: ağ hatası olsa da yukarıdaki kimlik/konu kartı çalışmaya devam eder */}
+      <AchievementsSection />
 
       {/* Çıkış yapınca oturum null olur; Stack.Protected bizi karşılama ekranına atar */}
       <View style={styles.signOut}>
