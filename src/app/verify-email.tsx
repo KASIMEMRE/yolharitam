@@ -36,6 +36,8 @@ import { supabase } from '@/lib/supabase';
 const RESEND_SECONDS = 60; // Supabase'in kendi "60 saniyede bir" kuralıyla uyumlu
 const MIN_DIGITS = 6; // Panelde kod uzunluğu 6-10 arası ayarlanabilir; bu yüzden aralık kontrol ediyoruz
 const MAX_DIGITS = 10;
+// Gönderim sınırı notu. İçinde sayı yok (sabit), bu yüzden hem ekranda hem tek seferlik duyuruda aynen kullanılır.
+const LIMIT_NOTE = 'Gönderim sınırına ulaştın. Sayaç bitince yeni kod isteyebilirsin.';
 
 // Bu ekranda 1. durak "Hesabını doğrula" olarak görünür; ilerleme iddiası yok (sahte ilerleme olmasın).
 const STOPS = [{ ...AUTH_STEPS[0], label: 'Hesabını doğrula' }, ...AUTH_STEPS.slice(1)];
@@ -58,15 +60,16 @@ export default function VerifyEmailScreen() {
   const [resending, setResending] = useState(false); // tekrar gönder isteği sürüyor
   const [error, setError] = useState<string | null>(null);
   const [errorIsCode, setErrorIsCode] = useState(false); // yalnız "kod yanlış" ise alan kırmızı olur
-  // Limit hatası alındıysa sayaç yuvasında "sınıra ulaştın" yazar; başarılı gönderimde kalkar.
-  const [limited, setLimited] = useState<{ seconds: number | null } | null>(null);
+  // Limit hatası alındıysa sayaç çalışırken yuvada "sınıra ulaştın" notu görünür; sayaç bitince not kalkar.
+  const [limited, setLimited] = useState(false);
   const [info, setInfo] = useState<string | null>(null);
   // GERİ SAYIM: saniyeyi SAYMAK yerine bitiş zamanını saklarız. iOS uygulama arka plandayken
   // zamanlayıcıları durdurur; sayarsak geri dönünce sayaç eski değerde takılı kalır. Bitiş zamanı
   // ise gerçek saate bağlı olduğundan her zaman doğru kalır.
   // Girişten geldiyse kullanıcı kodu bulamıyor olabilir: bekleme yok, "Tekrar gönder" hemen aktif.
-  const [resendAt, setResendAt] = useState(fromLogin ? 0 : Date.now() + RESEND_SECONDS * 1000);
-  const [now, setNow] = useState(Date.now());
+  // Tembel başlatıcı (() => ...): Date.now() render sırasında her seferinde değil, yalnız ilk kurulumda çağrılır.
+  const [resendAt, setResendAt] = useState(() => (fromLogin ? 0 : Date.now() + RESEND_SECONDS * 1000));
+  const [now, setNow] = useState(() => Date.now());
   const secondsLeft = Math.max(0, Math.ceil((resendAt - now) / 1000));
   // null = henüz bilmiyoruz. Ekran okuyucu açıksa alana otomatik odaklanmayız (başlığı duymadan atlamasın).
   const [screenReader, setScreenReader] = useState<boolean | null>(null);
@@ -99,12 +102,15 @@ export default function VerifyEmailScreen() {
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.value }] }));
   function playShake() {
     if (reduceMotion) return;
-    shake.value = withSequence(
-      withTiming(-6, { duration: 50 }),
-      withTiming(6, { duration: 50 }),
-      withTiming(-6, { duration: 50 }),
-      withTiming(6, { duration: 50 }),
-      withTiming(0, { duration: 50 })
+    // Paylaşılan değere .set() ile yazılır (proje kuralı; doğrudan .value atamak lint hatası verir).
+    shake.set(
+      withSequence(
+        withTiming(-6, { duration: 50 }),
+        withTiming(6, { duration: 50 }),
+        withTiming(-6, { duration: 50 }),
+        withTiming(6, { duration: 50 }),
+        withTiming(0, { duration: 50 })
+      )
     );
   }
 
@@ -159,17 +165,22 @@ export default function VerifyEmailScreen() {
 
     const { error } = await supabase.auth.resend({ type: 'signup', email });
     if (error) {
-      setError(toTurkish(error, 'resend'));
       setErrorIsCode(false);
       // Bekletme yalnız limit hatasında: ağ/diğer hatada istek hiç gitmemiş olabilir, kullanıcı hemen yeniden denesin.
       if (authErrorKind(error) === 'rateLimit') {
-        setResendAt(Date.now() + RESEND_SECONDS * 1000);
-        setLimited({ seconds: rateLimitSeconds(error) });
+        // Sunucu süre verdiyse sayaç o süreye kurulur, yoksa varsayılana. Mesajı kutuda göstermeyiz:
+        // sayaç altındaki sabit not yeterli ve sayaç bitince kendiliğinden kaybolur (kutu kalıcı olurdu).
+        setResendAt(Date.now() + (rateLimitSeconds(error) ?? RESEND_SECONDS) * 1000);
+        setLimited(true);
+        // Not canlı bölge değil (sayaç yuvası); ekran okuyucu kullanıcısı haber alsın diye BİR KEZ duyururuz.
+        AccessibilityInfo.announceForAccessibility(LIMIT_NOTE);
+      } else {
+        setError(toTurkish(error, 'resend'));
       }
     } else {
       const message = 'Yeni kod gönderildi. En son gelen kodu kullan.';
       setInfo(message);
-      setLimited(null);
+      setLimited(false);
       // iOS'ta Banner'ın live region'ı okunmayabilir; elle duyuruyoruz.
       AccessibilityInfo.announceForAccessibility(message);
       setResendAt(Date.now() + RESEND_SECONDS * 1000);
@@ -179,17 +190,15 @@ export default function VerifyEmailScreen() {
   }
 
   // Aşağıdakiler her çizimde state'ten TÜRETİLİR (ayrı state tutmayız): sayaç değişince metin kendiliğinden güncellenir.
-  // Yanlış kodda hemen "yeni kod iste" demek çıkmaz yaratır (buton sayaçta pasif); bekleme süresini söyleriz.
+  // Hata kutusu canlı bölgedir: içinde saniye gibi değişen bir sayı olursa ekran okuyucu her saniye yeniden okur.
+  // Bu yüzden metin SABİT; geri sayım yalnız alttaki "Tekrar gönder" yuvasında görünür.
   const shownError =
-    error && errorIsCode && secondsLeft > 0
-      ? `Kod hatalı ya da süresi dolmuş. Kodu kontrol et; yeni kod için ${secondsLeft} sn bekle.`
+    error && errorIsCode
+      ? 'Kod hatalı ya da süresi dolmuş. Kodu kontrol et; yeni kod için alttaki sayaç bitince tekrar gönder.'
       : error;
-  const resendHint = limited
-    ? limited.seconds
-      ? `Gönderim sınırına ulaştın. ${limited.seconds} saniye sonra tekrar dene.`
-      : 'Gönderim sınırına ulaştın. Birkaç dakika sonra tekrar dene.'
-    : secondsLeft > 0
-      ? `${secondsLeft} sn sonra yeniden isteyebilirsin`
+  const resendHint =
+    secondsLeft > 0
+      ? `${limited ? `${LIMIT_NOTE}\n` : ''}${secondsLeft} sn sonra yeniden isteyebilirsin`
       : '';
 
   return (
@@ -296,7 +305,8 @@ export default function VerifyEmailScreen() {
                 </View>
                 {/* Hesap numaralandırmayı önlemek için kayıtlı e-posta da bu ekrana gelir (login.tsx);
                     kod gelmeyen gerçek hesap sahibi buradan giriş yapmaya yönlenir. */}
-                {secondsLeft === 0 && (
+                {/* Girişten gelen kullanıcı zaten giriş yapmayı denedi; ona bu ipucu anlamsız. */}
+                {secondsLeft === 0 && !fromLogin && (
                   <ThemedText type="small" themeColor="textSecondary" style={[styles.hintText, { marginTop: Spacing.two }]}>
                     Kod birkaç dakika içinde gelmezse bu adresle zaten hesabın olabilir; giriş yapmayı dene.
                   </ThemedText>

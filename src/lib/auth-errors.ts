@@ -29,11 +29,21 @@ export function authErrorKind(error: AuthLikeError): AuthErrorKind {
     return 'rateLimit';
   }
   // Ağ kopukken kütüphane "retryable fetch" hatası verir; bazen düz "Network request failed" gelir.
-  if (isAuthRetryableFetchError(error) || m.includes('network') || m.includes('failed to fetch')) {
+  // "load failed" = Safari, "networkerror" = Firefox ("NetworkError when attempting to fetch...").
+  if (
+    isAuthRetryableFetchError(error) ||
+    m.includes('network') ||
+    m.includes('failed to fetch') ||
+    m.includes('load failed') ||
+    m.includes('networkerror')
+  ) {
     return 'network';
   }
   return 'other';
 }
+
+// Yalnız toTurkish içinde kullanılır: "Confirm email" KAPALIYKEN Supabase açık `user_already_exists` hatası döner.
+const ALREADY_REGISTERED_MESSAGE = 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
 
 // Supabase'in İngilizce hatalarını kullanıcının anlayacağı Türkçeye çevirir.
 export function toTurkish(error: AuthLikeError, context: AuthContext = 'login'): string {
@@ -48,11 +58,8 @@ export function toTurkish(error: AuthLikeError, context: AuthContext = 'login'):
       if (code === 'over_request_rate_limit' && context === 'verify') {
         return 'Çok fazla deneme yaptın. Biraz bekleyip tekrar dene.';
       }
-      // Mesajda "...only request this after 42 seconds" gibi bir süre varsa kullanıcıya söyleriz.
-      const seconds = /after (\d+) second/.exec(m)?.[1];
-      return seconds
-        ? `${seconds} saniye sonra tekrar dene.`
-        : 'Çok sık kod istedin. Bir dakika bekleyip tekrar dene.';
+      // Sabit metin: saniyeyi ekran kendi sayacıyla gösterir (canlı bölgede değişen sayı olmasın).
+      return 'Çok sık kod istedin. Sayaç bitince tekrar dene.';
     }
     return 'Çok fazla deneme yapıldı. Birkaç dakika sonra tekrar dene.';
   }
@@ -77,9 +84,6 @@ export function toTurkish(error: AuthLikeError, context: AuthContext = 'login'):
   return 'Bir sorun oluştu. Biraz sonra tekrar dene.';
 }
 
-// Yalnız toTurkish içinde kullanılır: "Confirm email" KAPALIYKEN Supabase açık `user_already_exists` hatası döner.
-const ALREADY_REGISTERED_MESSAGE = 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
-
 // "Giriş yapılamadı: e-posta doğrulanmamış" hatası mı? Bu durumda hata kutusu yerine kod ekranına gideriz.
 export function isEmailNotConfirmed(error: AuthLikeError): boolean {
   return error.code === 'email_not_confirmed' || error.message.toLowerCase().includes('email not confirmed');
@@ -87,6 +91,7 @@ export function isEmailNotConfirmed(error: AuthLikeError): boolean {
 
 // Limit hatasının mesajında "...after 42 seconds" gibi bir süre varsa saniyeyi verir, yoksa null.
 export function rateLimitSeconds(error: AuthLikeError): number | null {
+  // Süreyi çıkaran tek yer burası (toTurkish artık kendi regex'ini taşımıyor).
   const found = /after (\d+) second/.exec(error.message.toLowerCase())?.[1];
   return found ? Number(found) : null;
 }
