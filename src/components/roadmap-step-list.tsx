@@ -7,16 +7,18 @@ import Animated, {
   useReducedMotion,
   useSharedValue,
   withSequence,
-  withSpring,
+  withTiming,
   ZoomIn,
 } from 'react-native-reanimated';
 
+import { Banner } from '@/components/banner';
 import { StatusChip } from '@/components/level-badge';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import type { Phase, ResourceType } from '@/constants/roadmap-templates';
 import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { PHASE_STYLE, RESOURCE_STYLE, RESOURCE_SUMMARY } from '@/constants/visuals';
+import type { MarkError } from '@/hooks/use-roadmap-steps';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 
 // Yol haritası adımlarının DİKEY listesi: solda rota rayı (numaralı duraklar + noktalar), sağda kartlar.
@@ -50,10 +52,12 @@ export function RoadmapStepList({
   steps,
   completedIds,
   onToggle,
+  markError,
 }: {
   steps: StepItem[];
   completedIds: Set<string>;
   onToggle: (stepId: string) => void;
+  markError: MarkError | null;
 }) {
   const reduceMotion = useReducedMotion();
   const sorted = [...steps].sort((a, b) => a.position - b.position);
@@ -68,6 +72,7 @@ export function RoadmapStepList({
       : null;
 
   // Sıradaki adım = ilk tamamlanmamış adım (hepsi bitmişse yok)
+  const noneDone = !sorted.some((s) => completedIds.has(s.id));
   const nextId = sorted.find((s) => !completedIds.has(s.id))?.id;
   // Evre tamamlandı = o evrenin TÜM adımları işaretli. Evre başına bir kez hesaplanır.
   const phaseDone = new Map<string, boolean>();
@@ -84,7 +89,7 @@ export function RoadmapStepList({
         // Evre başlığı yalnız evre DEĞİŞİNCE çizilir (ardışık aynı evre tek başlık altında).
         const showHeader = step.phase !== sorted[index - 1]?.phase && phaseOf(step.phase) !== undefined;
         return (
-          <View key={step.position}>
+          <View key={step.id}>
             {showHeader && <PhaseHeader phase={step.phase} first={index === 0} done={phaseDone.get(step.phase) === true} />}
             <Animated.View
               entering={
@@ -99,7 +104,8 @@ export function RoadmapStepList({
                 completed={completedIds.has(step.id)}
                 isNext={step.id === nextId}
                 // Hiçbir adım işaretli değilken ilk adımda "Sıradaki" yerine "Buradan başla" yazar
-                isStart={step.id === nextId && step.position === 1 && completedIds.size === 0}
+                isStart={step.id === nextId && step.position === 1 && noneDone}
+                errorText={markError?.stepId === step.id ? markError.text : null}
                 onToggle={onToggle}
               />
             </Animated.View>
@@ -128,6 +134,9 @@ function RailDots() {
 
 function PhaseHeader({ phase, first, done }: { phase: string; first: boolean; done: boolean }) {
   const reduceMotion = useReducedMotion();
+  // Çip yalnız bu ekranda false→true GEÇİŞİNDE yaylanır; liste yüklenirken zaten tamamlanmış evrede
+  // (ilk çizimde done=true) animasyon oynamaz.
+  const [startedDone] = useState(done);
   const theme = useTheme();
   const style = phaseOf(phase);
   if (!style) return null;
@@ -147,7 +156,8 @@ function PhaseHeader({ phase, first, done }: { phase: string; first: boolean; do
         <ThemedText type="eyebrow">{style.label}</ThemedText>
         {done && (
           // Evre bitince çip yaylanarak belirir (hafif kutlama); reduce motion'da sade solma
-          <Animated.View entering={reduceMotion ? FadeIn.duration(150) : ZoomIn.springify().damping(9)}>
+          <Animated.View
+            entering={startedDone ? undefined : reduceMotion ? FadeIn.duration(150) : ZoomIn.springify().damping(9)}>
             <StatusChip tone="accent" emoji="✓" label="Evre tamamlandı" />
           </Animated.View>
         )}
@@ -164,6 +174,7 @@ function StepRow({
   completed,
   isNext,
   isStart,
+  errorText,
   onToggle,
 }: {
   step: StepItem;
@@ -172,6 +183,7 @@ function StepRow({
   completed: boolean;
   isNext: boolean;
   isStart: boolean;
+  errorText: string | null;
   onToggle: (stepId: string) => void;
 }) {
   const theme = useTheme();
@@ -182,24 +194,26 @@ function StepRow({
 
   // Mikro animasyon: durak yalnız KULLANICI işaretleyince "pop" yapar. İlk çizimde (liste yüklenirken
   // zaten tamamlanmış adımlar) oynamasın diye önceki değer ref'te tutulur.
+  // withTiming kullanılır (yay değil): web'de yay animasyonu 1.25'te takılı kalabiliyordu; süreli
+  // animasyon her platformda kesin biter. Başka bir değişimde (geri alma, hata) değer 1'e çekilir.
   const scale = useSharedValue(1);
   const prevCompleted = useRef(completed);
   useEffect(() => {
     if (prevCompleted.current !== completed && completed && !reduceMotion) {
-      scale.value = withSequence(withSpring(1.25, { damping: 6, stiffness: 300 }), withSpring(1));
+      scale.value = withSequence(withTiming(1.2, { duration: 120 }), withTiming(1, { duration: 160 }));
+    } else {
+      scale.value = withTiming(1, { duration: 100 });
     }
     prevCompleted.current = completed;
   }, [completed, reduceMotion, scale]);
   const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
-  // Ekran okuyucu: kart tek bir onay kutusu olarak okunur (durumu accessibilityState söyler).
+  // Ekran okuyucu: etiket KISA (başlık + süre + sıradaki mi), uzun açıklama ipucuna (hint) gider.
+  // Tamamlandı/tamamlanmadı bilgisini accessibilityState (checked) söyler.
   const label =
-    `Adım ${step.position}: ${step.title}. ` +
-    (completed ? 'Tamamlandı.' : 'Tamamlanmadı. İşaretlemek için çift dokun.') +
-    ` ${hoursText}.` +
-    (resource ? ` ${resource.label}.` : '') +
-    (isStart ? ' Buradan başla.' : isNext ? ' Sıradaki adım.' : '') +
-    ` ${step.description}`;
+    `Adım ${step.position}: ${step.title}, ${hoursText}` +
+    (isStart ? ', Buradan başla' : isNext ? ', Sıradaki adım' : '');
+  const hint = `${completed ? 'Geri almak için çift dokun.' : 'İşaretlemek için çift dokun.'} ${step.description}`;
 
   // Kart kenarı: tamamlandı = accent, sıradaki = sarı (marker), son adım = accent, diğerleri nötr
   const borderColor = completed ? theme.accent : isNext ? theme.markerEdge : last ? theme.accent : theme.border;
@@ -234,7 +248,10 @@ function StepRow({
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: completed }}
+          // react-native-web'de durumun DOM'a aria-checked olarak yansıması için ayrıca verilir
+          aria-checked={completed}
           accessibilityLabel={label}
+          accessibilityHint={hint}
           onPress={() => onToggle(step.id)}
           style={({ pressed }) => [
             styles.card,
@@ -259,6 +276,13 @@ function StepRow({
             </View>
           </View>
         </Pressable>
+        {/* Hata mesajı kartın hemen altında: uzun listede ekran dışında kalmaz, hangi adımın
+            kaydedilemediği de belli olur. Banner zaten alert + live region (ekran okuyucu duyurur). */}
+        {errorText !== null && (
+          <View style={styles.cardError}>
+            <Banner tone="warning">{errorText}</Banner>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -328,6 +352,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     minHeight: MinTouch,
   },
+  cardError: { marginTop: Spacing.two },
   cardInner: { gap: Spacing.two },
   skeletonCard: { minHeight: 148, gap: Spacing.two },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two, marginTop: Spacing.one },

@@ -39,5 +39,6 @@ export const ERROR_TEXT = {
   other: 'Bir şeyler ters gitti. Biraz sonra tekrar dene.',
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  markSchema: 'İşaret kaydedilemedi. Veritabanı güncellemesi bekleniyor olabilir.',
   session: 'Oturumun kapanmış. Lütfen yeniden giriş yap.',
 } as const;

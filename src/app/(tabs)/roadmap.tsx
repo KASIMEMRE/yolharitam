@@ -31,12 +31,11 @@ export default function RoadmapScreen() {
   // Kutlama yalnız bu oturumda "tamamlanmamış → tamamlanmış" GEÇİŞİNDE açılır (ekranı her açışta değil)
   const [celebrating, setCelebrating] = useState(false);
 
-  // Dokunulan adımı işaretler/geri alır. Son adım işaretlenip KAYIT BAŞARILI olunca kutlama açılır;
-  // istek başarısız olursa (adım geri alınır) kutlama hiç çıkmaz.
+  // Dokunulan adımı işaretler/geri alır. Kayıt BAŞARILI olup tüm adımlar bitmişse kutlama açılır
+  // (hook "allDone" bilgisini döndürür); istek başarısız olursa (adım geri alınır) kutlama hiç çıkmaz.
   async function onToggle(stepId: string) {
-    const completesAll = !completedIds.has(stepId) && completedIds.size + 1 === steps.length;
-    const ok = await toggleStep(stepId);
-    if (ok === true && completesAll) setCelebrating(true);
+    const res = await toggleStep(stepId);
+    if (res?.ok && res.allDone) setCelebrating(true);
   }
 
   if (loading) {
@@ -79,8 +78,8 @@ export default function RoadmapScreen() {
         )
       : null;
 
-  // Tamamlanan sayısı yalnız bu yol haritasının adımlarından sayılır (silinmiş adım id'leri sayıyı şişirmesin)
-  const completedCount = steps.filter((s) => completedIds.has(s.id)).length;
+  // completedIds hook'ta zaten yalnız mevcut adımlara süzülür (silinmiş adım id'leri sayıyı şişirmez)
+  const completedCount = completedIds.size;
   const topic = describeTopic(roadmap.topic_path);
 
   // "Boş" ile "hata" ayrı dallar: hatada "Adımlarımı oluştur" ASLA gösterilmez (yanlış yönlendirir)
@@ -125,20 +124,24 @@ export default function RoadmapScreen() {
               total={steps.length}
               remainingHours={steps.filter((s) => !completedIds.has(s.id)).reduce((t, s) => t + s.estimated_hours, 0)}
             />
-            {/* İşaret kaydedilemezse adım geri alınır ve burada sebebi yazar */}
-            {markError !== null && <Banner tone="warning">{markError}</Banner>}
-            <RoadmapStepList steps={steps} completedIds={completedIds} onToggle={onToggle} />
+            {/* İşaret kaydedilemezse adım geri alınır; hata mesajı DOKUNULAN kartın hemen altında çıkar */}
+            <RoadmapStepList steps={steps} completedIds={completedIds} onToggle={onToggle} markError={markError} />
           </View>
-          <Celebration
-            visible={celebrating}
-            emoji={topic.category.emoji}
-            hue={topic.category.hue}
-            title="Yol haritanı tamamladın!"
-            subtitle="Bütün adımları bitirdin. İstersen yeni bir konu seçip yola devam edebilirsin."
-            levelId={roadmap.level}
-            onDone={() => setCelebrating(false)}
-          />
         </>
+      )}
+
+      {/* Her açılışta TAZE mount: Celebration iç durumu (bitti bayrağı, animasyon değerleri) sıfırdan başlar.
+          Ayrıca adım durumundan bağımsız: liste dalının dışında durur. */}
+      {celebrating && (
+        <Celebration
+          visible
+          emoji={topic.category.emoji}
+          hue={topic.category.hue}
+          title="Yol haritanı tamamladın!"
+          subtitle="Bütün adımları bitirdin. İstersen yeni bir konu seçip yola devam edebilirsin."
+          levelId={roadmap.level}
+          onDone={() => setCelebrating(false)}
+        />
       )}
 
       {/* İkincil eylem en sonda: konu değiştirmek nadir bir iş, uzun listenin önüne geçmesin */}
