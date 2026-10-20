@@ -121,7 +121,9 @@ export function useRoadmapSteps(roadmapId: string | undefined) {
       return () => {
         cancelled = true;
       };
-      // reloadKey: "Tekrar dene" basılınca efekti yeniden çalıştırmak için
+      // reloadKey fonksiyonun içinde okunmuyor; ama "Tekrar dene" basılınca değişip efekti
+      // yeniden çalıştırması için BİLEREK bağımlılıkta. Lint bunu "gereksiz" sanıyor.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [roadmapId, reloadKey])
   );
 

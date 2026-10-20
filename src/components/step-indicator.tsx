@@ -36,15 +36,15 @@ export function StepIndicator({ current }: StepIndicatorProps) {
 
   useEffect(() => {
     // current değişince çizgiler dolar / boşalır, yeni daire hafifçe büyüyüp yerine oturur
-    fill1.value = reduceMotion ? (current >= 1 ? 1 : 0) : withTiming(current >= 1 ? 1 : 0, { duration: 300 });
-    fill2.value = reduceMotion ? (current >= 2 ? 1 : 0) : withTiming(current >= 2 ? 1 : 0, { duration: 300 });
+    fill1.set(reduceMotion ? (current >= 1 ? 1 : 0) : withTiming(current >= 1 ? 1 : 0, { duration: 300 }));
+    fill2.set(reduceMotion ? (current >= 2 ? 1 : 0) : withTiming(current >= 2 ? 1 : 0, { duration: 300 }));
     if (!reduceMotion && current > 0) {
       const target = current === 1 ? pop2 : pop3;
-      target.value = withSequence(
+      target.set(withSequence(
         withTiming(0.8, { duration: 0 }),
         withSpring(1.1, { damping: 10, stiffness: 220 }),
         withSpring(1, { damping: 10, stiffness: 220 })
-      );
+      ));
     }
   }, [current, reduceMotion, fill1, fill2, pop2, pop3]);
 

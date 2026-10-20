@@ -67,10 +67,10 @@ export function Celebration({ visible, emoji, hue, title, subtitle, levelId, onD
     // finish() hemen dönerdi ve kutlama kapanmazdı.
     doneRef.current = false;
 
-    backdrop.value = withTiming(0.96, { duration: 150 });
+    backdrop.set(withTiming(0.96, { duration: 150 }));
     if (!reduceMotion) {
-      tileScale.value = withSpring(1, { damping: 9, stiffness: 180, mass: 0.8 });
-      progress.value = withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) });
+      tileScale.set(withSpring(1, { damping: 9, stiffness: 180, mass: 0.8 }));
+      progress.set(withTiming(1, { duration: 900, easing: Easing.out(Easing.cubic) }));
     }
     AccessibilityInfo.announceForAccessibility(subtitle ? `${title} ${subtitle}` : title);
 

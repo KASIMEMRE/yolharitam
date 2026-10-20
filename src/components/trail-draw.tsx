@@ -31,23 +31,23 @@ const ARRIVE_AT = 1000; // 📍'in düştüğü an (ms)
 export function TrailDraw({ width, slow = false }: TrailDrawProps) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
-  // Hareketi azalt açıkken işaret baştan yerinde durur
-  const [arrived, setArrived] = useState(reduceMotion);
+  // 📍'in düşme zamanı geldi mi? (zamanlayıcı ayarlar)
+  const [timerDone, setTimerDone] = useState(false);
+  // Türetilmiş değer: "Hareketi azalt" açıkken işaret baştan yerinde durur.
+  // Bunu effect içinde setState ile yapmak gereksiz ikinci bir çizime yol açardı.
+  const arrived = reduceMotion || timerDone;
   const pulse = useSharedValue(1);
 
   useEffect(() => {
-    if (reduceMotion) {
-      setArrived(true);
-      return;
-    }
+    if (reduceMotion) return;
     // Zamanlayıcı ekran kapanınca temizlenir (kapanmış bileşende setState çağrılmasın)
-    const timer = setTimeout(() => setArrived(true), ARRIVE_AT);
+    const timer = setTimeout(() => setTimerDone(true), ARRIVE_AT);
     return () => clearTimeout(timer);
   }, [reduceMotion]);
 
   useEffect(() => {
     if (slow && !reduceMotion) {
-      pulse.value = withRepeat(withTiming(0.6, { duration: 900 }), -1, true);
+      pulse.set(withRepeat(withTiming(0.6, { duration: 900 }), -1, true));
     }
   }, [slow, reduceMotion, pulse]);
   const pinStyle = useAnimatedStyle(() => ({ opacity: pulse.value }));

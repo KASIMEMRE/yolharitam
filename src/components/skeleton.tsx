@@ -22,8 +22,8 @@ export function Skeleton({ width = '100%', height, radius = Radius.sm }: Skeleto
 
   useEffect(() => {
     if (reduceMotion) return;
-    opacity.value = 0.55;
-    opacity.value = withRepeat(withTiming(1, { duration: 800 }), -1, true);
+    opacity.set(0.55);
+    opacity.set(withRepeat(withTiming(1, { duration: 800 }), -1, true));
   }, [reduceMotion, opacity]);
 
   const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
