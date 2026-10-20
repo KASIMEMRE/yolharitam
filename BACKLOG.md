@@ -18,13 +18,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Türkçe karakterlere duyarsız arama (ı/i, ş/s vb.) için küçük bir yardımcı fonksiyon.
 - Kabul: Arama boşken mevcut gezinme aynen çalışır.
 
-### Y-05 · Yol Haritam ekranı: adımlar ve ilerleme
-- Y-04'e bağlı. Liste görünümü Y-04 PR'ında yapıldı (`RoadmapStepList`); kalan: işaretleme ve ilerleme özeti.
-- Adımlar dikey rota olarak listelensin (`RouteSteps` genişletilebilir veya yeni bileşen).
-- Her adıma basınca tamamlandı/tamamlanmadı işaretlenir (`step_progress`).
-- Üstte ilerleme özeti: "3 / 8 adım tamamlandı" ve ince bir ilerleme çubuğu.
-- Kabul: Uygulama kapanıp açılınca ilerleme korunur.
-
 ### Y-06 · AI ile yol haritası üretimi (Edge Function, deploy yok)
 - `supabase/functions/generate-roadmap/index.ts`: girdi { topic_path, level }, çıktı 6-10 adımlık JSON.
 - LLM API anahtarı ortam değişkeninden okunur (`Deno.env.get(...)`), koda yazılmaz.
@@ -67,6 +60,14 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Yol Haritam'da adımlar evrelere göre listelenir; adımı olmayan mevcut kullanıcı "Adımlarımı oluştur" ile aynı soruları yanıtlar.
 - Migration: `roadmap_steps`, `step_progress` (bu PR'da kullanılmıyor), `roadmaps` cevap sütunları, 2 RPC, RLS dahil.
 - Not: "Yolculuk başlıyor" çipi kaldırıldı, yerine gerçek özet (adım sayısı, toplam saat, tahmini hafta) geldi.
+
+### Y-05 · Yol Haritam ekranı: adımlar ve ilerleme
+- Y-04'e bağlı. Liste görünümü Y-04 PR'ında yapıldı (`RoadmapStepList`); kalan: işaretleme ve ilerleme özeti.
+- Adımlar dikey rota olarak listelensin (`RouteSteps` genişletilebilir veya yeni bileşen).
+- Her adıma basınca tamamlandı/tamamlanmadı işaretlenir (`step_progress`).
+- Üstte ilerleme özeti: "3 / 8 adım tamamlandı" ve ince bir ilerleme çubuğu.
+- Kabul: Uygulama kapanıp açılınca ilerleme korunur.
+- ✅ Adım kartı onay kutusu (insert/delete ile `step_progress`), iyimser güncelleme, `ProgressSummary` (N / M + çubuk + kalan süre), "Sıradaki adım", "Evre tamamlandı", yol bitince `Celebration`.
 
 ## Öneriler (ekipten)
 

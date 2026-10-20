@@ -1,11 +1,14 @@
 import { Link } from 'expo-router';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { Celebration } from '@/components/celebration';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge, StatusChip } from '@/components/level-badge';
+import { ProgressSummary } from '@/components/progress-summary';
 import { RoadmapStepList, StepListSkeleton } from '@/components/roadmap-step-list';
 import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
@@ -24,7 +27,16 @@ export default function RoadmapScreen() {
   // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda:
   // src/hooks/use-latest-roadmap.ts (yol haritası) ve src/hooks/use-roadmap-steps.ts (adımlar)
   const { roadmap, loading } = useLatestRoadmap();
-  const { steps, status, retrying, retry } = useRoadmapSteps(roadmap?.id);
+  const { steps, status, retrying, retry, completedIds, toggleStep, markError } = useRoadmapSteps(roadmap?.id);
+  // Kutlama yalnız bu oturumda "tamamlanmamış → tamamlanmış" GEÇİŞİNDE açılır (ekranı her açışta değil)
+  const [celebrating, setCelebrating] = useState(false);
+
+  // Dokunulan adımı işaretler/geri alır. Kayıt BAŞARILI olup tüm adımlar bitmişse kutlama açılır
+  // (hook "allDone" bilgisini döndürür); istek başarısız olursa (adım geri alınır) kutlama hiç çıkmaz.
+  async function onToggle(stepId: string) {
+    const res = await toggleStep(stepId);
+    if (res?.ok && res.allDone) setCelebrating(true);
+  }
 
   if (loading) {
     return (
@@ -66,6 +78,10 @@ export default function RoadmapScreen() {
         )
       : null;
 
+  // completedIds hook'ta zaten yalnız mevcut adımlara süzülür (silinmiş adım id'leri sayıyı şişirmez)
+  const completedCount = completedIds.size;
+  const topic = describeTopic(roadmap.topic_path);
+
   // "Boş" ile "hata" ayrı dallar: hatada "Adımlarımı oluştur" ASLA gösterilmez (yanlış yönlendirir)
   const noSteps = status === 'ready' && steps.length === 0;
 
@@ -103,13 +119,29 @@ export default function RoadmapScreen() {
             <ThemedText type="cardTitle" accessibilityRole="header">
               Adımların
             </ThemedText>
-            <RoadmapStepList steps={steps} />
+            <ProgressSummary
+              done={completedCount}
+              total={steps.length}
+              remainingHours={steps.filter((s) => !completedIds.has(s.id)).reduce((t, s) => t + s.estimated_hours, 0)}
+            />
+            {/* İşaret kaydedilemezse adım geri alınır; hata mesajı DOKUNULAN kartın hemen altında çıkar */}
+            <RoadmapStepList steps={steps} completedIds={completedIds} onToggle={onToggle} markError={markError} />
           </View>
-          {/* İşaretleme henüz yok: dürüstçe "yakında" denir, sahte ilerleme çubuğu yok */}
-          <ThemedText type="small" themeColor="textSecondary" style={styles.soon}>
-            🔒 Adımları işaretlemek yakında
-          </ThemedText>
         </>
+      )}
+
+      {/* Her açılışta TAZE mount: Celebration iç durumu (bitti bayrağı, animasyon değerleri) sıfırdan başlar.
+          Ayrıca adım durumundan bağımsız: liste dalının dışında durur. */}
+      {celebrating && (
+        <Celebration
+          visible
+          emoji={topic.category.emoji}
+          hue={topic.category.hue}
+          title="Yol haritanı tamamladın!"
+          subtitle="Bütün adımları bitirdin. İstersen yeni bir konu seçip yola devam edebilirsin."
+          levelId={roadmap.level}
+          onDone={() => setCelebrating(false)}
+        />
       )}
 
       {/* İkincil eylem en sonda: konu değiştirmek nadir bir iş, uzun listenin önüne geçmesin */}
@@ -122,8 +154,8 @@ export default function RoadmapScreen() {
 
 type Summary = { count: number; totalHours: number; weeks: number };
 
-// Yolculuk kartı: konu, konu yolu, seviye, (varsa) plan ve adım özeti. İlerleme yüzdesi/halkası YOK:
-// böyle bir veri henüz yok.
+// Yolculuk kartı: konu, konu yolu, seviye, (varsa) plan ve adım özeti (toplam). İlerleme (N / M + çubuk)
+// kartta değil "Adımların" bölümünde gösterilir; veri step_progress'ten gelir.
 function JourneyCard({
   topicPath,
   level,
@@ -303,7 +335,6 @@ const styles = StyleSheet.create({
   body: { padding: Spacing.three, gap: Spacing.three },
   meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   planText: { flex: 1, minWidth: 120 },
-  soon: { marginTop: Spacing.three },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   cta: { borderWidth: Border.thick, borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.three },
   ctaTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },

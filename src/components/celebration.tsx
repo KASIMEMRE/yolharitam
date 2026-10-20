@@ -63,6 +63,9 @@ export function Celebration({ visible, emoji, hue, title, subtitle, levelId, onD
   useEffect(() => {
     if (!visible) return;
     let cancelled = false;
+    // Sözleşme: her visible=true geçişinde "bitti" bayrağı sıfırlanır; yoksa ikinci açılışta
+    // finish() hemen dönerdi ve kutlama kapanmazdı.
+    doneRef.current = false;
 
     backdrop.set(withTiming(0.96, { duration: 150 }));
     if (!reduceMotion) {
