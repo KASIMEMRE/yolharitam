@@ -21,6 +21,10 @@ import { useTheme } from '@/hooks/use-theme';
 //  - vertical: karşılama ekranında zikzaklı dikey patika
 //  - horizontal: giriş ekranında küçük yatay patika; aktif durak (sarı) adımlar arasında kayar
 // Duraklar gerçek 3 adımdır; sayı/yüzde gibi ilerleme iddiası yoktur.
+// Dikey patikada etiketin en fazla genişliği. 140'ta "Konunu ve seviyeni seç" iki satıra bölünüp
+// "seç" tek başına kalıyordu; yer varsa tek satıra sığsın.
+const LABEL_MAX = 200;
+
 export type TrailStop = { emoji: string; label: string };
 
 type TrailMapProps = {
@@ -143,10 +147,10 @@ function VerticalTrail({ stops, current, showDone }: { stops: TrailStop[]; curre
             let labelWidth: number;
             if (onLeft) {
               labelLeft = c.x + STOP / 2 + 12;
-              labelWidth = Math.min(140, W - labelLeft);
+              labelWidth = Math.min(LABEL_MAX, W - labelLeft);
             } else {
               const rightEdge = c.x - STOP / 2 - 12;
-              labelWidth = Math.min(140, rightEdge);
+              labelWidth = Math.min(LABEL_MAX, rightEdge);
               labelLeft = rightEdge - labelWidth;
             }
 
