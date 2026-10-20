@@ -57,7 +57,10 @@ export function useRoadmapSteps(roadmapId: string | undefined) {
   const errorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // En güncel sonuç: toggleStep'in await sonrasında "tümü bitti mi" sorusuna taze cevap vermesi için
   const latest = useRef<Result | null>(null);
-  latest.current = result;
+  // Ref'e render sırasında yazmak React kurallarına aykırı (çizim saf olmalı); her çizimden sonra güncelle.
+  useEffect(() => {
+    latest.current = result;
+  }, [result]);
 
   // Ekrandan çıkılırsa hata zamanlayıcısı takılı kalmasın
   useEffect(
