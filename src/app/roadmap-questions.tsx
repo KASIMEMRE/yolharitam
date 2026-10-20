@@ -4,6 +4,7 @@ import {
   AccessibilityInfo,
   BackHandler,
   findNodeHandle,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -168,8 +169,11 @@ export default function RoadmapQuestionsScreen() {
       firstRender.current = false;
       return;
     }
-    const node = headingRef.current ? findNodeHandle(headingRef.current) : null;
-    if (node) AccessibilityInfo.setAccessibilityFocus(node);
+    // findNodeHandle web'de yok (çağırınca çöker); odak taşıma yalnız telefonda yapılır.
+    if (Platform.OS !== 'web') {
+      const node = headingRef.current ? findNodeHandle(headingRef.current) : null;
+      if (node) AccessibilityInfo.setAccessibilityFocus(node);
+    }
     AccessibilityInfo.announceForAccessibility(`Soru ${step + 1} / ${QUESTIONS.length}: ${QUESTIONS[step].title}`);
   }, [step]);
 
