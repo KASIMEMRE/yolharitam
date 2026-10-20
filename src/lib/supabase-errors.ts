@@ -16,6 +16,8 @@ export function classifyError(error: DbError): DbErrorKind {
   const code = error?.code;
   // Zaman aşımında (AbortController) supabase-js "AbortError: …" mesajıyla döner: ağ sorunu sayılır.
   if (/^AbortError/.test(error?.message ?? '')) return 'network';
+  // Tarayıcıların ağ hatası metinleri: Chrome "Failed to fetch", Safari "Load failed", Firefox "NetworkError…"
+  if (/failed to fetch|load failed|networkerror/i.test(error?.message ?? '')) return 'network';
   if (code === undefined) return 'other';
   if (SCHEMA_CODES.includes(code)) return 'schema';
   // 23505 = benzersizlik kısıtı ihlali: aynı yol haritası için adımlar zaten var.
