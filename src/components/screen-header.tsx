@@ -20,7 +20,7 @@ export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent' }: ScreenHe
         {emoji && <IconTile emoji={emoji} tone={hue} size={48} />}
         <View style={styles.texts}>
           {eyebrow && (
-            <ThemedText type="eyebrow" themeColor="textSecondary">
+            <ThemedText type="eyebrow" themeColor="textSecondary" numberOfLines={1}>
               {eyebrow}
             </ThemedText>
           )}
@@ -35,7 +35,8 @@ export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent' }: ScreenHe
 
 const styles = StyleSheet.create({
   wrapper: { gap: Spacing.two },
-  // minHeight 64 (48 ikon + dikey boşluk): ikonsuz başlık (Profil) da diğer sekmelerle aynı yükseklikte olsun, geçişte zıplamasın
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two, minHeight: 64 },
+  // minHeight 72 (48 ikon + dikey boşluk + eyebrow payı): eyebrow ('Merhaba, ad') gelip gidince başlık zıplamasın;
+  // ikonsuz başlık (Profil) da diğer sekmelerle aynı yükseklikte kalsın
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two, minHeight: 72 },
   texts: { flex: 1, minWidth: 0 },
 });

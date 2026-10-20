@@ -5,12 +5,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-### Y-02 · Profil: görünen adı düzenleme
-- Profil ekranında `TextField` ile görünen ad (`profiles.display_name`) düzenlenebilsin, "Kaydet" butonu.
-- Ekran açılınca mevcut değer `profiles` tablosundan okunur.
-- Yol Haritam sekmesinin başlığında "Merhaba, <ad>" gösterilsin (ad yoksa gösterme).
-- Kabul: Kaydetme sırasında yükleniyor durumu, hata olursa Türkçe mesaj.
-
 ### Y-03 · Onboarding'i yeni tasarım diline uyarla + konu araması
 - ✅ "Tasarım diline uyarla" kısmı tasarım yenileme PR'ı ile karşılandı (seçili kartlar ve buton `accent`). Kalan: arama.
 - Üstte bir arama kutusu (`TextField`): yazınca tüm ağaçtaki YAPRAK konular arasında başlığa göre arasın,
@@ -77,6 +71,12 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 ### OTP-01 · E-posta doğrulaması kodla
 - Kayıttan sonra e-postaya gelen kod `src/app/verify-email.tsx` ekranında girilir (`verifyOtp`); "Tekrar gönder" 60 sn geri sayımlıdır.
 - Girişte "Email not confirmed" hatası kod ekranına yönlendirir; hata çevirileri `src/lib/auth-errors.ts` içinde ortaklaştı.
+### Y-02 · Profil: görünen adı düzenleme
+- Profil'de "Görünen ad" kartı (`TextField` + "Kaydet"); ad `profiles.display_name` alanından okunur/yazılır (şema değişikliği yok).
+  Yol Haritam başlığında "Merhaba, <ad>" gösterilir (ad yoksa hiç çizilmez). Okuma ortak `use-display-name` hook'unda.
+- Kaydetme: yükleniyor durumu, kırpılmış ad, Türkçe başarı/hata Banner'ı (`Banner` yeni `success` tonu).
+- Seçilen yorumlar: ad silinemez (boş kayıt engellenir); 40 karakter sınırı yalnız uygulamada (veritabanı kısıtı yok);
+  değişmemişken "Kaydet" pasif. Not: `ScreenHeader` minimum yüksekliği 64 -> 72 oldu (tüm sekme başlıkları 8 pt uzadı).
 
 ## Öneriler (ekipten)
 
@@ -90,3 +90,7 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Şifremi unuttum akışı**: OTP altyapısı hazır (`verifyOtp` type 'recovery'). Ortak `AuthScreenLayout`: login ve verify-email iskeleti tekrar ediyor.
 - **CAPTCHA ve rate limit**: kayıt/doğrulama için CAPTCHA ve Supabase rate limit ayarlarının gözden geçirilmesi.
 - **Özel SMTP**: Supabase'e özel SMTP bağlanması (varsayılan e-posta limiti çok düşük).
+- **Görünen ad için veritabanı kısıtı** (Y-02'den): `check (char_length(display_name) <= 40)` migration'ı; şu an sınır yalnız uygulamada.
+- **Okuma hatasında "Tekrar dene" ve kısa zaman aşımı** (Y-02'den): supabase-js GET isteklerini birkaç kez yeniden denediği için "Adın yüklenemedi" uyarısı ~7 sn sonra çıkıyor (Y-07 ile birlikte ele alınabilir).
+- **Pasif buton kontrastı** (Y-02'den): `Button` pasifken etiket koyu modda zor seçiliyor; disabled etiket rengi `textSecondary`'ye yaklaştırılabilir.
+- **Selamlamayı belirginleştirme** (Y-02'den): "Merhaba, <ad>" eyebrow'u küçük ve silik; tema renkleriyle bir kademe daha belirgin yapılabilir.
