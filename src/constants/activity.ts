@@ -20,17 +20,44 @@ function addDays(date: Date, n: number): Date {
   return x;
 }
 
-// Bugünden (ya da bugün henüz işaret yoksa dünden) geriye kesintisiz aktif gün sayısı.
+// Bugünden (ya da bugün henüz etkinlik yoksa dünden) geriye kesintisiz aktif gün sayısı.
 // Dün aktifsen ve bugün henüz bir şey yapmadıysan seri BOZULMAZ; gün bitene kadar şansın var.
+//
+// SERİ KORUYUCU: her takvim haftasında (pazartesi-pazar) BİR boş gün affedilir. Boş gün seriye
+// sayılmaz ama seriyi de bozmaz. Art arda iki boş gün ya da aynı haftada ikinci boş gün seriyi bitirir.
+// Koruyucu otomatik çalışır; ayrıca saklanmaz, her seferinde tarihlerden yeniden hesaplanır.
 export function computeStreak(activeDays: ReadonlySet<string>, now: Date = new Date()) {
   const activeToday = activeDays.has(dayKey(now));
   let cursor = activeToday ? now : addDays(now, -1);
   let streak = 0;
-  while (activeDays.has(dayKey(cursor))) {
-    streak += 1;
-    cursor = addDays(cursor, -1);
+  const frozenWeeks = new Set<string>(); // koruyucusu kullanılmış haftalar (pazartesinin gün anahtarı)
+  let frozenDay: string | null = null;
+  for (let guard = 0; guard < 3660; guard++) {
+    const key = dayKey(cursor);
+    if (activeDays.has(key)) {
+      streak += 1;
+      cursor = addDays(cursor, -1);
+      continue;
+    }
+    // Boş gün: bu haftanın koruyucusu kullanılmadıysa VE bir önceki gün aktifse köprü kur
+    const week = dayKey(startOfWeek(cursor));
+    const before = addDays(cursor, -1);
+    if (!frozenWeeks.has(week) && activeDays.has(dayKey(before))) {
+      frozenWeeks.add(week);
+      if (frozenDay === null) frozenDay = key;
+      cursor = before;
+      continue;
+    }
+    break;
   }
-  return { streak, activeToday };
+  const thisWeek = dayKey(startOfWeek(now));
+  return {
+    streak,
+    activeToday,
+    // Bu haftanın koruyucusu seriyi korumak için kullanıldı mı?
+    freezeUsedThisWeek: frozenWeeks.has(thisWeek),
+    frozenDay,
+  };
 }
 
 // Haftanın başı: pazartesi 00:00 (yerel)

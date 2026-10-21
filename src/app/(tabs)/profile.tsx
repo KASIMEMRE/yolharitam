@@ -14,6 +14,8 @@ import { Border, Edge, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
 import { useDisplayName } from '@/hooks/use-display-name';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
+import { levelFor } from '@/constants/xp';
+import { useXp } from '@/lib/xp';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 
@@ -52,6 +54,9 @@ export default function ProfileScreen() {
           {email}
         </ThemedText>
       </View>
+
+      {/* Seviye: XP'den türetilir (bkz. constants/xp.ts) */}
+      <LevelCard />
 
       <ThemedText type="eyebrow" themeColor="textSecondary">
         Şu anki haritan
@@ -107,7 +112,40 @@ export default function ProfileScreen() {
   );
 }
 
+function LevelCard() {
+  const theme = useTheme();
+  const xp = useXp();
+  const level = levelFor(xp.total);
+  return (
+    <View
+      accessible
+      accessibilityLabel={`Seviye ${level.title}, ${xp.total} XP${level.next ? `, ${level.next.title} seviyesine ${level.next.remaining} XP kaldı` : ''}`}
+      style={[styles.topicCard, styles.levelCard, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge, borderBottomColor: theme.markerEdge }]}>
+      <View style={styles.levelRow}>
+        <ThemedText type="cardTitle" themeColor="markerInk">
+          {level.emoji} {level.title}
+        </ThemedText>
+        <ThemedText type="smallBold" themeColor="markerInk">
+          ⭐ {xp.total} XP
+        </ThemedText>
+      </View>
+      <View style={[styles.levelTrack, { backgroundColor: theme.card }]}>
+        <View style={[styles.levelFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
+      </View>
+      <ThemedText type="small" themeColor="markerInk">
+        {level.next
+          ? `${level.next.title} seviyesine ${level.next.remaining} XP kaldı. Konu bitir (+20), quiz çöz, günün görevini yap (+30).`
+          : 'En yüksek seviyedesin. Efsane!'}
+      </ThemedText>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  levelCard: { flexDirection: 'column', alignItems: 'stretch', gap: Spacing.two },
+  levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  levelTrack: { height: 10, borderRadius: Radius.pill, overflow: 'hidden' },
+  levelFill: { height: '100%', borderRadius: Radius.pill },
   identity: { alignItems: 'center', gap: Spacing.three },
   email: { alignSelf: 'stretch', textAlign: 'center' },
   topicCard: {

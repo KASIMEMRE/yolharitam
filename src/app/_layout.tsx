@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { XpToast } from '@/components/xp-toast';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,6 +19,8 @@ export default function RootLayout() {
       <AuthProvider>
         <AnimatedSplashOverlay />
         <RootStack />
+        {/* "+20 XP" bildirimi her ekranın üstünde görünsün diye kökte */}
+        <XpToast />
       </AuthProvider>
     </ThemeProvider>
   );

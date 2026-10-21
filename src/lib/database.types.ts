@@ -126,6 +126,33 @@ export type Database = {
           },
         ]
       }
+      xp_events: {
+        Row: {
+          amount: number
+          created_at: string
+          id: number
+          kind: string
+          ref: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: never
+          kind: string
+          ref: string
+          user_id?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: never
+          kind?: string
+          ref?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       topic_progress: {
         Row: {
           roadmap_id: string

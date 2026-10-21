@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -9,8 +9,10 @@ import { ThemedText } from '@/components/themed-text';
 import type { DevRoadmap, Section, Topic } from '@/constants/dev-roadmaps';
 import type { LevelId } from '@/constants/plan';
 import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { XP_PER_CORRECT } from '@/constants/xp';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
+import { awardXp } from '@/lib/xp';
 
 // Konu detayındaki üç yapay zekâ aracı: alt konular, mini quiz, soru sor.
 // Hepsi `topic-assist` Edge Function'ından gelir. Alt konular ve quiz herkes için ortak önbellekte
@@ -93,7 +95,7 @@ export function TopicAssist({ map, section, topic, level }: Props) {
         load={quiz}
         actionLabel="Quiz'i başlat"
         onLoad={loadQuiz}>
-        {quiz.data && <QuizView data={quiz.data} />}
+        {quiz.data && <QuizView data={quiz.data} xpRef={`${map.id}:${topic.id}`} topicId={topic.id} />}
       </Block>
 
       {/* 3) Soru sor */}
@@ -210,12 +212,20 @@ function ExplainView({ data }: { data: Explain }) {
   );
 }
 
-function QuizView({ data }: { data: Quiz }) {
+function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId: string }) {
   const theme = useTheme();
   // Her soru için seçilen şık (bir kez seçilir, sonra cevap gösterilir)
   const [picked, setPicked] = useState<Record<number, number>>({});
   const answered = Object.keys(picked).length;
   const correct = data.questions.filter((q, i) => picked[i] === q.answer).length;
+  const finished = answered === data.questions.length;
+
+  // Quiz bitince doğru başına XP (konu başına bir kez; "Quiz'i sıfırla" tekrar puan vermez)
+  useEffect(() => {
+    if (finished && correct > 0) {
+      awardXp({ kind: 'quiz_done', ref: xpRef, amount: correct * XP_PER_CORRECT, topicId });
+    }
+  }, [finished, correct, xpRef, topicId]);
 
   return (
     <View style={styles.inner}>
@@ -297,7 +307,10 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
         ? { state: 'ready', data: res.data, asked: q, remaining: res.remaining }
         : { state: 'error', error: res.error, asked: q }
     );
-    if (res.data) setQuestion('');
+    if (res.data) {
+      setQuestion('');
+      awardXp({ kind: 'ask', ref: `${String(base.mapId)}:${String(base.topicId)}:${Date.now()}` });
+    }
   }
 
   return (

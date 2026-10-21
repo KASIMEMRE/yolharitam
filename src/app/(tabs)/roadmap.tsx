@@ -25,6 +25,7 @@ import {
   type TopicStatus,
 } from '@/constants/dev-roadmaps/personalize';
 import { computeStreak, startOfWeek, weeklyProgress } from '@/constants/activity';
+import { levelFor } from '@/constants/xp';
 import { toLevelId, type GoalId, type WeeklyHoursId } from '@/constants/plan';
 import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questions';
 import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
@@ -35,6 +36,8 @@ import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
 import { useAuth } from '@/lib/auth-context';
+import { getTodayTask, taskTitle, type DailyTask } from '@/lib/daily-task';
+import { useXp } from '@/lib/xp';
 import { setPreferences, usePreferences, type MapViewPref } from '@/lib/preferences';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
@@ -153,6 +156,7 @@ function MapView({
 
       {ready && (
         <>
+          <DailyTaskCard roadmap={roadmap} map={map} statuses={statuses} personalization={personalization} />
           {activity && <MomentumCard activity={activity} roadmapId={roadmap.id} weekly={weekly} />}
           {next && <NextCard topic={next} personalization={personalization} onPress={() => openTopic(roadmap, next.id)} />}
           <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} />
@@ -340,19 +344,39 @@ function MapSwitcher({
 // Motivasyon kartı: günlük seri + bu haftanın hedefi
 function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roadmapId: string; weekly: WeeklyHoursId }) {
   const theme = useTheme();
-  const { streak, activeToday } = computeStreak(activity.activeDays);
+  const xp = useXp();
+  // Aktif gün: konu işaretlenen günler + XP kazanılan günler (quiz, soru, görev)
+  const days = new Set([...activity.activeDays, ...xp.days]);
+  const { streak, activeToday, freezeUsedThisWeek } = computeStreak(days);
   const week = weeklyProgress(activity.doneThisWeekFor(roadmapId, startOfWeek()), weekly);
+  const level = levelFor(xp.total);
   const hint = activeToday
     ? 'Bugün çalıştın, serin devam ediyor.'
     : streak > 0
-      ? 'Bugün bir konuyu işaretle, serin bozulmasın.'
-      : 'Bir konuyu “Çalışıyorum” ya da “Bitti” yap, serin başlasın.';
+      ? 'Bugün bir şey yap, serin devam etsin.'
+      : 'Günün görevini yap, serin başlasın.';
 
   return (
     <View
       accessible
-      accessibilityLabel={`Seri: ${streak} gün. ${hint} Bu hafta ${week.hours} / ${week.target} saat.`}
+      accessibilityLabel={`Seviye ${level.title}, ${xp.total} XP. Seri: ${streak} gün. ${hint} Bu hafta ${week.hours} / ${week.target} saat.`}
       style={[styles.momentum, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      {/* Seviye ve XP */}
+      <View style={styles.weekBlock}>
+        <View style={styles.weekRow}>
+          <ThemedText type="smallBold">
+            {level.emoji} {level.title}
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            ⭐ {xp.total} XP{level.next ? ` · ${level.next.title} için ${level.next.remaining}` : ''}
+          </ThemedText>
+        </View>
+        <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
+          <View style={[styles.weekFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
+        </View>
+      </View>
+
+      {/* Seri + koruyucu */}
       <View style={styles.momentumRow}>
         <View style={[styles.streakBadge, { backgroundColor: streak > 0 ? theme.coralSoft : theme.backgroundSelected }]}>
           <Text allowFontScaling={false} style={styles.streakEmoji}>
@@ -367,8 +391,15 @@ function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roa
           <ThemedText type="small" themeColor="textSecondary">
             {hint}
           </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {freezeUsedThisWeek
+              ? '🧊 Bu haftaki seri koruyucun kullanıldı.'
+              : '🧊 Seri koruyucu hazır: bu hafta bir gün kaçırsan da serin bozulmaz.'}
+          </ThemedText>
         </View>
       </View>
+
+      {/* Haftalık hedef */}
       <View style={styles.weekBlock}>
         <View style={styles.weekRow}>
           <ThemedText type="small" themeColor="textSecondary">
@@ -388,6 +419,71 @@ function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roa
         </View>
       </View>
     </View>
+  );
+}
+
+// Günün görevi: tek, küçük bir iş (≈5 dk). Tamamlanınca +30 XP ve seri devam eder.
+function DailyTaskCard({
+  roadmap,
+  map,
+  statuses,
+  personalization,
+}: {
+  roadmap: Roadmap;
+  map: DevRoadmap;
+  statuses: ReadonlyMap<string, TopicStatus>;
+  personalization: Personalization;
+}) {
+  const theme = useTheme();
+  const xp = useXp();
+  const [task, setTask] = useState<DailyTask | null>(null);
+  // Görev o gün ilk açılışta belirlenir ve gün boyu sabit kalır (bkz. daily-task.ts)
+  useEffect(() => {
+    let cancelled = false;
+    getTodayTask(roadmap.id, map, statuses, personalization).then((t) => {
+      if (!cancelled) setTask(t);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [roadmap.id, map, statuses, personalization]);
+
+  if (!task) return null;
+  const done = xp.dailyDoneDays.has(task.day);
+  return (
+    <Pressable
+      onPress={() => openTopic(roadmap, task.topicId)}
+      accessibilityRole="button"
+      accessibilityLabel={`Günün görevi: ${taskTitle(task)}. ${done ? 'Tamamlandı.' : 'Açmak için dokun.'}`}
+      style={({ pressed }) => [
+        styles.next,
+        {
+          backgroundColor: done ? theme.accentSoft : theme.markerSoft,
+          borderColor: done ? theme.accent : theme.markerEdge,
+          borderBottomColor: done ? theme.accentEdge : theme.markerEdge,
+        },
+        pressed && { transform: [{ translateY: 2 }] },
+      ]}>
+      <Text allowFontScaling={false} style={styles.taskEmoji}>
+        {done ? '✅' : '🎯'}
+      </Text>
+      <View style={styles.bandTexts}>
+        <ThemedText type="eyebrow" themeColor={done ? 'accentInk' : 'markerInk'}>
+          {done ? 'Günün görevi tamam · +30 XP' : 'Günün görevi · yaklaşık 5 dk · +30 XP'}
+        </ThemedText>
+        <ThemedText type="cardTitle">{taskTitle(task)}</ThemedText>
+        {done && (
+          <ThemedText type="small" themeColor="textSecondary">
+            Yarın yeni görev seni bekliyor.
+          </ThemedText>
+        )}
+      </View>
+      {!done && (
+        <ThemedText type="cardTitle" themeColor="markerInk">
+          ›
+        </ThemedText>
+      )}
+    </Pressable>
   );
 }
 
@@ -788,6 +884,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
   },
   streakEmoji: { fontSize: 20, lineHeight: 26 },
+  taskEmoji: { fontSize: 32, lineHeight: 40 },
   weekBlock: { gap: Spacing.one },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   weekTrack: { height: 10, borderRadius: Radius.pill, overflow: 'hidden' },
