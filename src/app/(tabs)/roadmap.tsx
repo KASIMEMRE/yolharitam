@@ -1,54 +1,58 @@
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
-import { Celebration } from '@/components/celebration';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge, StatusChip } from '@/components/level-badge';
 import { ProgressSummary } from '@/components/progress-summary';
-import { RoadmapStepList, StepListSkeleton } from '@/components/roadmap-step-list';
 import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
-import { findOption, isAnswerId, QUESTIONS, weeklyLabel } from '@/constants/roadmap-questions';
-import { summarizeSteps, type WeeklyHoursId } from '@/constants/roadmap-templates';
-import { Border, Edge, Radius, Spacing } from '@/constants/theme';
-import { describeTopic } from '@/constants/visuals';
+import { getRoadmap, KIND_LABEL, type DevRoadmap, type Section, type Topic } from '@/constants/dev-roadmaps';
+import {
+  computeProgress,
+  nextTopic,
+  parsePersonalization,
+  planTopics,
+  rulePersonalization,
+  type Personalization,
+  type TopicStatus,
+} from '@/constants/dev-roadmaps/personalize';
+import { toLevelId, type GoalId, type WeeklyHoursId } from '@/constants/plan';
+import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questions';
+import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { HUES, MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useDisplayName } from '@/hooks/use-display-name';
-import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
-import { useRoadmapSteps } from '@/hooks/use-roadmap-steps';
+import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
+import { useTopicProgress } from '@/hooks/use-topic-progress';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
+// Konu detayını açar. Harita kimliği de gönderilir: detay ekranı içeriği veritabanına gitmeden bulur.
+function openTopic(roadmap: Roadmap, topicId: string) {
+  router.push({ pathname: '/topic/[id]', params: { id: topicId, map: roadmap.topic_path, roadmapId: roadmap.id } });
+}
+
 export default function RoadmapScreen() {
-  // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda:
-  // src/hooks/use-latest-roadmap.ts (yol haritası) ve src/hooks/use-roadmap-steps.ts (adımlar)
+  // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda
   const { roadmap, loading } = useLatestRoadmap();
-  // Hook erken return'lerden ÖNCE çağrılır (hook kuralı). Ad hatası başlığı bozmaz: ad yoksa selamlama çizilmez.
+  // Hook erken return'lerden ÖNCE çağrılır (hook kuralı)
   const { name } = useDisplayName();
   const trimmedName = name?.trim();
   const greeting = trimmedName ? `Merhaba, ${trimmedName}` : undefined;
-  const { steps, status, retrying, retry, completedIds, toggleStep, markError } = useRoadmapSteps(roadmap?.id);
-  // Kutlama yalnız bu oturumda "tamamlanmamış → tamamlanmış" GEÇİŞİNDE açılır (ekranı her açışta değil)
-  const [celebrating, setCelebrating] = useState(false);
+  const progress = useTopicProgress(roadmap?.id);
 
-  // Dokunulan adımı işaretler/geri alır. Kayıt BAŞARILI olup tüm adımlar bitmişse kutlama açılır
-  // (hook "allDone" bilgisini döndürür); istek başarısız olursa (adım geri alınır) kutlama hiç çıkmaz.
-  async function onToggle(stepId: string) {
-    const res = await toggleStep(stepId);
-    if (res?.ok && res.allDone) setCelebrating(true);
-  }
+  const header = <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />;
 
   if (loading) {
     return (
       <TabScreen>
-        <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />
+        {header}
         <JourneySkeleton />
-        <StepListSkeleton />
       </TabScreen>
     );
   }
@@ -56,132 +60,124 @@ export default function RoadmapScreen() {
   if (!roadmap) {
     return (
       <TabScreen>
-        <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />
-        <EmptyState />
+        {header}
+        <EmptyState
+          title="Henüz bir yol haritası seçmedin."
+          text="Frontend’den yapay zekâya, sana uyan yolu seç; konuları adım adım işaretle."
+        />
       </TabScreen>
     );
   }
 
-  // Cevap sütunları migration uygulanmadan `undefined` gelebilir, eski kayıtlarda NULL'dır:
-  // yalnız GEÇERLİ bir seçenek kimliği varsa kullanırız.
-  const weekly = isAnswerId('weeklyHours', roadmap.weekly_hours) ? (roadmap.weekly_hours as WeeklyHoursId) : null;
-  const plan =
-    weekly && isAnswerId('goal', roadmap.goal) && isAnswerId('learningStyle', roadmap.learning_style)
-      ? [
-          weeklyLabel(roadmap.weekly_hours),
-          `Hedef: ${findOption('goal', roadmap.goal)?.title}`,
-          `Yöntem: ${findOption('learningStyle', roadmap.learning_style)?.title}`,
-        ].join(' · ')
-      : null;
-
-  // Özet sayılar HER ZAMAN adımlardan türetilir (kaydedilmez): adımlar değişse de doğru kalır.
-  const summary =
-    status === 'ready' && steps.length > 0
-      ? summarizeSteps(
-          steps.map((s) => ({ estimatedHours: s.estimated_hours })),
-          weekly ?? '3-5'
-        )
-      : null;
-
-  // completedIds hook'ta zaten yalnız mevcut adımlara süzülür (silinmiş adım id'leri sayıyı şişirmez)
-  const completedCount = completedIds.size;
-  const topic = describeTopic(roadmap.topic_path);
-
-  // "Boş" ile "hata" ayrı dallar: hatada "Adımlarımı oluştur" ASLA gösterilmez (yanlış yönlendirir)
-  const noSteps = status === 'ready' && steps.length === 0;
+  const map = getRoadmap(roadmap.topic_path);
+  if (!map) {
+    // Eski sürümde seçilmiş genel bir konu (spor, finans…): artık yalnız yazılımcı haritaları var
+    return (
+      <TabScreen>
+        {header}
+        <EmptyState
+          title="Yol Haritam yenilendi!"
+          text="Artık yazılımcı yol haritaları var: Frontend, Backend, Yapay Zekâ ve daha fazlası. Devam etmek için bir harita seç."
+        />
+      </TabScreen>
+    );
+  }
 
   return (
     <TabScreen>
-      <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />
-
-      {/* Adım yokken asıl eylem "Adımlarını oluştur"dur: kartın ÜSTÜNDE durur, ilk ekranda görünür */}
-      {noSteps && <StepsCtaCard roadmapId={roadmap.id} />}
-
-      <JourneyCard
-        topicPath={roadmap.topic_path}
-        level={roadmap.level}
-        plan={plan}
-        summary={summary}
-        // hafta özeti yalnız haftalık süre biliniyorsa gösterilir (tahmini hafta ona bağlı)
-        showWeeks={weekly !== null}
-        summaryLoading={status === 'loading'}
-      />
-
-      {status === 'loading' && <StepListSkeleton />}
-
-      {(status === 'schema' || status === 'network' || status === 'error') && (
-        <View style={styles.errorBox}>
-          <Banner tone="warning">
-            {status === 'schema' ? ERROR_TEXT.loadSchema : status === 'network' ? ERROR_TEXT.network : ERROR_TEXT.other}
-          </Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" loading={retrying} onPress={retry} />
-        </View>
-      )}
-
-      {status === 'ready' && steps.length > 0 && (
-        <>
-          <View style={styles.stepsSection}>
-            <ThemedText type="cardTitle" accessibilityRole="header">
-              Adımların
-            </ThemedText>
-            <ProgressSummary
-              done={completedCount}
-              total={steps.length}
-              remainingHours={steps.filter((s) => !completedIds.has(s.id)).reduce((t, s) => t + s.estimated_hours, 0)}
-            />
-            {/* İşaret kaydedilemezse adım geri alınır; hata mesajı DOKUNULAN kartın hemen altında çıkar */}
-            <RoadmapStepList steps={steps} completedIds={completedIds} onToggle={onToggle} markError={markError} />
-          </View>
-        </>
-      )}
-
-      {/* Her açılışta TAZE mount: Celebration iç durumu (bitti bayrağı, animasyon değerleri) sıfırdan başlar.
-          Ayrıca adım durumundan bağımsız: liste dalının dışında durur. */}
-      {celebrating && (
-        <Celebration
-          visible
-          emoji={topic.category.emoji}
-          hue={topic.category.hue}
-          title="Yol haritanı tamamladın!"
-          subtitle="Bütün adımları bitirdin. İstersen yeni bir konu seçip yola devam edebilirsin."
-          levelId={roadmap.level}
-          onDone={() => setCelebrating(false)}
-        />
-      )}
-
-      {/* İkincil eylem en sonda: konu değiştirmek nadir bir iş, uzun listenin önüne geçmesin */}
-      <Link href="/onboarding" asChild>
-        <Button variant="text" icon="🧭" label="Konunu değiştir" />
-      </Link>
+      {header}
+      <MapView roadmap={roadmap} map={map} progress={progress} />
     </TabScreen>
   );
 }
 
-type Summary = { count: number; totalHours: number; weeks: number };
-
-// Yolculuk kartı: konu, konu yolu, seviye, (varsa) plan ve adım özeti (toplam). İlerleme (N / M + çubuk)
-// kartta değil "Adımların" bölümünde gösterilir; veri step_progress'ten gelir.
-function JourneyCard({
-  topicPath,
-  level,
-  plan,
-  summary,
-  showWeeks,
-  summaryLoading,
+function MapView({
+  roadmap,
+  map,
+  progress,
 }: {
-  topicPath: string;
-  level: string;
+  roadmap: Roadmap;
+  map: DevRoadmap;
+  progress: ReturnType<typeof useTopicProgress>;
+}) {
+  const weekly: WeeklyHoursId = isAnswerId('weeklyHours', roadmap.weekly_hours)
+    ? (roadmap.weekly_hours as WeeklyHoursId)
+    : '3-5';
+  const goal: GoalId = isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
+  // Kayıtlı kişisel işaretler; yoksa (eski kayıt) seviyeye göre kurallar
+  const personalization =
+    parsePersonalization(roadmap.personalization, map) ?? rulePersonalization(map, toLevelId(roadmap.level), goal);
+
+  const plan =
+    isAnswerId('weeklyHours', roadmap.weekly_hours) && isAnswerId('goal', roadmap.goal)
+      ? [weeklyLabel(roadmap.weekly_hours), `Hedef: ${findOption('goal', roadmap.goal)?.title}`].join(' · ')
+      : null;
+
+  const ready = progress.status === 'ready';
+  const statuses = progress.statuses;
+  const sum = computeProgress(map, statuses, personalization, weekly);
+  const next = ready ? nextTopic(map, statuses, personalization) : undefined;
+
+  return (
+    <>
+      <JourneyCard roadmap={roadmap} map={map} plan={plan} sum={ready ? sum : null} />
+
+      {(progress.status === 'schema' || progress.status === 'network' || progress.status === 'error') && (
+        <View style={styles.errorBox}>
+          <Banner tone="warning">
+            {progress.status === 'schema'
+              ? ERROR_TEXT.loadSchema
+              : progress.status === 'network'
+                ? ERROR_TEXT.network
+                : ERROR_TEXT.other}
+          </Banner>
+          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={progress.retry} />
+        </View>
+      )}
+
+      {ready && (
+        <>
+          {next && <NextCard topic={next} personalization={personalization} onPress={() => openTopic(roadmap, next.id)} />}
+          <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} />
+          <Sections
+            roadmap={roadmap}
+            map={map}
+            statuses={statuses}
+            personalization={personalization}
+            nextId={next?.id}
+          />
+        </>
+      )}
+
+      {/* İkincil eylemler en sonda: nadir yapılan işler uzun listenin önüne geçmesin */}
+      <View style={styles.actions}>
+        <Link href={{ pathname: '/roadmap-questions', params: { roadmapId: roadmap.id } }} asChild>
+          <Button variant="text" icon="🎯" label="Planımı güncelle" />
+        </Link>
+        <Link href="/onboarding" asChild>
+          <Button variant="text" icon="🧭" label="Haritanı değiştir" />
+        </Link>
+      </View>
+    </>
+  );
+}
+
+// Yolculuk kartı: harita, tür, seviye, plan ve toplam özet
+function JourneyCard({
+  roadmap,
+  map,
+  plan,
+  sum,
+}: {
+  roadmap: Roadmap;
+  map: DevRoadmap;
   plan: string | null;
-  summary: Summary | null;
-  showWeeks: boolean;
-  summaryLoading: boolean;
+  sum: { total: number; totalHours: number; weeks: number } | null;
 }) {
   const theme = useTheme();
   const shadow = useShadow();
   const reduceMotion = useReducedMotion();
-
-  // Bilinmeyen/bozuk yol gelirse çökmek yerine varsayılan görünüm ve genel başlık kullanılır
-  const { title, parents, category, hue } = describeTopic(topicPath);
+  const hue = HUES[map.hue];
 
   return (
     <View
@@ -191,69 +187,245 @@ function JourneyCard({
         shadow('card'),
       ]}>
       <View style={[styles.band, { backgroundColor: theme[hue.soft] }]}>
-        {/* "Bayrak dikme": ikon yaylanarak belirir, 📍 yukarıdan düşer */}
         <View>
           <Animated.View entering={reduceMotion ? FadeIn.duration(150) : ZoomIn.springify().damping(10)}>
-            <IconTile emoji={category.emoji} tone={category.hue} size={64} />
+            <IconTile emoji={map.emoji} tone={map.hue} size={64} />
           </Animated.View>
           <Animated.Text
             allowFontScaling={false}
-            entering={
-              reduceMotion
-                ? FadeIn.duration(150)
-                : FadeInDown.delay(250).springify().damping(8).stiffness(200)
-            }
+            entering={reduceMotion ? FadeIn.duration(150) : FadeInDown.delay(250).springify().damping(8).stiffness(200)}
             style={styles.pin}>
             📍
           </Animated.Text>
         </View>
         <View style={styles.bandTexts}>
           <ThemedText type="eyebrow" themeColor={hue.ink}>
-            Konun
+            {KIND_LABEL[map.kind]}
           </ThemedText>
-          <ThemedText type="heading">{title}</ThemedText>
-          {/* Konu yolu bantta başlığın altında: kartı kısaltır, ayrı satır gerekmez */}
-          {parents !== '' && (
-            <ThemedText type="small" themeColor={hue.ink}>
-              {parents}
-            </ThemedText>
-          )}
+          <ThemedText type="heading">{map.title}</ThemedText>
+          <ThemedText type="small" themeColor={hue.ink}>
+            {map.tagline}
+          </ThemedText>
         </View>
       </View>
 
       <View style={styles.body}>
-        {/* Seviye rozeti ve plan yan yana (dar ekranda alt alta sarar). Plan = kullanıcının KENDİ
-            cevapları; eski kayıtta cevap yoksa hiç çizilmez. Bilinmeyen seviyede rozet çizilmez. */}
         <View style={styles.meta}>
-          <LevelBadge levelId={level} size="md" />
+          <LevelBadge levelId={roadmap.level} size="md" />
           {plan !== null && (
             <ThemedText type="small" style={styles.planText}>
               {plan}
             </ThemedText>
           )}
         </View>
-        {summaryLoading && (
-          // Yüklenirken çiplerin yerini tutar: içerik gelince kart zıplamasın
+        {sum ? (
+          <View
+            accessible
+            accessibilityLabel={`Planında ${sum.total} konu, yaklaşık ${sum.totalHours} saat, yaklaşık ${sum.weeks} hafta`}
+            style={styles.chips}>
+            <StatusChip tone="neutral" emoji="🧭" label={`${sum.total} konu`} />
+            <StatusChip tone="neutral" emoji="⏱" label={`yaklaşık ${sum.totalHours} saat`} />
+            <StatusChip tone="neutral" emoji="📅" label={`yaklaşık ${sum.weeks} hafta`} />
+          </View>
+        ) : (
           <View style={styles.chips}>
             <Skeleton width={80} height={28} radius={Radius.pill} />
             <Skeleton width={130} height={28} radius={Radius.pill} />
-            <Skeleton width={130} height={28} radius={Radius.pill} />
           </View>
         )}
-        {summary && (
-          <Animated.View entering={FadeIn.delay(reduceMotion ? 0 : 450)}>
-            {/* Üç çip tek öğe olarak okunur; tek tek okunmaları gürültü olurdu */}
-            <View
-              accessible
-              accessibilityLabel={
-                `${summary.count} adım, yaklaşık ${summary.totalHours} saat` +
-                (showWeeks ? `, yaklaşık ${summary.weeks} hafta` : '')
-              }
-              style={styles.chips}>
-              <StatusChip tone="neutral" emoji="🧭" label={`${summary.count} adım`} />
-              <StatusChip tone="neutral" emoji="⏱" label={`yaklaşık ${summary.totalHours} saat`} />
-              {showWeeks && <StatusChip tone="neutral" emoji="📅" label={`yaklaşık ${summary.weeks} hafta`} />}
-            </View>
+      </View>
+    </View>
+  );
+}
+
+// "Sıradaki konu": tek dokunuşla kaldığın yerden devam
+function NextCard({
+  topic,
+  personalization,
+  onPress,
+}: {
+  topic: Topic;
+  personalization: Personalization;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  const focusIndex = personalization.focus.indexOf(topic.id);
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`Sıradaki konu: ${topic.title}. Açmak için dokun.`}
+      style={({ pressed }) => [
+        styles.next,
+        { backgroundColor: theme.accentSoft, borderColor: theme.accent, borderBottomColor: theme.accentEdge },
+        pressed && { transform: [{ translateY: 2 }] },
+      ]}>
+      <IconTile emoji="🥾" tone="accent" size={48} />
+      <View style={styles.bandTexts}>
+        <ThemedText type="eyebrow" themeColor="accentInk">
+          {focusIndex >= 0 && personalization.source === 'ai' ? '✨ Sıradaki konu · senin için seçildi' : 'Sıradaki konu'}
+        </ThemedText>
+        <ThemedText type="cardTitle">{topic.title}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+          {topic.summary}
+        </ThemedText>
+      </View>
+      <ThemedText type="cardTitle" themeColor="accentInk">
+        ›
+      </ThemedText>
+    </Pressable>
+  );
+}
+
+// Bölümler: roadmap.sh'teki ağacın dikey hali. Her bölüm açılıp kapanır; sıradaki konunun bölümü
+// ve ilk bölüm açık başlar, uzun liste tek ekranda boğmasın.
+function Sections({
+  roadmap,
+  map,
+  statuses,
+  personalization,
+  nextId,
+}: {
+  roadmap: Roadmap;
+  map: DevRoadmap;
+  statuses: ReadonlyMap<string, TopicStatus>;
+  personalization: Personalization;
+  nextId: string | undefined;
+}) {
+  const [open, setOpen] = useState<Set<string>>(() => {
+    const first = map.sections[0]?.id;
+    const withNext = map.sections.find((s) => s.topics.some((t) => t.id === nextId))?.id;
+    return new Set([first, withNext].filter((x): x is string => Boolean(x)));
+  });
+  const planIds = new Set(planTopics(map, statuses, personalization).map((t) => t.id));
+
+  function toggle(id: string) {
+    setOpen((prev) => {
+      const nextSet = new Set(prev);
+      if (nextSet.has(id)) nextSet.delete(id);
+      else nextSet.add(id);
+      return nextSet;
+    });
+  }
+
+  return (
+    <View style={styles.sections}>
+      <View style={styles.sectionsHead}>
+        <ThemedText type="cardTitle" accessibilityRole="header">
+          Harita
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          Bir konuya dokun: ne olduğunu, kaynaklarını gör ve durumunu işaretle.
+        </ThemedText>
+      </View>
+      {map.sections.map((section, index) => (
+        <SectionCard
+          key={section.id}
+          index={index}
+          last={index === map.sections.length - 1}
+          section={section}
+          open={open.has(section.id)}
+          onToggle={() => toggle(section.id)}
+          statuses={statuses}
+          personalization={personalization}
+          planIds={planIds}
+          nextId={nextId}
+          onOpenTopic={(id) => openTopic(roadmap, id)}
+        />
+      ))}
+    </View>
+  );
+}
+
+function SectionCard({
+  index,
+  last,
+  section,
+  open,
+  onToggle,
+  statuses,
+  personalization,
+  planIds,
+  nextId,
+  onOpenTopic,
+}: {
+  index: number;
+  last: boolean;
+  section: Section;
+  open: boolean;
+  onToggle: () => void;
+  statuses: ReadonlyMap<string, TopicStatus>;
+  personalization: Personalization;
+  planIds: Set<string>;
+  nextId: string | undefined;
+  onOpenTopic: (id: string) => void;
+}) {
+  const theme = useTheme();
+  const inPlan = section.topics.filter((t) => planIds.has(t.id));
+  const done = inPlan.filter((t) => statuses.get(t.id) === 'done').length;
+  const complete = inPlan.length > 0 && done === inPlan.length;
+  const note = personalization.notes[section.id];
+
+  return (
+    <View style={styles.sectionRow}>
+      {/* Sol taraftaki patika: düğüm + bölümleri birbirine bağlayan çizgi */}
+      <View style={styles.rail} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <View
+          style={[
+            styles.node,
+            {
+              backgroundColor: complete ? theme.accent : theme.card,
+              borderColor: complete ? theme.accentEdge : theme.borderStrong,
+            },
+          ]}>
+          <Text allowFontScaling={false} style={[styles.nodeText, { color: complete ? theme.onAccent : theme.text }]}>
+            {complete ? '✓' : String(index + 1)}
+          </Text>
+        </View>
+        {!last && <View style={[styles.line, { backgroundColor: theme.borderStrong }]} />}
+      </View>
+
+      <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <Pressable
+          onPress={onToggle}
+          accessibilityRole="button"
+          accessibilityState={{ expanded: open }}
+          accessibilityLabel={`${section.title}. ${inPlan.length} konunun ${done} tanesi bitti. ${open ? 'Kapatmak' : 'Açmak'} için dokun.`}
+          style={styles.sectionHead}>
+          <Text allowFontScaling={false} style={styles.sectionEmoji}>
+            {section.emoji}
+          </Text>
+          <View style={styles.bandTexts}>
+            <ThemedText type="cardTitle">{section.title}</ThemedText>
+            <ThemedText type="small" themeColor="textSecondary">
+              {inPlan.length > 0 ? `${done} / ${inPlan.length} konu` : `${section.topics.length} konu · planında yok`}
+            </ThemedText>
+          </View>
+          <ThemedText type="cardTitle" themeColor="textSecondary">
+            {open ? '▴' : '▾'}
+          </ThemedText>
+        </Pressable>
+
+        {open && (
+          <Animated.View entering={FadeIn.duration(150)} style={styles.topics}>
+            {note && (
+              <View style={[styles.note, { backgroundColor: theme.markerSoft }]}>
+                <ThemedText type="small" themeColor="markerInk">
+                  ✨ {note}
+                </ThemedText>
+              </View>
+            )}
+            {section.topics.map((topic) => (
+              <TopicRow
+                key={topic.id}
+                topic={topic}
+                status={statuses.get(topic.id)}
+                focus={personalization.focus.includes(topic.id)}
+                skipHint={personalization.skip.includes(topic.id)}
+                isNext={topic.id === nextId}
+                onPress={() => onOpenTopic(topic.id)}
+              />
+            ))}
           </Animated.View>
         )}
       </View>
@@ -261,27 +433,79 @@ function JourneyCard({
   );
 }
 
-// Yol haritası var ama adımı yok (soru akışından önce oluşmuş kayıt ya da yarım kalmış kurulum):
-// kullanıcıyı aynı soru ekranına, mevcut kaydın id'siyle gönderir. Kilitli kart DEĞİL, aktif eylem.
-function StepsCtaCard({ roadmapId }: { roadmapId: string }) {
+function TopicRow({
+  topic,
+  status,
+  focus,
+  skipHint,
+  isNext,
+  onPress,
+}: {
+  topic: Topic;
+  status: TopicStatus | undefined;
+  focus: boolean;
+  skipHint: boolean;
+  isNext: boolean;
+  onPress: () => void;
+}) {
   const theme = useTheme();
+  const muted = status === 'skipped' || (!status && (topic.marker !== 'core' || skipHint));
+
+  // Etiketler: harita işareti (önerilen konularda gösterilmez, varsayılan odur) + kişisel işaretler
+  const tags: string[] = [];
+  if (topic.marker !== 'core') tags.push(MARKER_STYLE[topic.marker].label);
+  if (focus && !status) tags.push('✨ Önce bununla başla');
+  if (skipHint && !status) tags.push('Biliyorsan atlayabilirsin');
+  if (status) tags.push(STATUS_STYLE[status].label);
+
   return (
-    <Animated.View
-      entering={FadeInDown.duration(280)}
-      style={[styles.cta, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
-      <View style={styles.ctaTop}>
-        <IconTile emoji="🥾" tone="accent" size={64} />
-        <View style={styles.bandTexts}>
-          <ThemedText type="cardTitle">Adımlarını oluşturalım</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {QUESTIONS.length} kısa soruyu yanıtla, sana özel adımlar hazırlansın.
-          </ThemedText>
-        </View>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${topic.title}. ${tags.join(', ')}. Ayrıntılar için dokun.`}
+      style={({ pressed }) => [
+        styles.topic,
+        {
+          borderColor: isNext ? theme.accent : theme.border,
+          backgroundColor: pressed ? theme.backgroundSelected : 'transparent',
+        },
+      ]}>
+      <View
+        style={[
+          styles.check,
+          {
+            borderColor: status === 'done' ? theme.accent : status === 'in_progress' ? theme.markerEdge : theme.borderStrong,
+            backgroundColor: status === 'done' ? theme.accent : status === 'in_progress' ? theme.markerSoft : 'transparent',
+          },
+        ]}>
+        {status && (
+          <Text
+            allowFontScaling={false}
+            style={[
+              styles.checkText,
+              { color: status === 'done' ? theme.onAccent : status === 'in_progress' ? theme.markerInk : theme.textSecondary },
+            ]}>
+            {status === 'done' ? '✓' : status === 'in_progress' ? '…' : '–'}
+          </Text>
+        )}
       </View>
-      <Link href={{ pathname: '/roadmap-questions', params: { roadmapId } }} asChild>
-        <Button label="Adımlarımı oluştur" />
-      </Link>
-    </Animated.View>
+      <View style={styles.bandTexts}>
+        <ThemedText
+          type="smallBold"
+          themeColor={muted ? 'textSecondary' : 'text'}
+          style={status === 'skipped' ? styles.strike : undefined}>
+          {topic.title}
+        </ThemedText>
+        {tags.length > 0 && (
+          <ThemedText type="small" themeColor={focus && !status ? 'accentInk' : 'textSecondary'}>
+            {tags.join(' · ')}
+          </ThemedText>
+        )}
+      </View>
+      <ThemedText type="small" themeColor="textSecondary">
+        {topic.hours} sa
+      </ThemedText>
+    </Pressable>
   );
 }
 
@@ -309,18 +533,18 @@ function JourneySkeleton() {
   );
 }
 
-function EmptyState() {
+function EmptyState({ title, text }: { title: string; text: string }) {
   return (
     <View style={styles.empty}>
       <IconTile emoji="🗺️" tone="accent" size={96} />
       <ThemedText type="heading" style={styles.centerText}>
-        Henüz bir konu seçmedin.
+        {title}
       </ThemedText>
       <ThemedText themeColor="textSecondary" style={styles.centerText}>
-        Başlamak için ilk konunu seç.
+        {text}
       </ThemedText>
       <Link href="/onboarding" asChild>
-        <Button label="Konunu seç" />
+        <Button label="Yol haritanı seç" />
       </Link>
     </View>
   );
@@ -334,17 +558,69 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   band: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three },
-  bandTexts: { flex: 1, minWidth: 0, gap: Spacing.one },
-  // 📍 ikonun sağ üst köşesinde, hafif taşarak durur
+  bandTexts: { flex: 1, minWidth: 0, gap: Spacing.half },
   pin: { position: 'absolute', top: -10, right: -8, fontSize: 28, lineHeight: 34 },
   body: { padding: Spacing.three, gap: Spacing.three },
   meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   planText: { flex: 1, minWidth: 120 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  cta: { borderWidth: Border.thick, borderRadius: Radius.lg, padding: Spacing.three, gap: Spacing.three },
-  ctaTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  stepsSection: { gap: Spacing.three },
   errorBox: { gap: Spacing.three },
+  next: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.three,
+    padding: Spacing.three,
+    borderWidth: Border.thick,
+    borderBottomWidth: Border.thick + Edge,
+    borderRadius: Radius.lg,
+  },
+  sections: { gap: Spacing.two },
+  sectionsHead: { gap: Spacing.one, marginBottom: Spacing.one },
+  sectionRow: { flexDirection: 'row', gap: Spacing.two },
+  rail: { width: 32, alignItems: 'center' },
+  node: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: Border.thick,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: Spacing.three,
+  },
+  nodeText: { fontSize: 14, fontWeight: '900' },
+  line: { flex: 1, width: 3, borderRadius: 2, marginTop: Spacing.one },
+  section: { flex: 1, minWidth: 0, borderWidth: Border.thick, borderRadius: Radius.md, overflow: 'hidden' },
+  sectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    padding: Spacing.three,
+    minHeight: MinTouch,
+  },
+  sectionEmoji: { fontSize: 22, lineHeight: 28 },
+  topics: { gap: Spacing.two, paddingHorizontal: Spacing.two, paddingBottom: Spacing.two },
+  note: { borderRadius: Radius.sm, padding: Spacing.two },
+  topic: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    minHeight: MinTouch,
+    paddingVertical: Spacing.two,
+    paddingHorizontal: Spacing.two,
+    borderWidth: Border.thick,
+    borderRadius: Radius.sm,
+  },
+  check: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: Border.thick,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkText: { fontSize: 13, fontWeight: '900' },
+  strike: { textDecorationLine: 'line-through' },
+  actions: { alignItems: 'center' },
   empty: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.five },
   centerText: { textAlign: 'center' },
 });

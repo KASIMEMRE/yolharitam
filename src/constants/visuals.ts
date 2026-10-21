@@ -1,9 +1,9 @@
-import type { Phase, ResourceType } from '@/constants/roadmap-templates';
+import { getRoadmap, KIND_LABEL, type ResourceKind, type TopicMarker } from '@/constants/dev-roadmaps';
+import type { TopicStatus } from '@/constants/dev-roadmaps/personalize';
 import type { ThemeColor } from '@/constants/theme';
-import { getTopicChain } from '@/constants/topics';
 
-// Görsel eşleme tabloları: veri dosyaları (topics.ts, onboarding.ts) değişmez,
-// hangi kategorinin hangi emoji/renkle görüneceği SADECE burada tutulur.
+// Görsel eşleme tabloları: hangi durumun/işaretin hangi emoji ve renkle görüneceği SADECE burada tutulur.
+// (Haritaların kendi emoji ve rengi dev-roadmaps içinde, haritayla birlikte durur.)
 
 export type Hue = 'accent' | 'marker' | 'sky' | 'coral' | 'violet' | 'berry' | 'leaf';
 
@@ -28,59 +28,42 @@ export const LEVEL_STYLE: Record<string, { emoji: string }> = {
   advanced: { emoji: '🏔️' },
 };
 
-// Adım evreleri (Temeller / Pratik / Hedef) ve kaynak türleri (Video / Okuma / Uygulama).
-// Anahtarlar roadmap-templates.ts'teki Phase ve ResourceType ile birebir aynı. Renk ailesi YOK:
-// bu etiketler nötr kalır, renk yalnız kategoriye aittir.
-export const PHASE_STYLE: Record<Phase, { label: string; emoji: string }> = {
-  foundation: { label: 'Temeller', emoji: '🧱' },
-  practice: { label: 'Pratik', emoji: '🧪' },
-  goal: { label: 'Hedef', emoji: '🎯' },
+// Konu durumları (bitti / çalışıyorum / atladım) ve harita işaretleri (önerilen / isteğe bağlı / alternatif).
+// Anahtarlar dev-roadmaps tipleriyle birebir aynı.
+export const STATUS_STYLE: Record<TopicStatus, { label: string; emoji: string; hue: Hue | null }> = {
+  done: { label: 'Bitti', emoji: '✅', hue: 'accent' },
+  in_progress: { label: 'Çalışıyorum', emoji: '⏳', hue: 'marker' },
+  skipped: { label: 'Atladım', emoji: '⏭️', hue: null },
 };
 
-export const RESOURCE_STYLE: Record<ResourceType, { label: string; emoji: string }> = {
+export const MARKER_STYLE: Record<TopicMarker, { label: string; description: string }> = {
+  core: { label: 'Önerilen', description: 'Bu yol için öğrenmen önerilir.' },
+  optional: { label: 'İsteğe bağlı', description: 'Bilmek artı kazandırır ama şart değil.' },
+  alt: { label: 'Alternatif', description: 'Bölümdeki önerilen konunun yerine seçebilirsin; ikisi birden gerekmez.' },
+};
+
+export const RESOURCE_KIND_STYLE: Record<ResourceKind, { label: string; emoji: string }> = {
+  docs: { label: 'Doküman', emoji: '📄' },
   video: { label: 'Video', emoji: '🎬' },
-  reading: { label: 'Okuma', emoji: '📖' },
-  practice: { label: 'Uygulama', emoji: '🛠️' },
+  course: { label: 'Kurs', emoji: '🎓' },
+  book: { label: 'Kitap', emoji: '📚' },
+  practice: { label: 'Alıştırma', emoji: '🛠️' },
 };
 
-// Tüm adımların kaynak türü aynıysa kartlara çip koymak yerine listenin başında BİR KEZ gösterilen cümle.
-export const RESOURCE_SUMMARY: Record<ResourceType, string> = {
-  video: 'Tüm adımlar: kısa video ders serileriyle ilerle.',
-  reading: 'Tüm adımlar: resmi dokümantasyon ve güncel rehberlerle ilerle.',
-  practice: 'Tüm adımlar: yaparak öğren, sonunda küçük bir çıktı üret.',
-};
-
-// Kategori id'leri topics.ts'teki kök id'lerle birebir aynı.
-export const CATEGORY_STYLE: Record<string, { emoji: string; hue: Hue }> = {
-  tech: { emoji: '💻', hue: 'sky' },
-  business: { emoji: '💼', hue: 'coral' },
-  finance: { emoji: '💰', hue: 'leaf' },
-  science: { emoji: '🔬', hue: 'violet' },
-  design: { emoji: '🎨', hue: 'berry' },
-  languages: { emoji: '🗣️', hue: 'accent' },
-  sports: { emoji: '⚽', hue: 'coral' },
-  personal: { emoji: '🌟', hue: 'violet' },
-};
-
-// Tanımadığımız bir id gelirse (örn. veritabanında eski/bozuk veri) çökmek yerine bunu kullan.
+// Tanımadığımız bir kimlik gelirse (örn. eski sürümden kalan konu yolu) çökmek yerine bunu kullan.
 export const DEFAULT_CATEGORY: { emoji: string; hue: Hue } = { emoji: '🧭', hue: 'accent' };
 
-// topic_path ('tech/ai/llm') içinden kategori görünümünü bulur.
-export function getCategoryStyle(topicPath?: string | null) {
-  const rootId = topicPath?.split('/')[0] ?? '';
-  return CATEGORY_STYLE[rootId] ?? DEFAULT_CATEGORY;
-}
-
-// Yol haritası kaydındaki topic_path'ten ekranların ortak ihtiyacı olan özeti çıkarır:
-// konu adı, üst konular, kategori emojisi ve rengi. Bozuk/bilinmeyen yolda çökmez, genel başlığa düşer.
+// Yol haritası kaydındaki topic_path'ten (harita kimliği) ekranların ortak ihtiyacı olan özeti çıkarır.
+// Eski sürümden kalan konu yollarında ('sports/football/…') hasTopic=false döner; ekranlar
+// kullanıcıyı yeni bir harita seçmeye yönlendirir.
 export function describeTopic(topicPath?: string | null) {
-  const chain = topicPath ? getTopicChain(topicPath.split('/')) : [];
-  const category = getCategoryStyle(topicPath);
+  const map = getRoadmap(topicPath);
+  const category = map ? { emoji: map.emoji, hue: map.hue } : DEFAULT_CATEGORY;
   return {
-    title: chain.at(-1)?.title ?? 'Seçtiğin konu',
-    parents: chain.slice(0, -1).map((t) => t.title).join(' › '),
+    title: map?.title ?? 'Seçtiğin konu',
+    parents: map ? KIND_LABEL[map.kind] : '',
     category,
     hue: HUES[category.hue],
-    hasTopic: chain.length > 0,
+    hasTopic: Boolean(map),
   };
 }

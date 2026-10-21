@@ -63,9 +63,11 @@ function RootStack() {
       {/* GİRİŞ YAPMIŞ kullanıcının görebileceği ekranlar */}
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ title: 'Konunu seç' }} />
-        {/* 3 soru + "adımların hazırlanıyor" anı. Başlık ve geri düğmesini ekranın kendisi ayarlar. */}
-        <Stack.Screen name="roadmap-questions" options={{ title: 'Sana özel adımlar' }} />
+        <Stack.Screen name="onboarding" options={{ title: 'Yol haritanı seç' }} />
+        {/* 3 soru + "haritan hazırlanıyor" anı. Başlık ve geri düğmesini ekranın kendisi ayarlar. */}
+        <Stack.Screen name="roadmap-questions" options={{ title: 'Sana özel plan' }} />
+        {/* Konu detayı (kaynaklar + durum işaretleme). Başlığı ekran kendisi koyar (bölüm adı). */}
+        <Stack.Screen name="topic/[id]" options={{ title: 'Konu' }} />
       </Stack.Protected>
     </Stack>
   );

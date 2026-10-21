@@ -1,8 +1,8 @@
 // Soru ekranının (roadmap-questions.tsx) VERİSİ: soru metinleri, seçenekler ve varsayılanlar.
 // Metinler burada durur, ekran kodu sadece bu tabloyu çizer. Yeni soru/seçenek eklemek için
 // ekranı değil bu tabloyu değiştirirsin. (Seçenek kimlikleri üretici kurallarıyla birebir aynı:
-// roadmap-templates.ts)
-import type { GoalId, LearningStyleId, WeeklyHoursId } from '@/constants/roadmap-templates';
+// plan.ts)
+import type { GoalId, LearningStyleId, WeeklyHoursId } from '@/constants/plan';
 
 export type Answers = {
   weeklyHours: WeeklyHoursId;

@@ -18,7 +18,7 @@ import { useTheme } from '@/hooks/use-theme';
 type StepIndicatorProps = { current: 0 | 1 | 2 };
 
 const DOT = 24;
-const LABELS = ['Konu seç', 'Seviye seç', 'Sorular'];
+const LABELS = ['Harita seç', 'Seviye seç', 'Sorular'];
 
 export function StepIndicator({ current }: StepIndicatorProps) {
   const theme = useTheme();

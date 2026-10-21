@@ -26,7 +26,7 @@ type Mode = 'login' | 'signup';
 
 const STEPS = [
   { emoji: '🔑', label: 'Hesabını oluştur' },
-  { emoji: '🧭', label: 'Konunu ve seviyeni seç' },
+  { emoji: '🧭', label: 'Yol haritanı ve seviyeni seç' },
   { emoji: '🗺️', label: 'Kişisel yol haritanı al' },
 ];
 // Giriş modunda ilk durak "hesap oluştur" değil "giriş yap" (etiketler benzersiz kalmalı: React key)

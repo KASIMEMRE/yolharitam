@@ -15,7 +15,7 @@ const EMPTY: AchievementInput = { roadmaps: [], progress: [] };
 
 // Kullanıcının TÜM yol haritalarını (konu değiştirince eskiler de kalır) ve tamamlama kayıtlarını okur,
 // rozetleri istemcide hesaplar. İki küçük sorgu yeter; RLS yalnız kullanıcının kendi satırlarını verir.
-// Profil her görününce (useFocusEffect) tazelenir: Yol Haritam'da adım işaretleyip dönünce rozet güncel olur.
+// Profil her görününce (useFocusEffect) tazelenir: konu işaretleyip dönünce rozet güncel olur.
 export function useAchievements() {
   const [state, setState] = useState<State>({ status: 'loading', data: EMPTY });
   const [reloadKey, setReloadKey] = useState(0);
@@ -26,10 +26,10 @@ export function useAchievements() {
       let cancelled = false; // hızlı odak değişiminde eski cevap yeni state'i ezmesin
       async function load() {
         try {
-          // İç içe seçim: her yol haritasıyla birlikte adımları (yalnız rozetlerin ihtiyacı olan sütunlar)
+          // Yol haritaları + konu durumları (yalnız rozetlerin ihtiyacı olan sütunlar)
           const [roadmaps, progress] = await Promise.all([
-            supabase.from('roadmaps').select('id, topic_path, created_at, roadmap_steps(id, phase, estimated_hours)'),
-            supabase.from('step_progress').select('step_id, completed_at'),
+            supabase.from('roadmaps').select('id, topic_path, created_at'),
+            supabase.from('topic_progress').select('roadmap_id, topic_id, status, updated_at'),
           ]);
           if (cancelled) return;
           const error = roadmaps.error ?? progress.error;
@@ -41,7 +41,7 @@ export function useAchievements() {
             setState({
               status: 'ready',
               data: {
-                roadmaps: (roadmaps.data ?? []).map(({ roadmap_steps, ...r }) => ({ ...r, steps: roadmap_steps })),
+                roadmaps: roadmaps.data ?? [],
                 progress: progress.data ?? [],
               },
             });

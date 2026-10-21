@@ -45,8 +45,13 @@ Docs: https://docs.expo.dev/eas/index.md
 # Yol Haritam — proje kuralları (ajanlar için)
 
 ## Ürün
-Yol Haritam, kullanıcının bir konu ağacından (Kategori › Alt kategori › Konu, bkz. `src/constants/topics.ts`)
-konu ve seviye seçtiği, ona özel öğrenme yol haritası sunan bir mobil uygulamadır.
+Yol Haritam, yazılımcılar için yol haritası uygulamasıdır (roadmap.sh kurgusundan ilham alır, içerik bize aittir).
+Kullanıcı bir **rol** (Frontend, Backend, DevOps…) ya da **beceri** (Python, SQL, Git) haritası ve seviye seçer;
+harita bölüm → konu ağacıdır (önerilen / isteğe bağlı / alternatif). Kullanıcı konuları bitti / çalışıyorum / atladım
+diye işaretler. Yapay zekâ haritayı değiştirmez, kişiye göre işaretler (öncelikli konular, atlanabilirler, bölüm notları).
+- İçerik: `src/constants/dev-roadmaps/` (konu `id`'leri ilerleme kaydının anahtarıdır, SONRADAN DEĞİŞTİRME)
+- İlerleme: `topic_progress` tablosu · Kişisel işaretler: `roadmaps.personalization` (jsonb)
+- roadmap.sh metinleri lisansı gereği KOPYALANMAZ; yeni içerik kendi cümlelerimizle yazılır.
 Sonraki aşamada "Gelişmeler" sekmesinde kullanıcının konularına bağlı haber akışı olacak
 (sadece başlık + kısa özet + kaynağa link; tam metin kopyalanmaz).
 
@@ -57,7 +62,7 @@ Proje sahibi (Emre) yazılımı bu projeyi geliştirerek ÖĞRENİYOR. Kod okuna
 - Supabase: Postgres + Auth. İstemci: `src/lib/supabase.ts`, tipler: `src/lib/database.types.ts`
 - Oturum: `src/lib/auth-context.tsx` + `_layout.tsx` içinde `Stack.Protected`
 - Tema: `src/constants/theme.ts` (`accent` = harita yeşili, `marker` = patika sarısı). Renk sabit kodlama; temadan al.
-- Ortak bileşenler: `OptionCard`, `TextField`, `RouteSteps`, `ThemedText`, `ThemedView`
+- Ortak bileşenler: `OptionCard`, `TextField`, `RouteSteps`, `ThemedText`, `ThemedView`, `ProgressSummary`
 
 ## Çalışma kuralları
 1. Görevleri `BACKLOG.md` dosyasından al: "Sıradaki" bölümündeki EN ÜSTTEKİ, başlamamış görevi seç. Sırayı değiştirme.

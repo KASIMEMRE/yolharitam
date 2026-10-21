@@ -43,12 +43,14 @@ import {
   QUESTIONS,
   tempoWord,
 } from '@/constants/roadmap-questions';
-import { generateRoadmapSteps, summarizeSteps, toLevelId } from '@/constants/roadmap-templates';
+import { getRoadmap } from '@/constants/dev-roadmaps';
+import { computeProgress } from '@/constants/dev-roadmaps/personalize';
+import { toLevelId } from '@/constants/plan';
 import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
 import { useShadow, useTheme } from '@/hooks/use-theme';
-import { personalizeSteps } from '@/lib/ai-roadmap';
 import { useAuth } from '@/lib/auth-context';
+import { personalizeRoadmap } from '@/lib/personalize-roadmap';
 import { supabase } from '@/lib/supabase';
 import { classifyError, ERROR_TEXT } from '@/lib/supabase-errors';
 import { isWizardDone, markWizardDone } from '@/lib/wizard-done';
@@ -62,17 +64,24 @@ const SAVE_TIMEOUT_MS = 20000;
 // Bu süreden uzun sürerse dürüst bir ek mesaj gösteririz (yüzde/sahte çubuk yok).
 const SLOW_AFTER_MS = 4000;
 
+// Veritabanı hatasını kullanıcı cümlesine çevirir
+function errorText(error: { code?: string; message?: string }): string {
+  const kind = classifyError(error);
+  if (kind === 'schema') return ERROR_TEXT.saveSchema;
+  if (kind === 'network') return ERROR_TEXT.network;
+  return ERROR_TEXT.other;
+}
+
 // Route parametresi bazen dizi gelebilir; her zaman ilk metni al.
 function first(param: string | string[] | undefined): string | undefined {
   return Array.isArray(param) ? param[0] : param;
 }
 
 // Bir yol haritası için 3 soruyu soran sihirbaz. İki yoldan açılır:
-//  - YENİ akış (onboarding): `topicPath` + `level` parametreleriyle. Henüz veritabanında kayıt yok;
-//    kayıt, son sorudan sonra TEK çağrıyla (RPC) yapılır. Soruları yarıda bırakan kullanıcıda
-//    adımsız "yetim" yol haritası oluşmaz.
-//  - MEVCUT kullanıcı: `roadmapId` ile (yol haritası var, adımı yok). Yeni satır eklenmez;
-//    cevaplar ve adımlar mevcut satıra yazılır.
+//  - YENİ akış (onboarding): `topicPath` (harita kimliği) + `level` parametreleriyle. Kayıt son sorudan
+//    sonra yapılır; soruları yarıda bırakan kullanıcıda yarım kayıt oluşmaz.
+//  - MEVCUT harita: `roadmapId` ile (Yol Haritam'daki "Planımı güncelle"). Yeni satır eklenmez;
+//    cevaplar ve kişisel işaretler mevcut satıra yazılır, konu ilerlemesi korunur.
 export default function RoadmapQuestionsScreen() {
   const params = useLocalSearchParams<{ topicPath?: string; level?: string; roadmapId?: string }>();
   const roadmapId = first(params.roadmapId);
@@ -222,81 +231,63 @@ export default function RoadmapQuestionsScreen() {
     router.replace('/roadmap');
   }
 
-  // Kayıt: üret -> TEK RPC çağrısı. Sonuç: başarı (kutlama özetiyle) | 'exists' (adımlar zaten vardı) | { message } (hata).
-  async function persist(
-    final: Answers
-  ): Promise<{ summary: string } | 'exists' | { message: string }> {
-    if (!topicPath || !level) return { message: ERROR_TEXT.other };
-    // 20 sn içinde cevap gelmezse isteği iptal et (AbortError -> "ağ sorunu" olarak sınıflanır)
-    // Zamanlayıcı yapay zekâ adımından SONRA kurulur; o adımın kendi süre sınırı var (ai-roadmap.ts).
+  // Kayıt: haritayı kişiye göre işaretle → yol haritası satırını yaz.
+  // Aynı haritayı daha önce seçtiysen YENİ satır açılmaz, eskisi güncellenir: konu ilerlemen korunur.
+  // Sonuç: başarı (kutlama özetiyle) | { message } (hata).
+  async function persist(final: Answers): Promise<{ summary: string } | { message: string }> {
+    const map = getRoadmap(topicPath);
+    if (!map || !level || !session) return { message: ERROR_TEXT.other };
+    // Zamanlayıcı yapay zekâ adımından SONRA kurulur; o adımın kendi süre sınırı var (personalize-roadmap.ts).
     const controller = new AbortController();
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      const topic = describeTopic(topicPath);
-      const input = {
-        topicPath,
-        topicTitle: topic.title, // bozuk yolda "Seçtiğin konu"
+      const personalization = await personalizeRoadmap(map, {
         level: toLevelId(level),
         weeklyHours: final.weeklyHours,
         goal: final.goal,
         learningStyle: final.learningStyle,
-      };
-      // 1. katman: konuya özel şablon (her zaman çalışır)
-      const baseSteps = await generateRoadmapSteps(input);
-      // 2. katman: yapay zekâ kişiselleştirmesi; başarısız olursa baseSteps aynen döner
-      const { steps, personalized } = await personalizeSteps(
-        input,
-        baseSteps,
-        topic.parents ? `${topic.parents} › ${topic.title}` : topic.title
-      );
+      });
       timeout = setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
-      // position GÖNDERİLMEZ: sunucu dizideki sıradan türetir (1..N, çakışma imkânsız)
-      const payload = steps.map((s) => ({
-        phase: s.phase,
-        title: s.title,
-        description: s.description,
-        estimated_hours: s.estimatedHours,
-        resource_type: s.resourceType,
-      }));
 
-      // RPC = veritabanında tek işlemle çalışan fonksiyon: ya roadmap + cevaplar + adımların HEPSİ
-      // yazılır ya hiçbiri. Yarım kayıt ("yol haritası var, adımı yok") bu yüzden oluşamaz.
-      const { error: rpcError } = roadmapId
-        ? await supabase
-            .rpc('add_steps_to_roadmap', {
-              p_roadmap_id: roadmapId,
-              p_weekly_hours: final.weeklyHours,
-              p_goal: final.goal,
-              p_learning_style: final.learningStyle,
-              p_steps: payload,
-            })
-            .abortSignal(controller.signal)
-        : await supabase
-            .rpc('create_roadmap_with_steps', {
-              p_topic_path: topicPath,
-              p_level: level,
-              p_weekly_hours: final.weeklyHours,
-              p_goal: final.goal,
-              p_learning_style: final.learningStyle,
-              p_steps: payload,
-            })
-            .abortSignal(controller.signal);
+      const fields = {
+        level,
+        weekly_hours: final.weeklyHours,
+        goal: final.goal,
+        learning_style: final.learningStyle,
+        personalization,
+        updated_at: new Date().toISOString(), // "en son kullanılan harita" sırası bununla
+      };
 
-      if (!rpcError) {
-        // Kutlama özeti, kaydedilen adımlardan türetilir (kendi başına bir sayı uydurmayız)
-        const sum = summarizeSteps(steps, final.weeklyHours);
-        return {
-          summary:
-            `${sum.count} adım · yaklaşık ${sum.totalHours} saat · yaklaşık ${sum.weeks} hafta` +
-            (personalized ? '\n✨ Yapay zekâ ile sana göre uyarlandı' : ''),
-        };
+      // Hangi satır güncellenecek? roadmapId ile açıldıysa o; değilse bu haritanın eski satırı (varsa)
+      let targetId = roadmapId ?? null;
+      if (!targetId) {
+        const found = await supabase
+          .from('roadmaps')
+          .select('id')
+          .eq('topic_path', map.id)
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .abortSignal(controller.signal)
+          .maybeSingle();
+        if (found.error) return { message: errorText(found.error) };
+        targetId = found.data?.id ?? null;
       }
-      const kind = classifyError(rpcError);
-      // Çift dokunma / başka cihaz: adımlar zaten yazılmış. Hata değil, "zaten hazır".
-      if (kind === 'duplicate' && roadmapId) return 'exists';
-      if (kind === 'schema') return { message: ERROR_TEXT.saveSchema };
-      if (kind === 'network') return { message: ERROR_TEXT.network };
-      return { message: ERROR_TEXT.other };
+
+      const { error: saveError } = targetId
+        ? await supabase.from('roadmaps').update(fields).eq('id', targetId).abortSignal(controller.signal)
+        : await supabase
+            .from('roadmaps')
+            .insert({ ...fields, user_id: session.user.id, topic_path: map.id })
+            .abortSignal(controller.signal);
+      if (saveError) return { message: errorText(saveError) };
+
+      // Kutlama özeti planın kendisinden türetilir (kendi başına bir sayı uydurmayız)
+      const sum = computeProgress(map, new Map(), personalization, final.weeklyHours);
+      return {
+        summary:
+          `${sum.total} konu · yaklaşık ${sum.totalHours} saat · yaklaşık ${sum.weeks} hafta` +
+          (personalization.source === 'ai' ? '\n✨ Yapay zekâ haritanı sana göre işaretledi' : ''),
+      };
     } catch {
       return { message: ERROR_TEXT.other };
     } finally {
@@ -325,7 +316,7 @@ export default function RoadmapQuestionsScreen() {
     if (!mountedRef.current) return;
     if (slowTimer.current) clearTimeout(slowTimer.current);
 
-    if (typeof outcome === 'object' && 'message' in outcome) {
+    if ('message' in outcome) {
       // Hata hemen gösterilir (yapay bekleme yok); sihirbaz kaldığı yerden devam eder.
       if (delayTimer.current) clearTimeout(delayTimer.current);
       setPreparing(false);
@@ -336,11 +327,7 @@ export default function RoadmapQuestionsScreen() {
     await minDelay;
     if (!mountedRef.current) return;
     markWizardDone(wizardKey);
-    if (outcome === 'exists') {
-      goToRoadmap();
-      return;
-    }
-    if (typeof outcome === 'object') setCelebrationSubtitle(outcome.summary);
+    setCelebrationSubtitle(outcome.summary);
     setCelebrating(true); // kilit açılmaz: kutlama sonrası ekran kapanır
   }
 
@@ -376,15 +363,15 @@ export default function RoadmapQuestionsScreen() {
     `Önerilen: ${describeDefaults()}.` +
     (answeredCount > 0 ? ' Yanıtladıkların korunur; kalanlar önerilenle dolar.' : '');
   const isLast = step === QUESTIONS.length - 1;
-  const primaryLabel = error !== null ? 'Tekrar dene' : isLast ? 'Adımlarımı oluştur' : 'Devam et';
+  const primaryLabel = error !== null ? 'Tekrar dene' : isLast ? 'Haritamı hazırla' : 'Devam et';
   const primaryDisabled = notReady || (error === null && selectedId === undefined);
 
   // Üst çubuk ayarları: soru ilerlediyse geri = önceki soru; kayıt sürerken geri tamamen kapalı.
   const screenOptions = (
     <Stack.Screen
       options={{
-        // Kutlama sırasında başlık boş: arkada soluk "Sana özel adımlar" görünmesin
-        title: celebrating ? '' : 'Sana özel adımlar',
+        // Kutlama sırasında başlık boş: arkada soluk başlık görünmesin
+        title: celebrating ? '' : 'Sana özel plan',
         headerBackVisible: !busy && step === 0,
         gestureEnabled: !busy && step === 0,
         // Soru ilerlediyse geri = önceki soru. İlk soruda native'in kendi geri okunu bırakırız;
@@ -436,13 +423,12 @@ export default function RoadmapQuestionsScreen() {
     />
   );
 
-  // "Adımların hazırlanıyor…" anı (kayıt süresince). Satırlar cevapların GERÇEK etkisini anlatır.
+  // "Haritan hazırlanıyor…" anı (kayıt süresince). Satırlar cevapların GERÇEK etkisini anlatır.
   if (preparing || celebrating) {
     const lines = [
-      'Yapay zekâ adımları sana göre uyarlıyor',
-      `${tempoWord(answers.weeklyHours) ?? 'Seçtiğin'} tempona göre süreler ayarlanıyor`,
-      `Son adımlar ${findOption('goal', answers.goal)?.title ?? 'seçtiğin'} hedefine göre kuruluyor`,
-      `Yöntem: ${findOption('learningStyle', answers.learningStyle)?.title ?? 'seçtiğin yöntem'}`,
+      'Yapay zekâ haritanı seviyene göre işaretliyor',
+      `${tempoWord(answers.weeklyHours) ?? 'Seçtiğin'} tempona göre süre hesaplanıyor`,
+      `Öncelikler ${findOption('goal', answers.goal)?.title ?? 'seçtiğin'} hedefine göre belirleniyor`,
     ];
     return (
       <ThemedView style={styles.container}>
@@ -456,7 +442,7 @@ export default function RoadmapQuestionsScreen() {
               entering={FadeIn.duration(150)}
               accessible
               accessibilityLiveRegion="polite"
-              accessibilityLabel={`Adımların hazırlanıyor. ${lines.join('. ')}.`}
+              accessibilityLabel={`Haritan hazırlanıyor. ${lines.join('. ')}.`}
               style={styles.preparingInner}>
               <View style={[shadow('lifted'), { borderRadius: Radius.xl }]}>
                 <IconTile emoji={info.category.emoji} tone={info.category.hue} size={height < 700 ? 64 : 96} />
@@ -472,7 +458,7 @@ export default function RoadmapQuestionsScreen() {
               </View>
               <TrailDraw width={Math.min(width - 2 * gutter, 288)} slow={slow} />
               <ThemedText type="heading" style={styles.centerText}>
-                Adımların hazırlanıyor…
+                Haritan hazırlanıyor…
               </ThemedText>
               <View style={styles.lines}>
                 {lines.map((line, i) => (
