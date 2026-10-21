@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { DisplayNameForm } from '@/components/display-name-form';
 import { HeaderBackButton } from '@/components/header-back-button';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
@@ -146,7 +147,11 @@ function MapsSection() {
 
   return (
     <View style={styles.section}>
-      <SectionTitle emoji="🗺️" title="Haritalarım" subtitle="Takip ettiğin yol haritaları. Birini kaldırınca o haritadaki ilerlemen de silinir." />
+      <SectionTitle
+        emoji="🗺️"
+        title="Haritalarım"
+        subtitle="Takip ettiğin yol haritaları. Yeni harita Yol Haritam sekmesinden eklenir. Birini kaldırınca o haritadaki ilerlemen de silinir."
+      />
       {loading ? (
         <ThemedText type="small" themeColor="textSecondary">
           Yükleniyor…
@@ -170,7 +175,6 @@ function MapsSection() {
           />
         ))
       )}
-      <Button variant="secondary" icon="＋" label="Yeni harita ekle" onPress={() => router.push('/onboarding')} />
 
       {leftovers.length > 0 && (
         <LeftoversRow count={leftovers.length} onClean={async () => {
@@ -279,10 +283,9 @@ function LeftoversRow({ count, onClean }: { count: number; onClean: () => Promis
 
 function AppearanceSection() {
   const prefs = usePreferences();
-  const { roadmap } = useLatestRoadmap();
   return (
     <View style={styles.section}>
-      <SectionTitle emoji="🎨" title="Görünüm ve plan" />
+      <SectionTitle emoji="🎨" title="Görünüm" />
       <Card>
         <Choice<ThemePref>
           label="Tema"
@@ -307,20 +310,6 @@ function AppearanceSection() {
           Bu tercihler yalnız bu cihazda saklanır.
         </ThemedText>
       </Card>
-      {roadmap && getRoadmap(roadmap.topic_path) && (
-        <Card>
-          <ThemedText type="smallBold">Planın</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Haftalık süreni, hedefini ve öğrenme yöntemini değiştir; yapay zekâ haritanı yeniden işaretlesin. İlerlemen korunur.
-          </ThemedText>
-          <Button
-            variant="secondary"
-            icon="🎯"
-            label="Planımı güncelle"
-            onPress={() => router.push({ pathname: '/roadmap-questions', params: { roadmapId: roadmap.id } })}
-          />
-        </Card>
-      )}
     </View>
   );
 }
@@ -333,6 +322,9 @@ function AccountSection() {
   return (
     <View style={styles.section}>
       <SectionTitle emoji="👤" title="Hesap" subtitle={session?.user.email ?? undefined} />
+      <Card>
+        <DisplayNameForm />
+      </Card>
       <PasswordCard email={session?.user.email ?? null} />
       <Card>
         <Button variant="secondary" icon="🚪" label="Çıkış yap" onPress={() => supabase.auth.signOut()} />
