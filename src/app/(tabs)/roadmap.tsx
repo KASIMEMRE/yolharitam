@@ -1,6 +1,6 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
 import { Banner } from '@/components/banner';
@@ -23,10 +23,12 @@ import {
   type Personalization,
   type TopicStatus,
 } from '@/constants/dev-roadmaps/personalize';
+import { computeStreak, startOfWeek, weeklyProgress } from '@/constants/activity';
 import { toLevelId, type GoalId, type WeeklyHoursId } from '@/constants/plan';
 import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questions';
 import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
+import { useActivity, type Activity } from '@/hooks/use-activity';
 import { useDisplayName } from '@/hooks/use-display-name';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
@@ -40,7 +42,8 @@ function openTopic(roadmap: Roadmap, topicId: string) {
 
 export default function RoadmapScreen() {
   // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda
-  const { roadmap, loading } = useLatestRoadmap();
+  const { roadmap, roadmaps, loading, activate } = useLatestRoadmap();
+  const activity = useActivity();
   // Hook erken return'lerden ÖNCE çağrılır (hook kuralı)
   const { name } = useDisplayName();
   const trimmedName = name?.trim();
@@ -87,7 +90,10 @@ export default function RoadmapScreen() {
   return (
     <TabScreen>
       {header}
-      <MapView roadmap={roadmap} map={map} progress={progress} />
+      {/* Birden çok harita takip ediliyorsa üstte hızlı geçiş */}
+      {roadmaps.length > 1 && <MapSwitcher roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
+      {/* key: harita değişince içteki açık/kapalı bölüm durumu sıfırdan başlasın */}
+      <MapView key={roadmap.id} roadmap={roadmap} map={map} progress={progress} activity={activity} />
     </TabScreen>
   );
 }
@@ -96,10 +102,12 @@ function MapView({
   roadmap,
   map,
   progress,
+  activity,
 }: {
   roadmap: Roadmap;
   map: DevRoadmap;
   progress: ReturnType<typeof useTopicProgress>;
+  activity: Activity | null;
 }) {
   const weekly: WeeklyHoursId = isAnswerId('weeklyHours', roadmap.weekly_hours)
     ? (roadmap.weekly_hours as WeeklyHoursId)
@@ -138,6 +146,7 @@ function MapView({
 
       {ready && (
         <>
+          {activity && <MomentumCard activity={activity} roadmapId={roadmap.id} weekly={weekly} />}
           {next && <NextCard topic={next} personalization={personalization} onPress={() => openTopic(roadmap, next.id)} />}
           <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} />
           <Sections
@@ -234,6 +243,119 @@ function JourneyCard({
             <Skeleton width={130} height={28} radius={Radius.pill} />
           </View>
         )}
+      </View>
+    </View>
+  );
+}
+
+// Haritalar arası geçiş: takip ettiğin her harita için bir çip
+function MapSwitcher({
+  roadmaps,
+  activeId,
+  onSelect,
+}: {
+  roadmaps: Roadmap[];
+  activeId: string;
+  onSelect: (id: string) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.switcher}
+      accessibilityLabel="Takip ettiğin haritalar">
+      {roadmaps.map((r) => {
+        const m = getRoadmap(r.topic_path);
+        if (!m) return null;
+        const active = r.id === activeId;
+        const hue = HUES[m.hue];
+        return (
+          <Pressable
+            key={r.id}
+            onPress={() => !active && onSelect(r.id)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={`${m.title}${active ? ', şu an açık' : ', geçmek için dokun'}`}
+            style={[
+              styles.mapChip,
+              {
+                backgroundColor: active ? theme[hue.soft] : theme.card,
+                borderColor: active ? theme[hue.line] : theme.border,
+              },
+            ]}>
+            <Text allowFontScaling={false} style={styles.mapChipEmoji}>
+              {m.emoji}
+            </Text>
+            <ThemedText type="smallBold" themeColor={active ? hue.ink : 'textSecondary'}>
+              {m.title}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
+      <Link href="/onboarding" asChild>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Yeni harita ekle"
+          style={[styles.mapChip, { backgroundColor: theme.card, borderColor: theme.border, borderStyle: 'dashed' }]}>
+          <ThemedText type="smallBold" themeColor="textSecondary">
+            ＋ Harita ekle
+          </ThemedText>
+        </Pressable>
+      </Link>
+    </ScrollView>
+  );
+}
+
+// Motivasyon kartı: günlük seri + bu haftanın hedefi
+function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roadmapId: string; weekly: WeeklyHoursId }) {
+  const theme = useTheme();
+  const { streak, activeToday } = computeStreak(activity.activeDays);
+  const week = weeklyProgress(activity.doneThisWeekFor(roadmapId, startOfWeek()), weekly);
+  const hint = activeToday
+    ? 'Bugün çalıştın, serin devam ediyor.'
+    : streak > 0
+      ? 'Bugün bir konuyu işaretle, serin bozulmasın.'
+      : 'Bir konuyu “Çalışıyorum” ya da “Bitti” yap, serin başlasın.';
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={`Seri: ${streak} gün. ${hint} Bu hafta ${week.hours} / ${week.target} saat.`}
+      style={[styles.momentum, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <View style={styles.momentumRow}>
+        <View style={[styles.streakBadge, { backgroundColor: streak > 0 ? theme.coralSoft : theme.backgroundSelected }]}>
+          <Text allowFontScaling={false} style={styles.streakEmoji}>
+            {streak > 0 ? '🔥' : '🌱'}
+          </Text>
+          <ThemedText type="cardTitle" themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}>
+            {streak}
+          </ThemedText>
+        </View>
+        <View style={styles.bandTexts}>
+          <ThemedText type="smallBold">{streak > 0 ? `${streak} günlük seri` : 'Seri henüz başlamadı'}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {hint}
+          </ThemedText>
+        </View>
+      </View>
+      <View style={styles.weekBlock}>
+        <View style={styles.weekRow}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Bu haftanın hedefi
+          </ThemedText>
+          <ThemedText type="smallBold">
+            {week.hours} / {week.target} saat {week.ratio >= 1 ? '🎉' : ''}
+          </ThemedText>
+        </View>
+        <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
+          <View
+            style={[
+              styles.weekFill,
+              { width: `${Math.round(week.ratio * 100)}%`, backgroundColor: week.ratio >= 1 ? theme.accent : theme.marker },
+            ]}
+          />
+        </View>
       </View>
     </View>
   );
@@ -612,6 +734,32 @@ const styles = StyleSheet.create({
   planText: { flex: 1, minWidth: 120 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   errorBox: { gap: Spacing.three },
+  switcher: { gap: Spacing.two, paddingVertical: Spacing.half },
+  mapChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    minHeight: 40,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: Border.thick,
+  },
+  mapChipEmoji: { fontSize: 16, lineHeight: 20 },
+  momentum: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
+  momentumRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  streakBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.one,
+    paddingVertical: Spacing.one,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+  },
+  streakEmoji: { fontSize: 20, lineHeight: 26 },
+  weekBlock: { gap: Spacing.one },
+  weekRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  weekTrack: { height: 10, borderRadius: Radius.pill, overflow: 'hidden' },
+  weekFill: { height: '100%', borderRadius: Radius.pill },
   next: {
     flexDirection: 'row',
     alignItems: 'center',
