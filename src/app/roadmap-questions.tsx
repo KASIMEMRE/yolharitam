@@ -244,7 +244,7 @@ export default function RoadmapQuestionsScreen() {
       // 1. katman: konuya özel şablon (her zaman çalışır)
       const baseSteps = await generateRoadmapSteps(input);
       // 2. katman: yapay zekâ kişiselleştirmesi; başarısız olursa baseSteps aynen döner
-      const { steps } = await personalizeSteps(
+      const { steps, personalized } = await personalizeSteps(
         input,
         baseSteps,
         topic.parents ? `${topic.parents} › ${topic.title}` : topic.title
@@ -286,7 +286,9 @@ export default function RoadmapQuestionsScreen() {
         // Kutlama özeti, kaydedilen adımlardan türetilir (kendi başına bir sayı uydurmayız)
         const sum = summarizeSteps(steps, final.weeklyHours);
         return {
-          summary: `${sum.count} adım · yaklaşık ${sum.totalHours} saat · yaklaşık ${sum.weeks} hafta`,
+          summary:
+            `${sum.count} adım · yaklaşık ${sum.totalHours} saat · yaklaşık ${sum.weeks} hafta` +
+            (personalized ? '\n✨ Yapay zekâ ile sana göre uyarlandı' : ''),
         };
       }
       const kind = classifyError(rpcError);
@@ -437,6 +439,7 @@ export default function RoadmapQuestionsScreen() {
   // "Adımların hazırlanıyor…" anı (kayıt süresince). Satırlar cevapların GERÇEK etkisini anlatır.
   if (preparing || celebrating) {
     const lines = [
+      'Yapay zekâ adımları sana göre uyarlıyor',
       `${tempoWord(answers.weeklyHours) ?? 'Seçtiğin'} tempona göre süreler ayarlanıyor`,
       `Son adımlar ${findOption('goal', answers.goal)?.title ?? 'seçtiğin'} hedefine göre kuruluyor`,
       `Yöntem: ${findOption('learningStyle', answers.learningStyle)?.title ?? 'seçtiğin yöntem'}`,
