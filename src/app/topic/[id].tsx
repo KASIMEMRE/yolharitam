@@ -118,10 +118,17 @@ export default function TopicScreen() {
     const sectionPlan = section.topics.filter((t) => plan.includes(t));
     const sectionDone = sectionPlan.length > 0 && sectionPlan.every((t) => after.get(t.id) === 'done');
 
-    if (allDone && (await awardXp({ kind: 'roadmap_done', ref: roadmapId, roadmapId }))) {
-      setMilestone({ kind: 'roadmap', title: map.title, emoji: map.emoji, percent: 100, xp: gained + XP.roadmap_done });
-    } else if (sectionDone && (await awardXp({ kind: 'section_done', ref: `${roadmapId}:${section.id}`, roadmapId }))) {
-      setMilestone({ kind: 'section', title: section.title, emoji: section.emoji, percent, xp: gained + XP.section_done });
+    // Kutlama, bölüm/harita BU İŞARETLE tamamlandığında her durumda açılır. XP ise ayrı: bölüm başına
+    // bir kez verilir (işareti kaldırıp yeniden koymak kutlamayı tekrar açar ama puanı tekrar vermez).
+    const wasSectionDone = sectionPlan.every((t) => (t.id === topic.id ? current : progress.statuses.get(t.id)) === 'done');
+    if (allDone) {
+      const bonus = (await awardXp({ kind: 'roadmap_done', ref: roadmapId, roadmapId })) ? XP.roadmap_done : 0;
+      setMilestone({ kind: 'roadmap', title: map.title, emoji: map.emoji, percent: 100, xp: gained + bonus });
+    } else if (sectionDone && !wasSectionDone) {
+      const bonus = (await awardXp({ kind: 'section_done', ref: `${roadmapId}:${section.id}`, roadmapId }))
+        ? XP.section_done
+        : 0;
+      setMilestone({ kind: 'section', title: section.title, emoji: section.emoji, percent, xp: gained + bonus });
     }
   }
 
