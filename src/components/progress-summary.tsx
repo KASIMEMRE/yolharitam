@@ -6,12 +6,12 @@ import { ThemedText } from '@/components/themed-text';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// İlerleme özeti: "N / M adım tamamlandı" + ince çubuk + kalan süre.
+// İlerleme özeti: "N / M konu tamamlandı" + ince çubuk + kalan süre.
 // Tüm sayılar GERÇEK veriden gelir (adımlar ve step_progress); burada hiçbir şey saklanmaz/uydurulmaz.
 type Props = {
   done: number;
   total: number;
-  remainingHours: number; // tamamlanmamış adımların estimated_hours toplamı
+  remainingHours: number; // planda bitmemiş konuların tahmini saat toplamı
 };
 
 export function ProgressSummary({ done, total, remainingHours }: Props) {
@@ -28,24 +28,24 @@ export function ProgressSummary({ done, total, remainingHours }: Props) {
 
   const hours = Math.round(remainingHours);
   const remainingText =
-    done === total ? 'Tüm adımları tamamladın.' : `Kalan süre: yaklaşık ${hours} saat`;
+    done === total ? 'Planındaki tüm konuları bitirdin.' : `Kalan süre: yaklaşık ${hours} saat`;
 
   return (
     <View style={styles.box}>
       <ThemedText type="cardTitle">
-        {done} / {total} adım tamamlandı
+        {done} / {total} konu tamamlandı
       </ThemedText>
       {/* Çubuk ekran okuyucuya sayısal değer verir; metin zaten yukarıda olduğu için ayrıca okunmaz */}
       <View
         accessible
         accessibilityRole="progressbar"
         accessibilityLabel="İlerleme"
-        accessibilityValue={{ min: 0, max: total, now: done, text: `${total} adımın ${done} tanesi tamamlandı` }}
+        accessibilityValue={{ min: 0, max: total, now: done, text: `${total} konunun ${done} tanesi tamamlandı` }}
         style={[styles.track, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
         <Animated.View style={[styles.fill, { backgroundColor: theme.accent }, fillStyle]} />
       </View>
       <ThemedText type="small" themeColor="textSecondary">
-        {done === 0 ? 'İlk adımı bitirince çubuğun dolmaya başlar. ' : ''}
+        {done === 0 ? 'İlk konuyu bitirince çubuğun dolmaya başlar. ' : ''}
         {remainingText}
       </ThemedText>
     </View>

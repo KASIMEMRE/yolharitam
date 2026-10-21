@@ -65,7 +65,7 @@ export function AchievementsSection() {
           {/* Yol haritası yoksa hiçbir rozet kazanılamaz: neden olduğunu söyleriz */}
           {!hasRoadmap && (
             <ThemedText type="small" themeColor="textSecondary">
-              Rozet kazanmak için önce bir konu seç.
+              Rozet kazanmak için önce bir yol haritası seç.
             </ThemedText>
           )}
           <View style={styles.grid}>
@@ -80,7 +80,7 @@ export function AchievementsSection() {
             ))}
           </View>
           <ThemedText type="small" themeColor="textSecondary">
-            Rozetler tamamladığın adımlardan hesaplanır. Bir adımın işaretini kaldırırsan rozet de değişebilir.
+            Rozetler bitirdiğin konulardan hesaplanır. Bir konunun işaretini kaldırırsan rozet de değişebilir.
           </ThemedText>
         </>
       )}

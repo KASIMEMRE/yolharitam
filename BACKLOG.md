@@ -91,5 +91,6 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Selamlamayı belirginleştirme** (Y-02'den): "Merhaba, <ad>" eyebrow'u küçük ve silik; tema renkleriyle bir kademe daha belirgin yapılabilir.
 
 ## Yayından sonra
-- [ ] **2. katman ücretli abonelik (freemium):** yapay zekâ kişiselleştirmesi (`src/lib/ai-roadmap.ts` → `generate-roadmap` Edge Function) abonelere açık olsun; ücretsiz kullanıcılar 1. katmanı (konuya özel şablon) görür. Mağaza içi satın alma (RevenueCat vb.) + sunucu tarafında abonelik kontrolü.
-- [ ] **Müfredat: kalan 7 kategori** (iş, finans, bilim, tasarım, diller, spor, kişisel gelişim — 50 konu). Teknoloji geri bildiriminden sonra.
+- [ ] **Yapay zekâ katmanı ücretli abonelik (freemium):** kişisel işaretleme (`src/lib/personalize-roadmap.ts` → `personalize-roadmap` Edge Function) abonelere açık olsun; ücretsiz kullanıcılar kural tabanlı işaretlemeyi görür. Mağaza içi satın alma (RevenueCat vb.) + sunucu tarafında abonelik kontrolü.
+- [ ] **Yeni yol haritaları:** React, TypeScript, Node.js, Docker, Kubernetes, Veri Bilimci, Sistem Tasarımı… (aynı veri yapısıyla, `src/constants/dev-roadmaps/`).
+- [ ] **Konuya "Yapay zekâya sor" butonu:** konu detayında soru sorma (ücretli katmana aday).

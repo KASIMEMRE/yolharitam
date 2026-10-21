@@ -1,9 +1,11 @@
+import { findTopic, getRoadmap } from '@/constants/dev-roadmaps';
+import { planTopics, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
 import type { Hue } from '@/constants/visuals';
 
 // Başarım (rozet) tanımları ve hesabı. SAF modül: Supabase/React içermez, sadece veri alıp veri döndürür.
 // Böylece `node` ile tek başına denenebilir (roadmap-templates.ts ile aynı öğretici desen).
 //
-// Rozetler veritabanında SAKLANMAZ; her açılışta mevcut adım/ilerleme verisinden TÜRETİLİR.
+// Rozetler veritabanında SAKLANMAZ; her açılışta konu ilerlemesinden (topic_progress) TÜRETİLİR.
 // Neden? Rozet koşulları zaten tutulan gerçek olaylardan çıkıyor; ayrı bir tablo aynı bilgiyi ikinci kez
 // saklar ve ikisi tutarsız kalabilirdi. Bilinen sonuç: bir adımın işaretini geri alırsan rozet kaybolabilir.
 // Bu doğru davranış: rozet "şu an sağladığın durumu" gösterir.
@@ -12,12 +14,11 @@ import type { Hue } from '@/constants/visuals';
 
 export type AchievementRoadmap = {
   id: string;
-  topic_path: string;
+  topic_path: string; // harita kimliği ('frontend' …); eski sürümden kalan konular sayılmaz
   created_at: string; // ISO zaman damgası
-  steps: { id: string; phase: string; estimated_hours: number }[];
 };
 
-export type AchievementProgress = { step_id: string; completed_at: string };
+export type AchievementProgress = { roadmap_id: string; topic_id: string; status: string; updated_at: string };
 
 export type AchievementInput = {
   roadmaps: AchievementRoadmap[];
@@ -26,10 +27,11 @@ export type AchievementInput = {
 
 // ---- Tanımlar (sayısal sınırlar tek yerde: değiştirmek için burası yeter) ----
 
-export const WARMUP_STEPS = 3; // "Isınma Turu" için toplam adım
+export const WARMUP_STEPS = 3; // "Isınma Turu" için toplam konu
 export const QUICK_START_HOURS = 24; // "Hızlı Başlangıç" süre penceresi
-export const CURIOUS_TOPICS = 2; // "Meraklı Gezgin" için farklı konu sayısı
+export const CURIOUS_TOPICS = 2; // "Meraklı Gezgin" için farklı harita sayısı
 export const TARGET_HOURS = 10; // "On Saatlik Yol" için toplam tahmini süre
+export const MANY_SECTIONS = 3; // "Üç Bölüm" için bitirilen bölüm sayısı
 
 export type AchievementId =
   | 'first-step'
@@ -52,16 +54,16 @@ export type AchievementDef = {
 };
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  { id: 'first-step', emoji: '👣', title: 'İlk Adım', description: 'İlk adımı attın.', howTo: 'İlk adımını tamamla.', hue: 'accent' },
-  { id: 'three-steps', emoji: '🔥', title: 'Isınma Turu', description: 'Üç adımı geride bıraktın.', howTo: 'Toplam 3 adım tamamla.', hue: 'coral' },
-  { id: 'quick-start', emoji: '⚡', title: 'Hızlı Başlangıç', description: 'Başlamakta gecikmedin.', howTo: 'Yol haritanı oluşturduktan sonraki 24 saat içinde ilk adımını tamamla.', hue: 'marker' },
-  { id: 'foundation-done', emoji: '🧱', title: 'Temeller Tamam', description: 'Sağlam bir temel attın.', howTo: 'Bir yol haritasında Temeller evresini bitir.', hue: 'sky' },
-  { id: 'practice-done', emoji: '🧪', title: 'Pratiğe Geçtin', description: 'Öğrendiklerini uygulamaya döktün.', howTo: 'Bir yol haritasında Pratik evresini bitir.', hue: 'violet' },
-  { id: 'halfway', emoji: '⛰️', title: 'Yarı Yolda', description: 'Yolun yarısı geride kaldı.', howTo: 'Bir yol haritasının yarısını tamamla.', hue: 'leaf' },
-  { id: 'roadmap-done', emoji: '🏁', title: 'Yol Haritası Tamam', description: 'Bir yol haritasını sonuna kadar yürüdün.', howTo: 'Bir yol haritasının bütün adımlarını tamamla.', hue: 'accent' },
-  { id: 'curious', emoji: '🧭', title: 'Meraklı Gezgin', description: 'Merakın tek konuya sığmadı.', howTo: 'İki farklı konuda en az birer adım tamamla.', hue: 'berry' },
-  // "tahmini" diyoruz: gerçek çalışma süresini ölçmüyoruz, adımların tahmini sürelerini topluyoruz
-  { id: 'ten-hours', emoji: '⏳', title: 'On Saatlik Yol', description: 'Tahmini 10 saatlik içerik tamamladın.', howTo: 'Tamamladığın adımların tahmini süresi 10 saati bulsun.', hue: 'sky' },
+  { id: 'first-step', emoji: '👣', title: 'İlk Adım', description: 'İlk konunu bitirdin.', howTo: 'Bir konuyu “Bitti” olarak işaretle.', hue: 'accent' },
+  { id: 'three-steps', emoji: '🔥', title: 'Isınma Turu', description: 'Üç konuyu geride bıraktın.', howTo: 'Toplam 3 konu bitir.', hue: 'coral' },
+  { id: 'quick-start', emoji: '⚡', title: 'Hızlı Başlangıç', description: 'Başlamakta gecikmedin.', howTo: 'Haritanı seçtikten sonraki 24 saat içinde ilk konunu bitir.', hue: 'marker' },
+  { id: 'foundation-done', emoji: '🧱', title: 'İlk Bölüm', description: 'Bir bölümü baştan sona bitirdin.', howTo: 'Bir bölümün plandaki bütün konularını bitir.', hue: 'sky' },
+  { id: 'practice-done', emoji: '🏗️', title: 'Üç Bölüm', description: 'Haritanın üç bölümünü tamamladın.', howTo: 'Üç bölümü tamamla.', hue: 'violet' },
+  { id: 'halfway', emoji: '⛰️', title: 'Yarı Yolda', description: 'Yolun yarısı geride kaldı.', howTo: 'Bir haritada planındaki konuların yarısını bitir.', hue: 'leaf' },
+  { id: 'roadmap-done', emoji: '🏁', title: 'Harita Tamam', description: 'Bir yol haritasını sonuna kadar yürüdün.', howTo: 'Bir haritada planındaki bütün konuları bitir.', hue: 'accent' },
+  { id: 'curious', emoji: '🧭', title: 'Meraklı Gezgin', description: 'Merakın tek haritaya sığmadı.', howTo: 'İki farklı haritada en az birer konu bitir.', hue: 'berry' },
+  // "tahmini" diyoruz: gerçek çalışma süresini ölçmüyoruz, konuların tahmini sürelerini topluyoruz
+  { id: 'ten-hours', emoji: '⏳', title: 'On Saatlik Yol', description: 'Tahmini 10 saatlik içerik tamamladın.', howTo: 'Bitirdiğin konuların tahmini süresi 10 saati bulsun.', hue: 'sky' },
 ];
 
 // ---- Çıktı tipleri ----
@@ -97,80 +99,81 @@ function bestOf(candidates: Candidate[]): Candidate | null {
 }
 
 export function computeAchievements(input: AchievementInput): AchievementResult[] {
-  // step_id → tamamlanma zamanı. Sadece bilinen adımlar sayılır (başka yol haritasından kalan/yetim satırlar hariç).
-  const completedAt = new Map<string, string>();
-  const knownSteps = new Set(input.roadmaps.flatMap((r) => r.steps.map((s) => s.id)));
-  for (const p of input.progress) {
-    if (knownSteps.has(p.step_id)) completedAt.set(p.step_id, p.completed_at);
-  }
-  const totalDone = completedAt.size;
-
-  // Yol haritası başına özet
-  const perRoadmap = input.roadmaps.map((r) => {
-    const done = r.steps.filter((s) => completedAt.has(s.id));
-    const phaseCount = (phase: string) => {
-      const inPhase = r.steps.filter((s) => s.phase === phase);
-      return { current: inPhase.filter((s) => completedAt.has(s.id)).length, target: inPhase.length };
-    };
-    // En erken tamamlanma: "ilk adım" zamanı
-    const times = done.map((s) => Date.parse(completedAt.get(s.id)!)).filter((t) => !Number.isNaN(t));
-    return {
-      roadmap: r,
-      total: r.steps.length,
-      done: done.length,
-      hours: done.reduce((sum, s) => sum + s.estimated_hours, 0),
-      foundation: phaseCount('foundation'),
-      practice: phaseCount('practice'),
-      firstDoneAt: times.length > 0 ? Math.min(...times) : null,
-    };
+  // Yol haritası başına özet. İçerik uygulamada durduğu için konu saatleri ve bölümler buradan okunur.
+  const perRoadmap = input.roadmaps.flatMap((r) => {
+    const map = getRoadmap(r.topic_path);
+    if (!map) return []; // eski sürümden kalan genel konu: rozet hesabına girmez
+    const rows = input.progress.filter((p) => p.roadmap_id === r.id);
+    const statuses = new Map<string, TopicStatus>();
+    const doneAt = new Map<string, number>();
+    for (const row of rows) {
+      if (!findTopic(map, row.topic_id)) continue; // içerikten kalkmış konu sayılmaz
+      statuses.set(row.topic_id, row.status as TopicStatus);
+      const t = Date.parse(row.updated_at);
+      if (row.status === 'done' && !Number.isNaN(t)) doneAt.set(row.topic_id, t);
+    }
+    // Kişisel işaret olmadan plan: önerilenler + kullanıcının başladıkları − atladıkları
+    const plan = planTopics(map, statuses, null);
+    const done = plan.filter((t) => statuses.get(t.id) === 'done');
+    const sections = map.sections.map((s) => {
+      const inPlan = s.topics.filter((t) => plan.includes(t));
+      return { current: inPlan.filter((t) => statuses.get(t.id) === 'done').length, target: inPlan.length };
+    });
+    const times = [...doneAt.values()];
+    return [
+      {
+        roadmap: r,
+        total: plan.length,
+        done: done.length,
+        hours: done.reduce((sum, t) => sum + t.hours, 0),
+        sections,
+        firstDoneAt: times.length > 0 ? Math.min(...times) : null,
+      },
+    ];
   });
 
   const isFull = (c: Candidate) => c.target > 0 && c.current >= c.target;
+  const totalDone = perRoadmap.reduce((sum, p) => sum + p.done, 0);
 
-  // Hızlı Başlangıç: ilk tamamlama ile yol haritası oluşturma arasındaki fark (iki zaman damgası: saat dilimi etkilemez)
+  // Hızlı Başlangıç: ilk bitirme ile haritayı seçme arasındaki fark
   const quickStart = perRoadmap.some((p) => {
     if (p.firstDoneAt === null) return false;
     const created = Date.parse(p.roadmap.created_at);
     return !Number.isNaN(created) && p.firstDoneAt - created <= QUICK_START_HOURS * HOUR_MS;
   });
 
-  // Meraklı Gezgin: en az bir adımı tamamlanmış farklı konu sayısı (yol haritası sayısı DEĞİL:
-  // aynı konuda ikinci yol haritası kurmak sayıyı artırmaz)
-  const topics = new Set(perRoadmap.filter((p) => p.done > 0).map((p) => p.roadmap.topic_path));
-
+  // Meraklı Gezgin: en az bir konusu bitmiş farklı harita sayısı
+  const maps = new Set(perRoadmap.filter((p) => p.done > 0).map((p) => p.roadmap.topic_path));
   const totalHours = perRoadmap.reduce((sum, p) => sum + p.hours, 0);
 
-  // Yarı yol eşiği: toplam adımın yarısı, yukarı yuvarlanır (5 adımda 3)
+  // Bölüm rozetleri: biten bölüm sayısı (tüm haritalarda), ipucu için en çok ilerlemiş bölüm
+  const allSections = perRoadmap.flatMap((p) => p.sections);
+  const fullSections = allSections.filter(isFull).length;
+
   const halfNeed = (total: number) => Math.ceil(total / 2);
   const halfCandidates = perRoadmap.map((p) => ({ current: p.done, target: halfNeed(p.total) }));
   const fullCandidates = perRoadmap.map((p) => ({ current: p.done, target: p.total }));
 
   const state: Record<AchievementId, { earned: boolean; hint: AchievementHint | null }> = {
     'first-step': { earned: totalDone >= 1, hint: null },
-    'three-steps': { earned: totalDone >= WARMUP_STEPS, hint: hint(totalDone, WARMUP_STEPS, 'adım') },
+    'three-steps': { earned: totalDone >= WARMUP_STEPS, hint: hint(totalDone, WARMUP_STEPS, 'konu') },
     'quick-start': { earned: quickStart, hint: null },
-    'foundation-done': phaseResult(perRoadmap.map((p) => p.foundation), isFull),
-    'practice-done': phaseResult(perRoadmap.map((p) => p.practice), isFull),
+    'foundation-done': { earned: fullSections >= 1, hint: hintOf(bestOf(allSections)) },
+    'practice-done': { earned: fullSections >= MANY_SECTIONS, hint: hint(fullSections, MANY_SECTIONS, 'bölüm') },
     halfway: {
-      // target 0 (adımsız yol haritası) asla "yarı" sayılmaz
       earned: halfCandidates.some((c) => c.target > 0 && c.current >= c.target),
       hint: hintOf(bestOf(halfCandidates)),
     },
     'roadmap-done': { earned: fullCandidates.some(isFull), hint: hintOf(bestOf(fullCandidates)) },
-    curious: { earned: topics.size >= CURIOUS_TOPICS, hint: hint(topics.size, CURIOUS_TOPICS, 'konu') },
+    curious: { earned: maps.size >= CURIOUS_TOPICS, hint: hint(maps.size, CURIOUS_TOPICS, 'harita') },
     'ten-hours': { earned: totalHours >= TARGET_HOURS, hint: hint(totalHours, TARGET_HOURS, 'saat') },
   };
 
   return ACHIEVEMENTS.map((def) => ({ ...def, ...state[def.id] }));
 }
 
-// Evre rozetleri (Temeller/Pratik): evresi olan ve hepsi bitmiş bir yol haritası var mı + en yakın ilerleme (boş evre aday olmaz)
-function phaseResult(candidates: Candidate[], isFull: (c: Candidate) => boolean) {
-  return { earned: candidates.some(isFull), hint: hintOf(bestOf(candidates)) };
-}
-
 function hintOf(c: Candidate | null): AchievementHint | null {
-  return c ? hint(c.current, c.target, 'adım') : null;
+  return c ? hint(c.current, c.target, 'konu') : null;
 }
 
 // "9 rozetten 2'sini kazandın": Türkçede sayıdan sonra gelen iyelik+belirtme eki sayıya göre değişir.

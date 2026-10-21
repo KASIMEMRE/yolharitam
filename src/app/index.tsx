@@ -12,7 +12,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 // Üç gerçek adım: uygulamanın gerçekten izlediği yol
 const STOPS = [
   { emoji: '🔑', label: 'Hesabını oluştur' },
-  { emoji: '🧭', label: 'Konunu ve seviyeni seç' },
+  { emoji: '🧭', label: 'Yol haritanı ve seviyeni seç' },
   { emoji: '🗺️', label: 'Kişisel yol haritanı al' },
 ];
 
@@ -41,7 +41,7 @@ export default function WelcomeScreen() {
           </Animated.View>
           <Animated.View entering={enter(100)}>
             <ThemedText themeColor="textSecondary" style={[styles.center, styles.lead]}>
-              Öğrenmek istediğin konuyu seç, sana özel yol haritanla adım adım ilerle.
+              Frontend’den yapay zekâya: sana uyan yazılımcı yol haritasını seç, konu konu ilerle.
             </ThemedText>
           </Animated.View>
 

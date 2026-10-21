@@ -42,7 +42,9 @@ export type Database = {
           id: string
           learning_style: string | null
           level: string
+          personalization: Json | null
           topic_path: string
+          updated_at: string
           user_id: string
           weekly_hours: string | null
         }
@@ -52,7 +54,9 @@ export type Database = {
           id?: string
           learning_style?: string | null
           level: string
+          personalization?: Json | null
           topic_path: string
+          updated_at?: string
           user_id: string
           weekly_hours?: string | null
         }
@@ -62,7 +66,9 @@ export type Database = {
           id?: string
           learning_style?: string | null
           level?: string
+          personalization?: Json | null
           topic_path?: string
+          updated_at?: string
           user_id?: string
           weekly_hours?: string | null
         }
@@ -113,6 +119,38 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "roadmap_steps_roadmap_id_fkey"
+            columns: ["roadmap_id"]
+            isOneToOne: false
+            referencedRelation: "roadmaps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_progress: {
+        Row: {
+          roadmap_id: string
+          status: string
+          topic_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          roadmap_id: string
+          status: string
+          topic_id: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          roadmap_id?: string
+          status?: string
+          topic_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_progress_roadmap_id_fkey"
             columns: ["roadmap_id"]
             isOneToOne: false
             referencedRelation: "roadmaps"

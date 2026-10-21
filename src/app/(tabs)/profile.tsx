@@ -163,13 +163,13 @@ export default function ProfileScreen() {
           style={[styles.topicCard, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
           <IconTile emoji="🧭" tone="accent" size={48} />
           <View style={styles.topicTexts}>
-            <ThemedText type="cardTitle">Henüz bir konu seçmedin</ThemedText>
+            <ThemedText type="cardTitle">Henüz bir yol haritası seçmedin</ThemedText>
           </View>
         </View>
       )}
 
       <Link href="/onboarding" asChild>
-        <Button variant="secondary" icon="🧭" label="Konunu değiştir" />
+        <Button variant="secondary" icon="🧭" label="Haritanı değiştir" />
       </Link>
 
       {/* Rozetler kendi hook'uyla yüklenir: ağ hatası olsa da yukarıdaki kimlik/konu kartı çalışmaya devam eder */}
