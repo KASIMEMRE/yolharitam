@@ -2,13 +2,19 @@
 import { AI_ENGINEER } from './ai-engineer';
 import { BACKEND } from './backend';
 import { CYBER_SECURITY } from './cyber-security';
+import { DATA_SCIENTIST } from './data-scientist';
 import { DEVOPS } from './devops';
+import { DOCKER } from './docker';
 import { FRONTEND } from './frontend';
 import { FULLSTACK } from './fullstack';
 import { GIT } from './git';
 import { MOBILE } from './mobile';
+import { NODEJS } from './nodejs';
 import { PYTHON } from './python';
+import { REACT } from './react';
 import { SQL } from './sql';
+import { SYSTEM_DESIGN } from './system-design';
+import { TYPESCRIPT } from './typescript';
 import type { DevRoadmap, RoadmapKind, Section, Topic } from './types';
 
 export type * from './types';
@@ -21,10 +27,16 @@ export const DEV_ROADMAPS: DevRoadmap[] = [
   MOBILE,
   DEVOPS,
   AI_ENGINEER,
+  DATA_SCIENTIST,
   CYBER_SECURITY,
   PYTHON,
+  REACT,
+  TYPESCRIPT,
+  NODEJS,
   SQL,
+  DOCKER,
   GIT,
+  SYSTEM_DESIGN,
 ];
 
 export const KIND_LABEL: Record<RoadmapKind, string> = {
