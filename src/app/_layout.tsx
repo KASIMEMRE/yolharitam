@@ -1,9 +1,9 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 
@@ -68,6 +68,7 @@ function RootStack() {
         <Stack.Screen name="roadmap-questions" options={{ title: 'Sana özel plan' }} />
         {/* Konu detayı (kaynaklar + durum işaretleme). Başlığı ekran kendisi koyar (bölüm adı). */}
         <Stack.Screen name="topic/[id]" options={{ title: 'Konu' }} />
+        <Stack.Screen name="settings" options={{ title: 'Ayarlar' }} />
       </Stack.Protected>
     </Stack>
   );

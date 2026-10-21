@@ -33,6 +33,7 @@ import { useDisplayName } from '@/hooks/use-display-name';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
+import { setPreferences, usePreferences, type MapViewPref } from '@/lib/preferences';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 // Konu detayını açar. Harita kimliği de gönderilir: detay ekranı içeriği veritabanına gitmeden bulur.
@@ -421,8 +422,10 @@ function Sections({
     return new Set([first, withNext].filter((x): x is string => Boolean(x)));
   });
   const planIds = new Set(planTopics(map, statuses, personalization).map((t) => t.id));
-  // Görünüm: "Harita" (roadmap.sh gibi ağaç) ya da "Liste" (açılır bölümler, uzun başlıklar için rahat)
-  const [view, setView] = useState<'tree' | 'list'>('tree');
+  // Görünüm: "Harita" (roadmap.sh gibi ağaç) ya da "Liste" (açılır bölümler). Seçim cihazda hatırlanır
+  // (Ayarlar'daki "Haritanın varsayılan görünümü" ile aynı tercih).
+  const { mapView: view } = usePreferences();
+  const setView = (v: MapViewPref) => setPreferences({ mapView: v });
 
   function toggle(id: string) {
     setOpen((prev) => {

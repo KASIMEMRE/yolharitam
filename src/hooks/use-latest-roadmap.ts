@@ -51,6 +51,15 @@ export function useLatestRoadmap() {
     return true;
   }
 
+  // Haritayı kaldırır. Konu ilerlemesi de veritabanında zincirleme silinir (on delete cascade).
+  // İyimser değil: silme geri alınamaz, önce sunucunun onayını bekleriz.
+  async function remove(id: string): Promise<boolean> {
+    const { error } = await supabase.from('roadmaps').delete().eq('id', id);
+    if (error) return false;
+    setRows((prev) => prev.filter((r) => r.id !== id));
+    return true;
+  }
+
   // Aynı harita birden çok kez seçilmişse (eski sürüm) her harita için yalnız en güncel satır listelenir
   const seen = new Set<string>();
   const devRoadmaps = rows.filter((r) => {
@@ -59,5 +68,8 @@ export function useLatestRoadmap() {
     return true;
   });
 
-  return { roadmap: rows[0] ?? null, roadmaps: devRoadmaps, loading, activate };
+  // Eski sürümden kalan genel konular (spor, finans…) ve aynı haritanın eski kopyaları: Ayarlar'dan temizlenebilsin
+  const leftovers = rows.filter((r) => !devRoadmaps.includes(r));
+
+  return { roadmap: rows[0] ?? null, roadmaps: devRoadmaps, leftovers, loading, activate, remove };
 }

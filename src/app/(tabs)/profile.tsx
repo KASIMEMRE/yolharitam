@@ -169,7 +169,11 @@ export default function ProfileScreen() {
       )}
 
       <Link href="/onboarding" asChild>
-        <Button variant="secondary" icon="🧭" label="Haritanı değiştir" />
+        <Button variant="secondary" icon="🧭" label="Harita ekle" />
+      </Link>
+      {/* Ayarlar: haritaları yönet (geç/kaldır), tema, plan, şifre, hesap */}
+      <Link href="/settings" asChild>
+        <Button variant="secondary" icon="⚙️" label="Ayarlar ve haritalarım" />
       </Link>
 
       {/* Rozetler kendi hook'uyla yüklenir: ağ hatası olsa da yukarıdaki kimlik/konu kartı çalışmaya devam eder */}
