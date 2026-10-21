@@ -293,16 +293,16 @@ function MapSwitcher({
           </Pressable>
         );
       })}
-      <Link href="/onboarding" asChild>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Yeni harita ekle"
-          style={[styles.mapChip, { backgroundColor: theme.card, borderColor: theme.border, borderStyle: 'dashed' }]}>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            ＋ Harita ekle
-          </ThemedText>
-        </Pressable>
-      </Link>
+      {/* Link asChild yerine router.push: Link'in içine (Slot) stil DİZİSİ verilirse expo-router web'de hata fırlatır */}
+      <Pressable
+        onPress={() => router.push('/onboarding')}
+        accessibilityRole="button"
+        accessibilityLabel="Yeni harita ekle"
+        style={[styles.mapChip, { backgroundColor: theme.card, borderColor: theme.border, borderStyle: 'dashed' }]}>
+        <ThemedText type="smallBold" themeColor="textSecondary">
+          ＋ Harita ekle
+        </ThemedText>
+      </Pressable>
     </ScrollView>
   );
 }
