@@ -8,10 +8,12 @@ import { HeaderBackButton } from '@/components/header-back-button';
 import { StatusChip } from '@/components/level-badge';
 import { OptionCard } from '@/components/option-card';
 import { Skeleton } from '@/components/skeleton';
+import { TopicAssist } from '@/components/topic-assist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { allTopics, findTopic, getRoadmap } from '@/constants/dev-roadmaps';
 import { parsePersonalization, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
+import { toLevelId } from '@/constants/plan';
 import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, RESOURCE_KIND_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
@@ -204,6 +206,15 @@ export default function TopicScreen() {
                 </View>
               )}
             </View>
+
+            {/* Yapay zekâ araçları. key: "Sonraki konu"ya geçince önceki konunun cevapları kalmasın */}
+            <TopicAssist
+              key={topic.id}
+              map={map}
+              section={section}
+              topic={topic}
+              level={roadmap?.id === roadmapId ? toLevelId(roadmap.level) : undefined}
+            />
 
             {next && (
               <Button variant="secondary" icon="➡️" label={`Sonraki konu: ${next.title}`} onPress={openNext} />
