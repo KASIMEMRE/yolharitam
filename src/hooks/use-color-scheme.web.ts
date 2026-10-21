@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from 'react';
 import { useColorScheme as useRNColorScheme } from 'react-native';
 
+import { usePreferences } from '@/lib/preferences';
+
 // Değişmeyen bir "dış kaynağa" abonelik: dinlenecek bir şey yok, boş temizlik döndürür.
 const subscribe = () => () => {};
 
@@ -20,6 +22,9 @@ export function useColorScheme() {
   );
 
   const colorScheme = useRNColorScheme();
+  // Ayarlar'daki tema tercihi ("Sistem" dışında) tarayıcının temasını ezer
+  const { theme } = usePreferences();
+  const effective = theme === 'system' ? colorScheme : theme;
 
-  return hasHydrated ? colorScheme : 'light';
+  return hasHydrated ? effective : 'light';
 }
