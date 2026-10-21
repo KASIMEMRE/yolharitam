@@ -1,4 +1,5 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -6,19 +7,22 @@ import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { HeaderBackButton } from '@/components/header-back-button';
 import { StatusChip } from '@/components/level-badge';
+import { type Milestone, MilestoneCelebration } from '@/components/milestone-celebration';
 import { OptionCard } from '@/components/option-card';
 import { Skeleton } from '@/components/skeleton';
 import { TopicAssist } from '@/components/topic-assist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { allTopics, findTopic, getRoadmap } from '@/constants/dev-roadmaps';
-import { parsePersonalization, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
+import { computeProgress, parsePersonalization, planTopics, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
 import { toLevelId } from '@/constants/plan';
+import { XP } from '@/constants/xp';
 import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, RESOURCE_KIND_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
+import { awardXp } from '@/lib/xp';
 
 const LEVEL_LABEL = { 1: 'Başlangıç konusu', 2: 'Orta seviye konu', 3: 'İleri seviye konu' } as const;
 
@@ -43,6 +47,8 @@ export default function TopicScreen() {
   const progress = useTopicProgress(roadmapId);
   // Kişisel işaretler için kullanıcının yol haritası satırı (Yol Haritam ile aynı kaynak)
   const { roadmap } = useLatestRoadmap();
+  // Bölüm/harita bitince açılan kutlama (hook erken return'lerden ÖNCE çağrılır)
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
 
   const theme = useTheme();
   const { width } = useWindowDimensions();
@@ -89,7 +95,34 @@ export default function TopicScreen() {
   const next = topics[topics.findIndex((t) => t.id === topic.id) + 1];
 
   async function choose(status: TopicStatus) {
-    await progress.setStatus(topic.id, current === status ? null : status);
+    const next = current === status ? null : status;
+    const ok = await progress.setStatus(topic.id, next);
+    if (!ok || !next || !roadmapId || !map) return;
+    // XP: her olay bir kez puan verir (ref benzersiz); işareti kaldırıp yeniden koymak tekrar kazandırmaz
+    const ref = `${roadmapId}:${topic.id}`;
+    if (next === 'in_progress') {
+      await awardXp({ kind: 'topic_started', ref, roadmapId, topicId: topic.id });
+      return;
+    }
+    if (next !== 'done') return;
+    let gained = 0;
+    if (await awardXp({ kind: 'topic_done', ref, roadmapId, topicId: topic.id })) gained += XP.topic_done;
+
+    // Bölüm ya da harita bitti mi? (planındaki konulara göre; atladıkların sayılmaz)
+    const after = new Map(progress.statuses);
+    after.set(topic.id, 'done');
+    const plan = planTopics(map, after, personalization);
+    const sum = computeProgress(map, after, personalization, '3-5');
+    const percent = sum.total > 0 ? Math.round((sum.done / sum.total) * 100) : 0;
+    const allDone = plan.length > 0 && plan.every((t) => after.get(t.id) === 'done');
+    const sectionPlan = section.topics.filter((t) => plan.includes(t));
+    const sectionDone = sectionPlan.length > 0 && sectionPlan.every((t) => after.get(t.id) === 'done');
+
+    if (allDone && (await awardXp({ kind: 'roadmap_done', ref: roadmapId, roadmapId }))) {
+      setMilestone({ kind: 'roadmap', title: map.title, emoji: map.emoji, percent: 100, xp: gained + XP.roadmap_done });
+    } else if (sectionDone && (await awardXp({ kind: 'section_done', ref: `${roadmapId}:${section.id}`, roadmapId }))) {
+      setMilestone({ kind: 'section', title: section.title, emoji: section.emoji, percent, xp: gained + XP.section_done });
+    }
   }
 
   function openNext() {
@@ -220,6 +253,7 @@ export default function TopicScreen() {
               <Button variant="secondary" icon="➡️" label={`Sonraki konu: ${next.title}`} onPress={openNext} />
             )}
             <Button variant="text" label="Haritaya dön" onPress={goBack} />
+            <MilestoneCelebration milestone={milestone} map={map} onClose={() => setMilestone(null)} />
           </View>
         </ScrollView>
       </SafeAreaView>
