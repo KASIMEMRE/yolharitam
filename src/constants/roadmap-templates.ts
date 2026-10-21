@@ -292,9 +292,9 @@ export async function generateRoadmapSteps(input: RoadmapInput): Promise<Generat
 }
 
 // Çıktı sözleşmesi (şablon için de, ileride yapay zekâ çıktısı için de geçerli):
-// 6-8 adım, boş başlık yok, saatler >= 1 tam sayı, konumlar 1..N.
+// 6-14 adım (şablon 6-8 üretir; yapay zekâ konuya göre 14'e kadar genişletebilir), boş başlık yok, saatler >= 1 tam sayı, konumlar 1..N.
 export function validateSteps(steps: GeneratedStep[]): boolean {
-  if (steps.length < 6 || steps.length > 8) return false;
+  if (steps.length < 6 || steps.length > 14) return false;
   const phases: Phase[] = ['foundation', 'practice', 'goal'];
   const resources: ResourceType[] = ['video', 'reading', 'practice'];
   return steps.every(
