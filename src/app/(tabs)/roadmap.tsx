@@ -1,10 +1,11 @@
 import { Link, router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { DisplayNameForm, MAX_NAME_LENGTH } from '@/components/display-name-form';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge, StatusChip } from '@/components/level-badge';
 import { ProgressSummary } from '@/components/progress-summary';
@@ -33,6 +34,7 @@ import { useDisplayName } from '@/hooks/use-display-name';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
+import { useAuth } from '@/lib/auth-context';
 import { setPreferences, usePreferences, type MapViewPref } from '@/lib/preferences';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
@@ -66,6 +68,7 @@ export default function RoadmapScreen() {
     return (
       <TabScreen>
         {header}
+        <NamePrompt />
         <EmptyState
           title="Henüz bir yol haritası seçmedin."
           text="Frontend’den yapay zekâya, sana uyan yolu seç; konuları adım adım işaretle."
@@ -92,7 +95,10 @@ export default function RoadmapScreen() {
     <TabScreen>
       {header}
       {/* Birden çok harita takip ediliyorsa üstte hızlı geçiş */}
-      {roadmaps.length > 1 && <MapSwitcher roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
+      {/* Kullanıcı adı yoksa (eski hesap ya da kayıtta yazılmadıysa) kısa bir kartla sor */}
+      <NamePrompt />
+      {/* Haritalar arası geçiş + "Harita ekle": harita eklemenin tek yeri burası */}
+      {roadmaps.length > 0 && <MapSwitcher roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
       {/* key: harita değişince içteki açık/kapalı bölüm durumu sıfırdan başlasın */}
       <MapView key={roadmap.id} roadmap={roadmap} map={map} progress={progress} activity={activity} />
     </TabScreen>
@@ -164,9 +170,6 @@ function MapView({
       <View style={styles.actions}>
         <Link href={{ pathname: '/roadmap-questions', params: { roadmapId: roadmap.id } }} asChild>
           <Button variant="text" icon="🎯" label="Planımı güncelle" />
-        </Link>
-        <Link href="/onboarding" asChild>
-          <Button variant="text" icon="🧭" label="Haritanı değiştir" />
         </Link>
       </View>
     </>
@@ -245,6 +248,32 @@ function JourneyCard({
           </View>
         )}
       </View>
+    </View>
+  );
+}
+
+// Kullanıcı adı sorma kartı. Kayıtta yazılan ad hesabın bilgilerinde (user_metadata) bekler; varsa
+// otomatik kaydedilir ve kart hiç görünmez. Yoksa (eski hesaplar) burada bir kez sorulur.
+function NamePrompt() {
+  const theme = useTheme();
+  const { session } = useAuth();
+  const { name, status, save } = useDisplayName();
+  const pending = (session?.user.user_metadata as { display_name?: unknown } | undefined)?.display_name;
+  const fromSignup = typeof pending === 'string' ? pending.trim() : '';
+  const tried = useRef(false);
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    if (status !== 'ready' || name || !fromSignup || tried.current) return;
+    tried.current = true;
+    save(fromSignup.slice(0, MAX_NAME_LENGTH));
+  }, [status, name, fromSignup, save]);
+
+  if (hidden || status !== 'ready' || name || fromSignup) return null;
+  return (
+    <View style={[styles.momentum, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
+      <ThemedText type="cardTitle">👋 Sana nasıl hitap edelim?</ThemedText>
+      <DisplayNameForm submitLabel="Kaydet" onSaved={() => setHidden(true)} />
     </View>
   );
 }

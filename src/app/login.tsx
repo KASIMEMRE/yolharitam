@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { TrailMap } from '@/components/route-steps';
+import { MAX_NAME_LENGTH, MIN_NAME_LENGTH } from '@/components/display-name-form';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -67,6 +68,7 @@ export default function LoginScreen() {
   const short = height < 700;
   const stagePad = short ? Spacing.two : undefined;
   const [mode, setMode] = useState<Mode>('login');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -83,7 +85,9 @@ export default function LoginScreen() {
   // Türetilmiş değerler
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
   const passwordValid = password.length >= 6;
-  const canSubmit = emailValid && passwordValid && !busy;
+  const usernameValid = username.trim().length >= MIN_NAME_LENGTH;
+  // Kayıtta kullanıcı adı da zorunlu; girişte sorulmaz
+  const canSubmit = emailValid && passwordValid && (mode === 'login' || usernameValid) && !busy;
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -103,7 +107,12 @@ export default function LoginScreen() {
       if (error) setError(toTurkish(error));
       // Başarılıysa Stack.Protected bizi otomatik içeri alır.
     } else {
-      const { data, error } = await supabase.auth.signUp(credentials);
+      // Kullanıcı adı hesabın bilgilerine (user_metadata) yazılır. E-posta onayı gerektiği için kayıt anında
+      // oturum yoktur; ilk girişte Yol Haritam ekranı bu adı profile kaydeder (bkz. NamePrompt).
+      const { data, error } = await supabase.auth.signUp({
+        ...credentials,
+        options: { data: { display_name: username.trim().slice(0, MAX_NAME_LENGTH) } },
+      });
       if (error) {
         setError(toTurkish(error));
       } else if (!data.session) {
@@ -185,6 +194,22 @@ export default function LoginScreen() {
                   );
                 })}
               </View>
+
+              {mode === 'signup' && (
+                <TextField
+                  label="Kullanıcı adı"
+                  placeholder="Sana nasıl hitap edelim?"
+                  value={username}
+                  onChangeText={setUsername}
+                  maxLength={MAX_NAME_LENGTH}
+                  autoCapitalize="words"
+                  autoComplete="name"
+                  textContentType="name"
+                  returnKeyType="next"
+                  hint={usernameValid ? '✓ Sonradan Ayarlar’dan değiştirebilirsin' : `En az ${MIN_NAME_LENGTH} karakter · sonradan değiştirebilirsin`}
+                  hintTone={usernameValid ? 'good' : 'neutral'}
+                />
+              )}
 
               <TextField
                 label="E-posta"
