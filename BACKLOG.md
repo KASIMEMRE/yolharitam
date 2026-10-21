@@ -89,3 +89,7 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Okuma hatasında "Tekrar dene" ve kısa zaman aşımı** (Y-02'den): supabase-js GET isteklerini birkaç kez yeniden denediği için "Adın yüklenemedi" uyarısı ~7 sn sonra çıkıyor (Y-07 ile birlikte ele alınabilir).
 - **Pasif buton kontrastı** (Y-02'den): `Button` pasifken etiket koyu modda zor seçiliyor; disabled etiket rengi `textSecondary`'ye yaklaştırılabilir.
 - **Selamlamayı belirginleştirme** (Y-02'den): "Merhaba, <ad>" eyebrow'u küçük ve silik; tema renkleriyle bir kademe daha belirgin yapılabilir.
+
+## Yayından sonra
+- [ ] **2. katman ücretli abonelik (freemium):** yapay zekâ kişiselleştirmesi (`src/lib/ai-roadmap.ts` → `generate-roadmap` Edge Function) abonelere açık olsun; ücretsiz kullanıcılar 1. katmanı (konuya özel şablon) görür. Mağaza içi satın alma (RevenueCat vb.) + sunucu tarafında abonelik kontrolü.
+- [ ] **Müfredat: kalan 7 kategori** (iş, finans, bilim, tasarım, diller, spor, kişisel gelişim — 50 konu). Teknoloji geri bildiriminden sonra.

@@ -47,6 +47,7 @@ import { generateRoadmapSteps, summarizeSteps, toLevelId } from '@/constants/roa
 import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
 import { useShadow, useTheme } from '@/hooks/use-theme';
+import { personalizeSteps } from '@/lib/ai-roadmap';
 import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { classifyError, ERROR_TEXT } from '@/lib/supabase-errors';
@@ -227,17 +228,28 @@ export default function RoadmapQuestionsScreen() {
   ): Promise<{ summary: string } | 'exists' | { message: string }> {
     if (!topicPath || !level) return { message: ERROR_TEXT.other };
     // 20 sn içinde cevap gelmezse isteği iptal et (AbortError -> "ağ sorunu" olarak sınıflanır)
+    // Zamanlayıcı yapay zekâ adımından SONRA kurulur; o adımın kendi süre sınırı var (ai-roadmap.ts).
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      const steps = await generateRoadmapSteps({
+      const topic = describeTopic(topicPath);
+      const input = {
         topicPath,
-        topicTitle: describeTopic(topicPath).title, // bozuk yolda "Seçtiğin konu"
+        topicTitle: topic.title, // bozuk yolda "Seçtiğin konu"
         level: toLevelId(level),
         weeklyHours: final.weeklyHours,
         goal: final.goal,
         learningStyle: final.learningStyle,
-      });
+      };
+      // 1. katman: konuya özel şablon (her zaman çalışır)
+      const baseSteps = await generateRoadmapSteps(input);
+      // 2. katman: yapay zekâ kişiselleştirmesi; başarısız olursa baseSteps aynen döner
+      const { steps } = await personalizeSteps(
+        input,
+        baseSteps,
+        topic.parents ? `${topic.parents} › ${topic.title}` : topic.title
+      );
+      timeout = setTimeout(() => controller.abort(), SAVE_TIMEOUT_MS);
       // position GÖNDERİLMEZ: sunucu dizideki sıradan türetir (1..N, çakışma imkânsız)
       const payload = steps.map((s) => ({
         phase: s.phase,
