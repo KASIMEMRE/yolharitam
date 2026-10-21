@@ -8,6 +8,7 @@ import { Button } from '@/components/button';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge, StatusChip } from '@/components/level-badge';
 import { ProgressSummary } from '@/components/progress-summary';
+import { RoadmapTree, TreeLegend } from '@/components/roadmap-tree';
 import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
@@ -298,6 +299,8 @@ function Sections({
     return new Set([first, withNext].filter((x): x is string => Boolean(x)));
   });
   const planIds = new Set(planTopics(map, statuses, personalization).map((t) => t.id));
+  // Görünüm: "Harita" (roadmap.sh gibi ağaç) ya da "Liste" (açılır bölümler, uzun başlıklar için rahat)
+  const [view, setView] = useState<'tree' | 'list'>('tree');
 
   function toggle(id: string) {
     setOpen((prev) => {
@@ -311,14 +314,27 @@ function Sections({
   return (
     <View style={styles.sections}>
       <View style={styles.sectionsHead}>
-        <ThemedText type="cardTitle" accessibilityRole="header">
-          Harita
-        </ThemedText>
+        <View style={styles.headRow}>
+          <ThemedText type="cardTitle" accessibilityRole="header" style={styles.flex1}>
+            Harita
+          </ThemedText>
+          <ViewSwitch value={view} onChange={setView} />
+        </View>
         <ThemedText type="small" themeColor="textSecondary">
           Bir konuya dokun: ne olduğunu, kaynaklarını gör ve durumunu işaretle.
         </ThemedText>
+        {view === 'tree' && <TreeLegend />}
       </View>
-      {map.sections.map((section, index) => (
+      {view === 'tree' && (
+        <RoadmapTree
+          map={map}
+          statuses={statuses}
+          personalization={personalization}
+          nextId={nextId}
+          onOpenTopic={(id) => openTopic(roadmap, id)}
+        />
+      )}
+      {view === 'list' && map.sections.map((section, index) => (
         <SectionCard
           key={section.id}
           index={index}
@@ -333,6 +349,37 @@ function Sections({
           onOpenTopic={(id) => openTopic(roadmap, id)}
         />
       ))}
+    </View>
+  );
+}
+
+// İki seçenekli anahtar (segmented control)
+function ViewSwitch({ value, onChange }: { value: 'tree' | 'list'; onChange: (v: 'tree' | 'list') => void }) {
+  const theme = useTheme();
+  const options = [
+    { id: 'tree' as const, label: '🗺️ Harita' },
+    { id: 'list' as const, label: '☰ Liste' },
+  ];
+  return (
+    <View
+      accessibilityRole="radiogroup"
+      accessibilityLabel="Görünüm"
+      style={[styles.switch, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
+      {options.map((o) => {
+        const selected = value === o.id;
+        return (
+          <Pressable
+            key={o.id}
+            onPress={() => onChange(o.id)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            style={[styles.switchItem, selected && { backgroundColor: theme.card, borderColor: theme.accent }]}>
+            <ThemedText type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
+              {o.label}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }
@@ -575,7 +622,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
   },
   sections: { gap: Spacing.two },
-  sectionsHead: { gap: Spacing.one, marginBottom: Spacing.one },
+  sectionsHead: { gap: Spacing.two, marginBottom: Spacing.one },
+  headRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  flex1: { flex: 1 },
+  switch: { flexDirection: 'row', borderRadius: Radius.pill, borderWidth: Border.thin, padding: 2 },
+  switchItem: {
+    minHeight: 36,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: Border.thick,
+    borderColor: 'transparent',
+  },
   sectionRow: { flexDirection: 'row', gap: Spacing.two },
   rail: { width: 32, alignItems: 'center' },
   node: {
