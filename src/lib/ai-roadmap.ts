@@ -1,7 +1,7 @@
 // 2. katman (yapay zekâ ile kişiselleştirme).
 //
 // Akış: 1. katman (konuya özel şablon) adımları üretir → bu dosya onları `generate-roadmap`
-// Edge Function'ına gönderir → yapay zekâ başlık/açıklama/saatleri kişiye göre uyarlar.
+// Edge Function'ına gönderir → yapay zekâ planı kişiye ve konuya göre uyarlar, gerekirse genişletir.
 // HER hata durumunda (ağ yok, kota doldu, zaman aşımı, bozuk çıktı) sessizce 1. katman adımları
 // döner. Kullanıcı hiçbir zaman "yapay zekâ çalışmadı" yüzünden plansız kalmaz.
 //
@@ -16,7 +16,7 @@ import { supabase } from '@/lib/supabase';
 
 const AI_TIMEOUT_MS = 13000; // sunucu kendi içinde 12 sn bekler; üstüne küçük pay
 
-type AiStep = { title: string; description: string; estimatedHours: number };
+type AiStep = Omit<GeneratedStep, 'position'>;
 
 export type PersonalizeResult = { steps: GeneratedStep[]; personalized: boolean };
 
@@ -44,18 +44,18 @@ export async function personalizeSteps(
         timeout: AI_TIMEOUT_MS,
       }
     );
-    if (error || !data?.steps || data.steps.length !== baseSteps.length) return fallback;
+    if (error || !Array.isArray(data?.steps)) return fallback;
 
-    // Evre, kaynak türü ve sıra 1. katmandan gelir; yapay zekâ yalnız metni ve saati değiştirir.
-    const steps: GeneratedStep[] = baseSteps.map((base, i) => {
-      const ai = data.steps![i];
-      return {
-        ...base,
-        title: typeof ai?.title === 'string' ? ai.title.trim() : '',
-        description: typeof ai?.description === 'string' ? ai.description.trim() : '',
-        estimatedHours: Number.isInteger(ai?.estimatedHours) ? ai.estimatedHours : base.estimatedHours,
-      };
-    });
+    // Yapay zekâ adım sayısını konuya göre değiştirebilir (6-14). Sunucu zaten doğruladı;
+    // burada da aynı sözleşmeden geçer (validateSteps), geçmezse temel plan kullanılır.
+    const steps: GeneratedStep[] = data.steps.map((ai, i) => ({
+      position: i + 1,
+      title: typeof ai?.title === 'string' ? ai.title.trim() : '',
+      description: typeof ai?.description === 'string' ? ai.description.trim() : '',
+      estimatedHours: Number.isInteger(ai?.estimatedHours) ? ai.estimatedHours : 3,
+      phase: ai?.phase,
+      resourceType: ai?.resourceType,
+    }));
     return validateSteps(steps) ? { steps, personalized: true } : fallback;
   } catch {
     return fallback;
