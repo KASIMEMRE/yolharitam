@@ -47,6 +47,7 @@ export default function SettingsScreen() {
             <AppearanceSection />
             <AccountSection />
             <AboutSection />
+            <DeleteAccountLink />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -325,46 +326,66 @@ function AppearanceSection() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// 3) Hesap: şifre, çıkış, hesabı silme
+// 3) Hesap: şifre ve çıkış (hesabı silme sayfanın en altında)
 
 function AccountSection() {
   const { session } = useAuth();
   return (
     <View style={styles.section}>
       <SectionTitle emoji="👤" title="Hesap" subtitle={session?.user.email ?? undefined} />
-      <PasswordCard />
+      <PasswordCard email={session?.user.email ?? null} />
       <Card>
         <Button variant="secondary" icon="🚪" label="Çıkış yap" onPress={() => supabase.auth.signOut()} />
       </Card>
-      <DeleteAccountCard />
     </View>
   );
 }
 
-function PasswordCard() {
+function PasswordCard({ email }: { email: string | null }) {
   const [open, setOpen] = useState(false);
+  const [current, setCurrent] = useState('');
   const [password, setPassword] = useState('');
   const [repeat, setRepeat] = useState('');
   const [state, setState] = useState<{ tone: 'success' | 'warning'; text: string } | null>(null);
+  const [currentWrong, setCurrentWrong] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const tooShort = password.length > 0 && password.length < MIN_PASSWORD;
   const mismatch = repeat.length > 0 && repeat !== password;
-  const canSave = password.length >= MIN_PASSWORD && password === repeat && !busy;
+  const sameAsOld = password.length > 0 && password === current;
+  const canSave =
+    !!email && current.length > 0 && password.length >= MIN_PASSWORD && password === repeat && !sameAsOld && !busy;
+
+  function reset() {
+    setCurrent('');
+    setPassword('');
+    setRepeat('');
+    setCurrentWrong(false);
+  }
 
   async function save() {
-    if (!canSave) return;
+    if (!canSave || !email) return;
     setBusy(true);
     setState(null);
+    setCurrentWrong(false);
+    // 1) Önce MEVCUT şifreyi doğrula: telefonu açık bırakılmış biri şifreni değiştiremesin.
+    //    Doğrulama için mevcut şifreyle yeniden giriş yapılır (oturum aynı kullanıcıyla tazelenir).
+    const check = await supabase.auth.signInWithPassword({ email, password: current });
+    if (check.error) {
+      setBusy(false);
+      setCurrentWrong(true);
+      setState({ tone: 'warning', text: 'Mevcut şifren yanlış.' });
+      return;
+    }
+    // 2) Doğrulandıysa yeni şifreyi kaydet
     const { error } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (error) {
-      // Supabase aynı şifreyi ya da zayıf şifreyi reddedebilir; mesajı sade tut
-      setState({ tone: 'warning', text: 'Şifre değiştirilemedi. Farklı ve daha güçlü bir şifre deneyip tekrar dene.' });
+      // Supabase zayıf şifreyi reddedebilir; mesajı sade tut
+      setState({ tone: 'warning', text: 'Şifre değiştirilemedi. Daha güçlü bir şifre deneyip tekrar dene.' });
       return;
     }
-    setPassword('');
-    setRepeat('');
+    reset();
     setState({ tone: 'success', text: 'Şifren değiştirildi.' });
   }
 
@@ -372,9 +393,33 @@ function PasswordCard() {
     <Card>
       <ThemedText type="smallBold">Şifre</ThemedText>
       {!open ? (
-        <Button variant="secondary" icon="🔑" label="Şifremi değiştir" onPress={() => setOpen(true)} />
+        <>
+          {state?.tone === 'success' && <Banner tone="success">{state.text}</Banner>}
+          <Button
+            variant="secondary"
+            icon="🔑"
+            label="Şifremi değiştir"
+            onPress={() => {
+              setState(null);
+              setOpen(true);
+            }}
+          />
+        </>
       ) : (
         <>
+          <TextField
+            label="Mevcut şifre"
+            value={current}
+            onChangeText={(t) => {
+              setCurrent(t);
+              setCurrentWrong(false);
+            }}
+            secureTextEntry
+            autoComplete="current-password"
+            textContentType="password"
+            invalid={currentWrong}
+            hint={currentWrong ? 'Mevcut şifren yanlış.' : undefined}
+          />
           <TextField
             label="Yeni şifre"
             value={password}
@@ -382,8 +427,14 @@ function PasswordCard() {
             secureTextEntry
             autoComplete="new-password"
             textContentType="newPassword"
-            invalid={tooShort}
-            hint={tooShort ? `En az ${MIN_PASSWORD} karakter olmalı.` : `En az ${MIN_PASSWORD} karakter.`}
+            invalid={tooShort || sameAsOld}
+            hint={
+              sameAsOld
+                ? 'Yeni şifre eskisiyle aynı olamaz.'
+                : tooShort
+                  ? `En az ${MIN_PASSWORD} karakter olmalı.`
+                  : `En az ${MIN_PASSWORD} karakter.`
+            }
           />
           <TextField
             label="Yeni şifre (tekrar)"
@@ -396,10 +447,19 @@ function PasswordCard() {
             hint={mismatch ? 'Şifreler aynı değil.' : undefined}
             onSubmitEditing={save}
           />
-          {state && <Banner tone={state.tone}>{state.text}</Banner>}
+          {state?.tone === 'warning' && <Banner tone="warning">{state.text}</Banner>}
           <View style={styles.rowActions}>
-            <Button label="Kaydet" loading={busy} disabled={!canSave} onPress={save} />
-            <Button variant="text" label="Vazgeç" onPress={() => setOpen(false)} />
+            <Button label="Şifreyi değiştir" loading={busy} disabled={!canSave} onPress={save} />
+            <Button
+              variant="text"
+              label="Vazgeç"
+              disabled={busy}
+              onPress={() => {
+                reset();
+                setState(null);
+                setOpen(false);
+              }}
+            />
           </View>
         </>
       )}
@@ -407,7 +467,9 @@ function PasswordCard() {
   );
 }
 
-function DeleteAccountCard() {
+// Hesabı silme: sayfanın EN ALTINDA, sade bir metin bağlantısı. Göze batmaz ama aranınca bulunur
+// (mağaza kuralı). Dokununca açıklama ve "SİL" yazarak onay açılır.
+function DeleteAccountLink() {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [word, setWord] = useState('');
@@ -431,32 +493,46 @@ function DeleteAccountCard() {
     }
   }
 
+  if (!open) {
+    return (
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityRole="button"
+        hitSlop={8}
+        style={styles.deleteLink}>
+        <ThemedText type="small" themeColor="textSecondary" style={styles.underline}>
+          Hesabımı sil
+        </ThemedText>
+      </Pressable>
+    );
+  }
+
   return (
-    <View style={[styles.card, styles.danger, { borderColor: theme.coral, backgroundColor: theme.card }]}>
-      <ThemedText type="smallBold" themeColor="coralInk">
-        Hesabı sil
-      </ThemedText>
+    <View style={[styles.card, { borderColor: theme.border, backgroundColor: theme.card }]}>
+      <ThemedText type="smallBold">Hesabı sil</ThemedText>
       <ThemedText type="small" themeColor="textSecondary">
         Hesabın, tüm haritaların, ilerlemen ve rozetlerin kalıcı olarak silinir. Bu geri alınamaz.
       </ThemedText>
-      {!open ? (
-        <Button variant="text" icon="⚠️" label="Hesabımı silmek istiyorum" onPress={() => setOpen(true)} />
-      ) : (
-        <>
-          <TextField
-            label={`Onaylamak için ${DELETE_WORD} yaz`}
-            value={word}
-            onChangeText={setWord}
-            autoCapitalize="characters"
-            autoCorrect={false}
-          />
-          {error && <Banner tone="warning">{error}</Banner>}
-          <View style={styles.rowActions}>
-            <Button label="Hesabımı kalıcı olarak sil" disabled={!confirmed} loading={busy} onPress={deleteAccount} />
-            <Button variant="text" label="Vazgeç" disabled={busy} onPress={() => { setOpen(false); setWord(''); }} />
-          </View>
-        </>
-      )}
+      <TextField
+        label={`Onaylamak için ${DELETE_WORD} yaz`}
+        value={word}
+        onChangeText={setWord}
+        autoCapitalize="characters"
+        autoCorrect={false}
+      />
+      {error && <Banner tone="warning">{error}</Banner>}
+      <View style={styles.rowActions}>
+        <Button variant="secondary" label="Hesabımı kalıcı olarak sil" disabled={!confirmed} loading={busy} onPress={deleteAccount} />
+        <Button
+          variant="text"
+          label="Vazgeç"
+          disabled={busy}
+          onPress={() => {
+            setOpen(false);
+            setWord('');
+          }}
+        />
+      </View>
     </View>
   );
 }
@@ -490,7 +566,8 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.three },
   sectionTitle: { gap: Spacing.one },
   card: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
-  danger: { borderStyle: 'dashed' },
+  deleteLink: { alignSelf: 'center', minHeight: MinTouch, justifyContent: 'center', paddingHorizontal: Spacing.three },
+  underline: { textDecorationLine: 'underline' },
   choiceBlock: { gap: Spacing.two },
   choice: { flexDirection: 'row', borderRadius: Radius.pill, borderWidth: Border.thin, padding: 2 },
   choiceItem: {
