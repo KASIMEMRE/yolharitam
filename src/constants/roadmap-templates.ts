@@ -13,6 +13,8 @@
 // `{konu} için …` kalıbıyla, anlam gerektiren adımlarda geçer. Diğer başlıklar eylemle başlar
 // ("Gerçek örnekleri incele"): konu adı zaten ekranın üstündeki kartta yazılı, her satırda tekrarlamaya gerek yok.
 
+import { CURRICULA, type CurriculumStep } from './curricula';
+
 export type WeeklyHoursId = '1-2' | '3-5' | '6-10' | '10+';
 export type GoalId = 'job' | 'project' | 'exam' | 'curiosity';
 export type LearningStyleId = 'video' | 'reading' | 'practice' | 'mixed';
@@ -215,6 +217,15 @@ const GOAL_STEPS: Record<GoalId, StepTemplate[]> = {
   ],
 };
 
+// Müfredat adımını şablon kaydına çevirir. Kaynak önerisi açıklamanın sonuna eklenir.
+function fromCurriculum(step: CurriculumStep): StepTemplate {
+  return {
+    title: () => step.title,
+    description: step.resource ? `${step.description} Önerilen kaynak: ${step.resource}.` : step.description,
+    baseHours: step.baseHours,
+  };
+}
+
 // Üretilecek bir adımın ham hâli (evre kaynak diziden atanır, şablon kaydından değil).
 type Draft = { template: StepTemplate; phase: Phase };
 
@@ -225,10 +236,21 @@ export function generateTemplateSteps(input: RoadmapInput): GeneratedStep[] {
   const { multiplier } = HOURS_RULES[weeklyHours];
 
   // KURAL 1: seviye adım sayısını belirler. İleri'de hedefin plan adımı atlanır (6 adım).
-  const goalSteps = level === 'advanced' ? GOAL_STEPS[goal].slice(1) : GOAL_STEPS[goal];
+  // KURAL 6: konuya özel müfredat varsa Temeller ve Pratik adımları ondan gelir; yoksa genel şablon.
+  // Hedef adımları her zaman hedefe göredir; müfredattaki proje fikirleri ilk hedef adımına eklenir.
+  const curriculum = CURRICULA[input.topicPath];
+  const foundation = curriculum ? curriculum[level].foundation.map(fromCurriculum) : FOUNDATION[level];
+  const practice = curriculum ? curriculum[level].practice.map(fromCurriculum) : PRACTICE[level];
+  let goalSteps = level === 'advanced' ? GOAL_STEPS[goal].slice(1) : GOAL_STEPS[goal];
+  if (curriculum && curriculum.projectIdeas.length > 0 && goal !== 'exam') {
+    const ideas = curriculum.projectIdeas.join(', ');
+    goalSteps = goalSteps.map((step, i) =>
+      i === 0 ? { ...step, description: `${step.description} Fikir: ${ideas}.` } : step
+    );
+  }
   const drafts: Draft[] = [
-    ...FOUNDATION[level].map((template) => ({ template, phase: 'foundation' as const })),
-    ...PRACTICE[level].map((template) => ({ template, phase: 'practice' as const })),
+    ...foundation.map((template) => ({ template, phase: 'foundation' as const })),
+    ...practice.map((template) => ({ template, phase: 'practice' as const })),
     ...goalSteps.map((template) => ({ template, phase: 'goal' as const })),
   ];
 
