@@ -5,6 +5,7 @@ import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-na
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { FriendsTodayCard } from '@/components/community/friends-today-card';
 import { DisplayNameForm, MAX_NAME_LENGTH } from '@/components/display-name-form';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge, StatusChip } from '@/components/level-badge';
@@ -182,6 +183,7 @@ function MapView({
         <>
           <DailyTaskCard roadmap={roadmap} map={map} statuses={statuses} personalization={personalization} />
           {activity && <MomentumCard activity={activity} roadmapId={roadmap.id} weekly={weekly} />}
+          <FriendsTodayCard />
           {next && <NextCard topic={next} personalization={personalization} onPress={() => openTopic(roadmap, next.id)} />}
           <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} />
           <Sections
