@@ -27,6 +27,9 @@ export default function AppTabs() {
           <TabTrigger name="news" href="/news" asChild>
             <TabButton emoji="📰">Gelişmeler</TabButton>
           </TabTrigger>
+          <TabTrigger name="community" href="/community" asChild>
+            <TabButton emoji="👥">Topluluk</TabButton>
+          </TabTrigger>
           <TabTrigger name="profile" href="/profile" asChild>
             <TabButton emoji="👤">Profil</TabButton>
           </TabTrigger>
@@ -65,6 +68,9 @@ export function TabButton({
       <ThemedText
         type={isFocused ? 'smallBold' : 'small'}
         themeColor={isFocused ? 'accentInk' : 'textSecondary'}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
         style={narrow && styles.labelNarrow}>
         {children}
       </ThemedText>
@@ -125,8 +131,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: Border.thick,
   },
-  tabNarrow: { flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 0, paddingHorizontal: Spacing.one },
+  tabNarrow: { flex: 1, minWidth: 0, flexDirection: 'column', justifyContent: 'center', gap: 0, paddingHorizontal: 2 },
   emoji: { fontSize: 18 },
   emojiNarrow: { fontSize: 22, lineHeight: 26 },
-  labelNarrow: { fontSize: 13, lineHeight: 16 },
+  labelNarrow: { fontSize: 13, lineHeight: 16, textAlign: 'center', maxWidth: '100%' },
 });

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { UsernameForm } from '@/components/community/username-gate';
 import { DisplayNameForm } from '@/components/display-name-form';
 import { HeaderBackButton } from '@/components/header-back-button';
 import { TextField } from '@/components/text-field';
@@ -332,6 +333,10 @@ function AccountSection() {
       <SectionTitle emoji="👤" title="Hesap" subtitle={session?.user.email ?? undefined} />
       <Card>
         <DisplayNameForm />
+      </Card>
+      {/* Topluluk (lig, arkadaşlar) için benzersiz @kullanıcı adı; yukarıdaki görünen addan ayrı */}
+      <Card>
+        <UsernameForm />
       </Card>
       <PasswordCard email={session?.user.email ?? null} />
       <Card>

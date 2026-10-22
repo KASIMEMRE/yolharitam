@@ -17,6 +17,125 @@ export type Database = {
   }
   public: {
     Tables: {
+      friendships: {
+        Row: {
+          addressee: string
+          created_at: string
+          id: number
+          requester: string
+          responded_at: string | null
+          status: string
+        }
+        Insert: {
+          addressee: string
+          created_at?: string
+          id?: never
+          requester: string
+          responded_at?: string | null
+          status?: string
+        }
+        Update: {
+          addressee?: string
+          created_at?: string
+          id?: never
+          requester?: string
+          responded_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "friendships_addressee_fkey"
+            columns: ["addressee"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "friendships_requester_fkey"
+            columns: ["requester"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      showcase_projects: {
+        Row: {
+          created_at: string
+          demo_url: string | null
+          description: string
+          id: number
+          map_id: string
+          repo_url: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          demo_url?: string | null
+          description?: string
+          id?: never
+          map_id: string
+          repo_url: string
+          title: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          demo_url?: string | null
+          description?: string
+          id?: never
+          map_id?: string
+          repo_url?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "showcase_projects_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      showcase_reports: {
+        Row: {
+          created_at: string
+          project_id: number
+          reason: string | null
+          reporter: string
+        }
+        Insert: {
+          created_at?: string
+          project_id: number
+          reason?: string | null
+          reporter?: string
+        }
+        Update: {
+          created_at?: string
+          project_id?: number
+          reason?: string | null
+          reporter?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "showcase_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "showcase_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "showcase_reports_reporter_fkey"
+            columns: ["reporter"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       news_items: {
         Row: {
           created_at: string
@@ -105,16 +224,19 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          username: string | null
         }
         Insert: {
           created_at?: string
           display_name?: string | null
           id: string
+          username?: string | null
         }
         Update: {
           created_at?: string
           display_name?: string | null
           id?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -326,6 +448,60 @@ export type Database = {
           p_weekly_hours: string
         }
         Returns: string
+      }
+      friend_request: {
+        Args: { p_username: string }
+        Returns: string
+      }
+      friend_respond: {
+        Args: { p_accept: boolean; p_id: number }
+        Returns: undefined
+      }
+      friends_overview: {
+        Args: never
+        Returns: {
+          active_days: string[]
+          direction: string
+          display_name: string | null
+          friendship_id: number
+          status: string
+          today_done: number
+          today_xp: number
+          user_id: string
+          username: string | null
+          week_xp: number
+        }[]
+      }
+      league_week: {
+        Args: { p_map: string }
+        Returns: {
+          display_name: string | null
+          is_me: boolean
+          rank: number
+          user_id: string
+          username: string | null
+          xp: number
+        }[]
+      }
+      showcase_list: {
+        Args: { p_before?: number; p_limit?: number; p_map?: string }
+        Returns: {
+          created_at: string
+          demo_url: string | null
+          description: string
+          display_name: string | null
+          id: number
+          is_me: boolean
+          map_id: string
+          repo_url: string
+          title: string
+          user_id: string
+          username: string | null
+        }[]
+      }
+      username_available: {
+        Args: { p: string }
+        Returns: boolean
       }
     }
     Enums: {
