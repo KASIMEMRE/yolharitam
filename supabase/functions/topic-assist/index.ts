@@ -126,6 +126,25 @@ function cleanQuiz(raw: unknown) {
   return questions.length >= 3 ? { questions } : null;
 }
 
+// ÖNBELLEK ZEHİRLENMESİ KORUMASI: önbellek anahtarı (map_id, topic_id, topic_title, kind) istemcinin
+// gönderdiği bölüm/özet/harita başlığını kapsamaz. Biri uydurma metinle istek atıp içeriği önbelleğe
+// yazarsa gerçek kullanıcılara sunulurdu. Bu yüzden içeriğin yanına "_src" (üretimde kullanılan girdi)
+// yazılır; okurken yalnız istekle BİREBİR aynıysa önbellekten dönülür. Şema değişikliği gerekmez (jsonb).
+type Src = { mapTitle: string; sectionTitle: string; topicSummary: string; topicTitle: string };
+const srcOf = (b: Body): Src => ({
+  mapTitle: b.mapTitle, sectionTitle: b.sectionTitle, topicSummary: b.topicSummary, topicTitle: b.topicTitle,
+});
+function sameSrc(stored: unknown, b: Body): boolean {
+  const a = (stored ?? null) as Partial<Src> | null;
+  if (!a) return false; // eski kayıtlarda _src yok: bir kez yeniden üretilir
+  const want = srcOf(b);
+  return (Object.keys(want) as (keyof Src)[]).every((k) => a[k] === want[k]);
+}
+function stripSrc(content: Record<string, unknown>) {
+  const { _src: _unused, ...rest } = content;
+  return rest;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
@@ -156,7 +175,8 @@ Deno.serve(async (req) => {
       .eq('topic_title', body.topicTitle)
       .eq('kind', body.kind)
       .maybeSingle();
-    if (cached?.content) return json({ content: cached.content, cached: true });
+    const hit = cached?.content as Record<string, unknown> | undefined;
+    if (hit && sameSrc(hit._src, body)) return json({ content: stripSrc(hit), cached: true });
   }
 
   // 2) Kota: son 24 saatte bu kullanıcının istekleri
@@ -170,7 +190,23 @@ Deno.serve(async (req) => {
     .in('kind', isAsk ? ['ask'] : ['explain', 'quiz']);
   const limit = isAsk ? ASK_LIMIT : GEN_LIMIT;
   if ((count ?? 0) >= limit) return json({ error: 'daily_limit', limit }, 429);
-  await service.from('ai_requests').insert({ user_id: userId, kind: body.kind });
+  // Hak, model çağrısından ÖNCE ayrılır: sayım ile insert arasında model beklenirse paralel isteklerin
+  // hepsi "count < limit" görüp sınırı aşardı (maliyet). Üretim başarısız olursa satır silinip iade edilir.
+  const { data: reserved, error: reserveError } = await service
+    .from('ai_requests')
+    .insert({ user_id: userId, kind: body.kind })
+    .select('id')
+    .single();
+  if (reserveError || !reserved) {
+    console.error('ai_requests reserve failed', reserveError?.message);
+    return json({ error: 'quota_error' }, 500);
+  }
+  const refund = () => service.from('ai_requests').delete().eq('id', reserved.id);
+  // Her hata dalı bunu kullanır: önce hakkı iade et, sonra hatayı döndür
+  const fail = async (error: string) => {
+    await refund();
+    return json({ error }, 502);
+  };
 
   const context = `Yol haritası: ${body.mapTitle}\nBölüm: ${body.sectionTitle}\nKonu: ${body.topicTitle}\nKonu özeti: ${body.topicSummary}` +
     (body.level ? `\nÖğrencinin seviyesi: ${LEVEL_TR[body.level]}` : '');
@@ -188,17 +224,18 @@ Deno.serve(async (req) => {
       'Çıktı SADECE JSON: {"subtopics":[{"title":"","detail":""}],"example":"","mistakes":[""],"exercise":""}',
     ].join('\n');
     const out = await callModel(system, context, true);
-    if (!out) return json({ error: 'provider_error' }, 502);
+    if (!out) return fail('provider_error');
     let parsed: unknown;
     try {
       parsed = JSON.parse(out.content);
     } catch {
-      return json({ error: 'bad_output' }, 502);
+      return fail('bad_output');
     }
     const content = cleanExplain(parsed);
-    if (!content) return json({ error: 'bad_output' }, 502);
+    if (!content) return fail('bad_output');
     await service.from('topic_ai_cache').upsert({
-      map_id: body.mapId, topic_id: body.topicId, topic_title: body.topicTitle, kind: 'explain', content, model: out.model,
+      map_id: body.mapId, topic_id: body.topicId, topic_title: body.topicTitle, kind: 'explain',
+      content: { ...content, _src: srcOf(body) }, model: out.model,
     });
     return json({ content, cached: false });
   }
@@ -212,17 +249,18 @@ Deno.serve(async (req) => {
       'Link yazma. Çıktı SADECE JSON: {"questions":[{"question":"","options":["","","",""],"answer":0,"why":""}]}',
     ].join('\n');
     const out = await callModel(system, context, true);
-    if (!out) return json({ error: 'provider_error' }, 502);
+    if (!out) return fail('provider_error');
     let parsed: unknown;
     try {
       parsed = JSON.parse(out.content);
     } catch {
-      return json({ error: 'bad_output' }, 502);
+      return fail('bad_output');
     }
     const content = cleanQuiz(parsed);
-    if (!content) return json({ error: 'bad_output' }, 502);
+    if (!content) return fail('bad_output');
     await service.from('topic_ai_cache').upsert({
-      map_id: body.mapId, topic_id: body.topicId, topic_title: body.topicTitle, kind: 'quiz', content, model: out.model,
+      map_id: body.mapId, topic_id: body.topicId, topic_title: body.topicTitle, kind: 'quiz',
+      content: { ...content, _src: srcOf(body) }, model: out.model,
     });
     return json({ content, cached: false });
   }
@@ -235,7 +273,7 @@ Deno.serve(async (req) => {
     '- Link (URL) yazma. Emin değilsen bunu söyle.',
   ].join('\n');
   const out = await callModel(system, `${context}\n\nÖğrencinin sorusu: ${body.question!.trim()}`, false);
-  if (!out || !out.content.trim()) return json({ error: 'provider_error' }, 502);
+  if (!out || !out.content.trim()) return fail('provider_error');
   const answer = out.content.trim().slice(0, 2000).replace(/https?:\/\/\S+/gi, '');
   return json({ content: { answer }, remaining: Math.max(0, ASK_LIMIT - (count ?? 0) - 1) });
 });

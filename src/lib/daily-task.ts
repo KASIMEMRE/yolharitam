@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dayKey } from '@/constants/activity';
 import type { DevRoadmap } from '@/constants/dev-roadmaps';
 import { nextTopic, type Personalization, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
+import { supabase } from '@/lib/supabase';
 
 export type DailyTaskKind = 'finish' | 'quiz' | 'start';
 export type DailyTask = {
@@ -15,26 +16,64 @@ export type DailyTask = {
   topicTitle: string;
 };
 
-const KEY = 'yolharitam.daily-task.v1';
-let cached: DailyTask | null = null;
-let loaded = false;
+const KEY_PREFIX = 'yolharitam.daily-task.v1';
+let currentKey: string | null = null;
+// Yükleme SÖZÜ (promise) önbelleği: eşzamanlı iki çağrı aynı okumayı bekler.
+// (Eskiden "yüklendi" bayrağı okuma bitmeden kuruluyordu; ikinci çağrı kayıtlı görevi görmeden yenisini üretip eziyordu.)
+let loading: Promise<DailyTask | null> | null = null;
+let generation = 0; // oturum değişince artar; eski okumanın sonucu yeni oturuma karışmasın
 
-async function load(): Promise<DailyTask | null> {
-  if (loaded) return cached;
-  loaded = true;
+async function currentUserId(): Promise<string> {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
-    cached = raw ? (JSON.parse(raw) as DailyTask) : null;
+    const { data } = await supabase.auth.getSession(); // yerel okuma, ağ gerektirmez
+    return data.session?.user.id ?? 'anon';
   } catch {
-    cached = null;
+    return 'anon';
   }
-  return cached;
+}
+
+function load(): Promise<DailyTask | null> {
+  if (!loading) {
+    loading = (async () => {
+      // Okurken oturum değişirse (generation arttıysa) sonuç eski kullanıcıya aittir: at ve yeniden oku.
+      // Aksi halde currentKey boş kalır ve yeni görev diske yazılmazdı.
+      for (;;) {
+        const gen = generation;
+        // Anahtara kullanıcı id'si girer: aynı cihazda hesap değişince başkasının görevi gelmesin
+        const key = `${KEY_PREFIX}.${await currentUserId()}`;
+        let task: DailyTask | null = null;
+        try {
+          const raw = await AsyncStorage.getItem(key);
+          task = raw ? (JSON.parse(raw) as DailyTask) : null;
+        } catch {
+          task = null;
+        }
+        if (gen === generation) {
+          currentKey = key;
+          return task;
+        }
+      }
+    })();
+  }
+  return loading;
 }
 
 function save(task: DailyTask) {
-  cached = task;
-  AsyncStorage.setItem(KEY, JSON.stringify(task)).catch(() => {});
+  loading = Promise.resolve(task);
+  if (currentKey) AsyncStorage.setItem(currentKey, JSON.stringify(task)).catch(() => {});
 }
+
+// Kullanıcı değişince (çıkış / başka hesap) bellek önbelleğini temizle
+let lastUserId: string | null | undefined;
+supabase.auth.onAuthStateChange((_event, session) => {
+  const uid = session?.user.id ?? null;
+  if (lastUserId !== undefined && uid !== lastUserId) {
+    generation++;
+    currentKey = null;
+    loading = null;
+  }
+  lastUserId = uid;
+});
 
 // Günün sırasına göre görev türü: her gün aynı şey gelmesin diye dönüşümlü
 const ROTATION: DailyTaskKind[] = ['quiz', 'finish', 'quiz', 'start'];

@@ -13,7 +13,7 @@ export const XP: Record<Exclude<XpKind, 'quiz_done'>, number> = {
   section_done: 50,
   roadmap_done: 200,
 };
-// Quiz: doğru cevap başına puan (4 soruda en fazla 20)
+// Quiz: doğru cevap başına puan (5 soruda en fazla 25; sunucu 3-5 soru döndürebilir)
 export const XP_PER_CORRECT = 5;
 
 export const XP_LABEL: Record<XpKind, string> = {

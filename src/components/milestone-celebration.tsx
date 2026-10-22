@@ -56,8 +56,12 @@ export function MilestoneCelebration({
     } catch {
       // Web'de paylaş menüsü yoksa panoya kopyala
       if (Platform.OS === 'web' && typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(text);
-        setShareNote('Metin panoya kopyalandı; istediğin yere yapıştırabilirsin.');
+        try {
+          await navigator.clipboard.writeText(text);
+          setShareNote('Metin panoya kopyalandı; istediğin yere yapıştırabilirsin.');
+        } catch {
+          setShareNote('Paylaşılamadı.'); // tarayıcı pano iznini reddedebilir
+        }
       } else {
         setShareNote('Paylaşılamadı.');
       }

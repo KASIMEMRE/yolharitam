@@ -20,10 +20,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // useEffect: Ekran ilk açıldığında bir kere çalışan kod (yan etki).
   useEffect(() => {
     // 1) Uygulama açılınca telefonda kayıtlı bir oturum var mı bak
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    // Okuma hata verirse (bozuk depolama vb.) yükleme ekranında sonsuza dek kalmayalım: oturumsuz say
+    supabase.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch(() => setSession(null))
+      .finally(() => setLoading(false));
 
     // 2) Sonrasında giriş/çıkış olduğunda haberdar ol
     const { data } = supabase.auth.onAuthStateChange((_event, newSession) => {

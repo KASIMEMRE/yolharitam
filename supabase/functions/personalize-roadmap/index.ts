@@ -6,6 +6,7 @@
 // 4xx/5xx döner ve uygulama kural tabanlı işaretlemeye düşer.
 // Sağlayıcı: Groq (OpenAI uyumlu API). Anahtar Supabase sırlarında: GROQ_API_KEY (koda asla yazılmaz).
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // Groq modelleri zamanla emekliye ayrılır; sırayla denenir. GROQ_MODEL sırrı ile öne alınabilir.
@@ -64,6 +65,15 @@ function isValidBody(b: Body): boolean {
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
+
+  // Kimlik doğrulama: verify_jwt yalnız "geçerli bir JWT var" der (anon anahtar da geçerli JWT'dir).
+  // Gerçek bir kullanıcı olup olmadığını getUser ile doğruluyoruz (topic-assist ile aynı kalıp).
+  const service = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
+    auth: { persistSession: false },
+  });
+  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+  const { data: userData } = await service.auth.getUser(token);
+  if (!userData?.user?.id) return json({ error: 'unauthorized' }, 401);
 
   const apiKey = Deno.env.get('GROQ_API_KEY');
   if (!apiKey) return json({ error: 'not_configured' }, 503);

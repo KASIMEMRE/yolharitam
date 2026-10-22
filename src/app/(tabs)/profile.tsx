@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { Banner } from '@/components/banner';
 import { AchievementsSection } from '@/components/achievements-section';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
@@ -18,12 +19,13 @@ import { levelFor } from '@/constants/xp';
 import { useXp } from '@/lib/xp';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
+import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 
 export default function ProfileScreen() {
   const theme = useTheme();
   const { session } = useAuth();
-  const { roadmap, loading } = useLatestRoadmap();
+  const { roadmap, loading, failed, retry } = useLatestRoadmap();
   const { name } = useDisplayName();
   const email = session?.user.email;
 
@@ -73,6 +75,12 @@ export default function ProfileScreen() {
             <Skeleton width="60%" height={20} />
             <Skeleton width="40%" height={14} />
           </View>
+        </View>
+      ) : failed ? (
+        // Okunamadı ≠ haritan yok: yanlış "seçmedin" demek yerine hata + tekrar dene
+        <View style={styles.errorBox}>
+          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
+          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
         </View>
       ) : hasTopic && roadmap ? (
         <View
@@ -159,4 +167,5 @@ const styles = StyleSheet.create({
   },
   topicTexts: { flex: 1, minWidth: 0, gap: Spacing.one },
   center: { textAlign: 'center' },
+  errorBox: { gap: Spacing.three },
 });

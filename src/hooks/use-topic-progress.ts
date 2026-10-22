@@ -29,11 +29,26 @@ export function useTopicProgress(roadmapId: string | undefined) {
   const userId = session?.user.id;
   // Aynı konuya art arda dokunma kilidi (istek bitmeden yenisi gönderilmez)
   const busy = useRef(new Set<string>());
+  // Yazma sayacı: okuma sürerken bir yazma başlayıp bittiyse okuma eski veriyi taşıyor olabilir
+  const writes = useRef(0);
+  // Atılan (eski sayılan) okuma olduysa yazma bitince yeniden okunur; yoksa işaret sonrası tazeleme kaybolurdu
+  const pendingRefresh = useRef(false);
+  // Hangi harita için state kuruldu / ref'ler hangi haritaya ait (harita değişince sıfırlanır)
+  const loadedFor = useRef<string | null>(null);
+  const refsFor = useRef<string | null>(null);
 
   useFocusEffect(
     useCallback(() => {
       if (!roadmapId) return;
       let cancelled = false;
+      // Harita değişti: önceki haritanın uçuştaki işaretleri bu haritanın okumasını engellemesin
+      if (refsFor.current !== roadmapId) {
+        refsFor.current = roadmapId;
+        busy.current.clear();
+        writes.current = 0;
+        pendingRefresh.current = false;
+      }
+      const writesAtStart = writes.current;
       (async () => {
         try {
           const { data, error } = await supabase
@@ -42,16 +57,28 @@ export function useTopicProgress(roadmapId: string | undefined) {
             .eq('roadmap_id', roadmapId);
           if (cancelled) return;
           if (error) {
+            loadedFor.current = roadmapId;
             setState({ roadmapId, status: statusOf(error), statuses: {} });
+            return;
+          }
+          // İstek uçuştayken (ya da okuma sürerken biten) bir işaretleme varsa bu cevap eskidir:
+          // yok sayılır, yoksa iyimser durumu ezip işareti bir an geri alırdı.
+          // İSTİSNA: bu harita için henüz hiç state yoksa (ilk yükleme) cevap asla atılmaz, yoksa iskelet sonsuza dek kalır.
+          if (loadedFor.current === roadmapId && (busy.current.size > 0 || writes.current !== writesAtStart)) {
+            pendingRefresh.current = true;
             return;
           }
           const statuses: Record<string, TopicStatus> = {};
           for (const row of data ?? []) {
             if (VALID.includes(row.status as TopicStatus)) statuses[row.topic_id] = row.status as TopicStatus;
           }
+          loadedFor.current = roadmapId;
           setState({ roadmapId, status: 'ready', statuses });
         } catch {
-          if (!cancelled) setState({ roadmapId, status: 'network', statuses: {} });
+          if (!cancelled) {
+            loadedFor.current = roadmapId;
+            setState({ roadmapId, status: 'network', statuses: {} });
+          }
         }
       })();
       return () => {
@@ -86,6 +113,7 @@ export function useTopicProgress(roadmapId: string | undefined) {
     if (before === value) return true;
 
     busy.current.add(topicId);
+    writes.current += 1;
     setSaveError(null);
     apply(roadmapId, topicId, value);
     let ok = true;
@@ -108,6 +136,12 @@ export function useTopicProgress(roadmapId: string | undefined) {
       setSaveError(ERROR_TEXT.markFailed);
     }
     busy.current.delete(topicId);
+    writes.current += 1;
+    // Yazma sürerken atılan bir okuma varsa, her şey bitince yeniden oku
+    if (busy.current.size === 0 && pendingRefresh.current) {
+      pendingRefresh.current = false;
+      setReloadKey((k) => k + 1);
+    }
     if (!ok) apply(roadmapId, topicId, before); // geri al
     return ok;
   }

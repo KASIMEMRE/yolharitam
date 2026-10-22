@@ -1,6 +1,8 @@
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
+import { Banner } from '@/components/banner';
+import { Button } from '@/components/button';
 import { IconTile } from '@/components/icon-tile';
 import { StatusChip } from '@/components/level-badge';
 import { ScreenHeader } from '@/components/screen-header';
@@ -10,6 +12,7 @@ import { Border, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
+import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 const INFO = 'Seçtiğin konularla ilgili güncel haberler burada olacak.';
 
@@ -18,7 +21,7 @@ const INFO = 'Seçtiğin konularla ilgili güncel haberler burada olacak.';
 export default function NewsScreen() {
   const theme = useTheme();
   const { width } = useWindowDimensions();
-  const { roadmap } = useLatestRoadmap();
+  const { roadmap, failed, retry } = useLatestRoadmap();
 
   // Konu çipi yalnız GERÇEK seçimi gösterir; yol haritası yoksa çip de yok
   const { title: topicTitle, category, hue, hasTopic } = describeTopic(roadmap?.topic_path);
@@ -60,6 +63,14 @@ export default function NewsScreen() {
           </View>
         )}
       </Animated.View>
+
+      {/* Konu çipi yüklenemediyse "seçmedin" demek yerine nedenini söyle */}
+      {failed && (
+        <View style={styles.errorBox}>
+          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
+          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
+        </View>
+      )}
     </TabScreen>
   );
 }
@@ -97,6 +108,7 @@ const styles = StyleSheet.create({
   },
   stage: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginVertical: Spacing.three },
   ring: { position: 'absolute', width: 96, height: 96, borderRadius: 48, borderWidth: 2 },
+  errorBox: { gap: Spacing.three },
   info: { textAlign: 'center', maxWidth: 300 },
   topicChip: {
     flexDirection: 'row',
