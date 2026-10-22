@@ -113,6 +113,12 @@ export function parsePersonalization(value: unknown, map: DevRoadmap): Personali
   return { focus, skip, notes, source: v.source === 'ai' ? 'ai' : 'rules' };
 }
 
+// Kayıtlı kişisel işaretler; yoksa (eski kayıt) seviyeye göre kurallar.
+// Yol Haritam ve Konu ekranı AYNI fonksiyonu kullanır: aksi halde "bölüm bitti" kararı ekrana göre değişirdi.
+export function personalizationFor(map: DevRoadmap, saved: unknown, level: LevelId, goal: GoalId): Personalization {
+  return parsePersonalization(saved, map) ?? rulePersonalization(map, level, goal);
+}
+
 // "Planındaki konular": önerilen (core) konular, yapay zekânın atlanabilir dediği hariç;
 // ayrıca kullanıcının kendisi başladığı/bitirdiği her konu (isteğe bağlı ya da alternatif olsa da).
 // Kullanıcının "atla" dediği konu plandan çıkar.

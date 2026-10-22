@@ -42,6 +42,8 @@ export const ERROR_TEXT = {
   // Profil'de görünen ad okunurken / kaydedilirken
   profileLoadFailed: 'Adın yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   profileSaveFailed: 'Adın kaydedilemedi. Biraz sonra tekrar dene.',
+  // Yol haritaları listesi okunurken
+  mapsLoadFailed: 'Haritaların yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   markSchema: 'İşaret kaydedilemedi. Veritabanı güncellemesi bekleniyor olabilir.',

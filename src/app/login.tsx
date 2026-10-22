@@ -21,6 +21,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
+import { ERROR_TEXT } from '@/lib/supabase-errors';
 import { isAuthRetryableFetchError, type AuthError } from '@supabase/supabase-js';
 
 type Mode = 'login' | 'signup';
@@ -100,28 +101,33 @@ export default function LoginScreen() {
     setError(null);
     setNotice(null);
 
-    const credentials = { email: email.trim(), password };
+    // try/finally: beklenmedik bir istisnada bile buton takılı kalmasın
+    try {
+      const credentials = { email: email.trim(), password };
 
-    if (mode === 'login') {
-      const { error } = await supabase.auth.signInWithPassword(credentials);
-      if (error) setError(toTurkish(error));
-      // Başarılıysa Stack.Protected bizi otomatik içeri alır.
-    } else {
-      // Kullanıcı adı hesabın bilgilerine (user_metadata) yazılır. E-posta onayı gerektiği için kayıt anında
-      // oturum yoktur; ilk girişte Yol Haritam ekranı bu adı profile kaydeder (bkz. NamePrompt).
-      const { data, error } = await supabase.auth.signUp({
-        ...credentials,
-        options: { data: { display_name: username.trim().slice(0, MAX_NAME_LENGTH) } },
-      });
-      if (error) {
-        setError(toTurkish(error));
-      } else if (!data.session) {
-        setNotice(`Onay bağlantısı ${credentials.email} adresine gönderildi. Bağlantıya tıkladıktan sonra giriş yap.`);
-        setMode('login');
+      if (mode === 'login') {
+        const { error } = await supabase.auth.signInWithPassword(credentials);
+        if (error) setError(toTurkish(error));
+        // Başarılıysa Stack.Protected bizi otomatik içeri alır.
+      } else {
+        // Kullanıcı adı hesabın bilgilerine (user_metadata) yazılır. E-posta onayı gerektiği için kayıt anında
+        // oturum yoktur; ilk girişte Yol Haritam ekranı bu adı profile kaydeder (bkz. NamePrompt).
+        const { data, error } = await supabase.auth.signUp({
+          ...credentials,
+          options: { data: { display_name: username.trim().slice(0, MAX_NAME_LENGTH) } },
+        });
+        if (error) {
+          setError(toTurkish(error));
+        } else if (!data.session) {
+          setNotice(`Onay bağlantısı ${credentials.email} adresine gönderildi. Bağlantıya tıkladıktan sonra giriş yap.`);
+          setMode('login');
+        }
       }
+    } catch {
+      setError(ERROR_TEXT.other);
+    } finally {
+      setBusy(false);
     }
-
-    setBusy(false);
   }
 
   return (

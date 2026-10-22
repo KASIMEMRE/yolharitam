@@ -19,7 +19,8 @@ type XpState = {
 };
 export type Award = { id: number; kind: XpKind; amount: number; label?: string };
 
-let state: XpState = { total: 0, days: new Set(), dailyDoneDays: new Set(), loaded: false };
+const EMPTY_STATE = (): XpState => ({ total: 0, days: new Set(), dailyDoneDays: new Set(), loaded: false });
+let state: XpState = EMPTY_STATE();
 let lastAward: Award | null = null;
 let awardSeq = 0;
 const listeners = new Set<() => void>();
@@ -29,11 +30,47 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-// Sunucudan toplamı yeniden okur (odak değişiminde çağrılır)
-export async function refreshXp() {
-  try {
-    const { data, error } = await supabase.from('xp_events').select('kind, ref, amount, created_at');
-    if (error || !data) return; // tablo henüz yoksa ya da ağ hatası: mevcut değer kalır
+
+// Sürüm sayacı: state her değiştiğinde (ödül, oturum sıfırlama) artar.
+// Uçuştaki bir tazeleme başladığındaki sürüm değiştiyse sonucu eskimiştir; atılır ve yeniden okunur.
+let version = 0;
+let inFlight: Promise<void> | null = null;
+
+// Oturum değişince (çıkış / başka hesap) önceki kullanıcının XP'si ekranda kalmasın
+let lastUserId: string | null | undefined;
+supabase.auth.onAuthStateChange((_event, session) => {
+  const uid = session?.user.id ?? null;
+  if (lastUserId !== undefined && uid !== lastUserId) {
+    version++;
+    state = EMPTY_STATE();
+    lastAward = null;
+    emit();
+  }
+  lastUserId = uid;
+});
+
+// PostgREST bir istekte en çok 1000 satır döndürür; sayfa sayfa hepsini çekeriz.
+const PAGE = 1000;
+async function fetchAllEvents() {
+  const rows: { kind: string; ref: string; amount: number; created_at: string }[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from('xp_events')
+      .select('kind, ref, amount, created_at')
+      .order('id') // sayfalar arasında sıra sabit kalsın
+      .range(from, from + PAGE - 1);
+    if (error || !data) return null; // tablo yoksa ya da ağ hatası: mevcut değer kalır
+    rows.push(...data);
+    if (data.length < PAGE) return rows;
+  }
+}
+
+async function runRefresh() {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const startVersion = version;
+    const data = await fetchAllEvents();
+    if (!data) return;
+    if (startVersion !== version) continue; // okurken ödül/oturum değişti: sonuç eski, tekrar oku
     const days = new Set<string>();
     const dailyDoneDays = new Set<string>();
     let total = 0;
@@ -44,9 +81,21 @@ export async function refreshXp() {
     }
     state = { total, days, dailyDoneDays, loaded: true };
     emit();
-  } catch {
-    // sessiz geç
+    return;
   }
+}
+
+// Sunucudan toplamı yeniden okur (odak değişiminde çağrılır). Aynı anda tek istek uçar;
+// ikinci çağıran aynı sözü bekler.
+export function refreshXp(): Promise<void> {
+  if (!inFlight) {
+    inFlight = runRefresh()
+      .catch(() => {}) // sessiz geç
+      .finally(() => {
+        inFlight = null;
+      });
+  }
+  return inFlight;
 }
 
 type AwardInput = {
@@ -58,33 +107,48 @@ type AwardInput = {
   label?: string; // bildirimde gösterilecek özel metin
 };
 
-// Puan kazandırır. Dönüş: true = puan verildi, false = daha önce verilmiş ya da kaydedilemedi.
+// Puan kazandırır. Dönüş: true = yeni puan verildi, false = daha önce verilmiş ya da kaydedilemedi.
 // Günün görevini tamamlayan bir olaysa görev bonusu da otomatik verilir.
 export async function awardXp(input: AwardInput): Promise<boolean> {
   const amount = input.amount ?? (input.kind === 'quiz_done' ? 0 : XP[input.kind as Exclude<XpKind, 'quiz_done'>]);
   if (!amount || amount < 1) return false;
+  let isNew = true;
   try {
     const { error } = await supabase.from('xp_events').insert({ kind: input.kind, ref: input.ref.slice(0, 160), amount });
-    if (error) return false; // 23505 = bu olay zaten puan verdi; diğerleri (tablo yok, ağ) sessiz geçer
+    if (error) {
+      // 23505 = bu olay daha önce puan almış. Olay yine de OLDU; günün görevi o olay için seçildiyse
+      // tamamlanabilsin diye aşağıdaki görev kontrolüne devam ederiz. Diğer hatalarda (tablo yok, ağ) sessiz çık.
+      if (error.code !== '23505') return false;
+      isNew = false;
+      // Günlük bonus zaten alınmışsa günü işaretle: gereksiz tekrar istekleri atılmasın
+      if (input.kind === 'daily') {
+        state = { ...state, dailyDoneDays: new Set(state.dailyDoneDays).add(input.ref) };
+        emit();
+      }
+    }
   } catch {
     return false;
   }
   const today = dayKey(new Date());
-  state = { ...state, total: state.total + amount, days: new Set(state.days).add(today) };
-  lastAward = { id: ++awardSeq, kind: input.kind, amount, label: input.label };
-  emit();
+  if (isNew) {
+    version++; // uçuştaki tazeleme bu ödülü ezmesin
+    state = { ...state, total: state.total + amount, days: new Set(state.days).add(today) };
+    lastAward = { id: ++awardSeq, kind: input.kind, amount, label: input.label };
+    emit();
+  }
 
   if (input.kind !== 'daily' && !state.dailyDoneDays.has(today)) {
     const completes = await matchesTodayTask({ kind: input.kind, roadmapId: input.roadmapId, topicId: input.topicId });
     if (completes) {
       const ok = await awardXp({ kind: 'daily', ref: today, label: '🎯 Günün görevi tamam!' });
       if (ok) {
+        version++;
         state = { ...state, dailyDoneDays: new Set(state.dailyDoneDays).add(today) };
         emit();
       }
     }
   }
-  return true;
+  return isNew;
 }
 
 // Toplam XP ve günler. Ekran odaklanınca sunucudan tazelenir.

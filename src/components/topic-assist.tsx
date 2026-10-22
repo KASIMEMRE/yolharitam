@@ -91,7 +91,7 @@ export function TopicAssist({ map, section, topic, level }: Props) {
       <Block
         emoji="📝"
         title="Kendini test et"
-        subtitle="4 soruluk mini quiz: konuyu gerçekten anladın mı?"
+        subtitle="Kısa quiz: konuyu gerçekten anladın mı?"
         load={quiz}
         actionLabel="Quiz'i başlat"
         onLoad={loadQuiz}>
@@ -156,12 +156,13 @@ function Block({
   );
 }
 
+// Anahtarlar sıra (index) tabanlı: model aynı metni iki kez üretirse metin-anahtarlar çakışırdı.
 function ExplainView({ data }: { data: Explain }) {
   const theme = useTheme();
   return (
     <View style={styles.inner}>
       {data.subtopics.map((s, i) => (
-        <View key={s.title} style={styles.sub}>
+        <View key={`sub-${i}`} style={styles.sub}>
           <View style={[styles.num, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
             <ThemedText type="smallBold" themeColor="accentInk">
               {i + 1}
@@ -188,8 +189,8 @@ function ExplainView({ data }: { data: Explain }) {
       {data.mistakes.length > 0 && (
         <View style={styles.inner}>
           <ThemedText type="smallBold">Sık yapılan hatalar</ThemedText>
-          {data.mistakes.map((m) => (
-            <ThemedText key={m} type="small" themeColor="textSecondary">
+          {data.mistakes.map((m, mi) => (
+            <ThemedText key={`mistake-${mi}`} type="small" themeColor="textSecondary">
               ⚠️ {m}
             </ThemedText>
           ))}
@@ -233,7 +234,7 @@ function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId
         const choice = picked[qi];
         const done = choice !== undefined;
         return (
-          <View key={q.question} style={styles.inner}>
+          <View key={`q-${qi}`} style={styles.inner}>
             <ThemedText type="smallBold">
               {qi + 1}. {q.question}
             </ThemedText>
@@ -251,7 +252,7 @@ function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId
                 const border = !done ? theme.borderStrong : isRight ? theme.accent : isPicked ? theme.coral : theme.border;
                 return (
                   <Pressable
-                    key={o}
+                    key={`opt-${oi}`}
                     disabled={done}
                     onPress={() => setPicked((p) => ({ ...p, [qi]: oi }))}
                     accessibilityRole="radio"

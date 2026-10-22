@@ -273,13 +273,17 @@ export default function RoadmapQuestionsScreen() {
         targetId = found.data?.id ?? null;
       }
 
-      const { error: saveError } = targetId
-        ? await supabase.from('roadmaps').update(fields).eq('id', targetId).abortSignal(controller.signal)
+      // .select('id'): güncelleme RLS ya da silinmiş satır yüzünden 0 satıra denk gelirse hata dönmez;
+      // dönen satırı sayarak "kaydedildi" kutlamasının sahte olmasını önleriz.
+      const { data: saved, error: saveError } = targetId
+        ? await supabase.from('roadmaps').update(fields).eq('id', targetId).select('id').abortSignal(controller.signal)
         : await supabase
             .from('roadmaps')
             .insert({ ...fields, user_id: session.user.id, topic_path: map.id })
+            .select('id')
             .abortSignal(controller.signal);
       if (saveError) return { message: errorText(saveError) };
+      if (!saved || saved.length === 0) return { message: ERROR_TEXT.other };
 
       // Kutlama özeti planın kendisinden türetilir (kendi başına bir sayı uydurmayız)
       const sum = computeProgress(map, new Map(), personalization, final.weeklyHours);

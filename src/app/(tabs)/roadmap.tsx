@@ -1,5 +1,5 @@
 import { Link, router } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
@@ -18,9 +18,8 @@ import { getRoadmap, KIND_LABEL, type DevRoadmap, type Section, type Topic } fro
 import {
   computeProgress,
   nextTopic,
-  parsePersonalization,
+  personalizationFor,
   planTopics,
-  rulePersonalization,
   type Personalization,
   type TopicStatus,
 } from '@/constants/dev-roadmaps/personalize';
@@ -48,15 +47,16 @@ function openTopic(roadmap: Roadmap, topicId: string) {
 
 export default function RoadmapScreen() {
   // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda
-  const { roadmap, roadmaps, loading, activate } = useLatestRoadmap();
+  const { roadmap, roadmaps, loading, failed, retry, activate } = useLatestRoadmap();
   const activity = useActivity();
   // Hook erken return'lerden ÖNCE çağrılır (hook kuralı)
-  const { name } = useDisplayName();
-  const trimmedName = name?.trim();
-  const greeting = trimmedName ? `Merhaba, ${trimmedName}` : undefined;
   const progress = useTopicProgress(roadmap?.id);
+  // Ad kaydedilince artar: başlık (kendi useDisplayName örneği) yeniden kurulup güncel adı okur
+  const [nameVersion, setNameVersion] = useState(0);
+  // useCallback: kimliği sabit kalsın, yoksa NamePrompt efekti her render'da yeniden çalışır
+  const onNameSaved = useCallback(() => setNameVersion((v) => v + 1), []);
 
-  const header = <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />;
+  const header = <RoadmapHeader key={nameVersion} />;
 
   if (loading) {
     return (
@@ -67,11 +67,24 @@ export default function RoadmapScreen() {
     );
   }
 
+  // Okuyamadık ≠ haritan yok: hatada "Henüz seçmedin" demeyiz, tekrar denemeyi öneririz
+  if (failed) {
+    return (
+      <TabScreen>
+        {header}
+        <View style={styles.errorBox}>
+          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
+          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
+        </View>
+      </TabScreen>
+    );
+  }
+
   if (!roadmap) {
     return (
       <TabScreen>
         {header}
-        <NamePrompt />
+        <NamePrompt onSaved={onNameSaved} />
         <EmptyState
           title="Henüz bir yol haritası seçmedin."
           text="Frontend’den yapay zekâya, sana uyan yolu seç; konuları adım adım işaretle."
@@ -99,13 +112,21 @@ export default function RoadmapScreen() {
       {header}
       {/* Birden çok harita takip ediliyorsa üstte hızlı geçiş */}
       {/* Kullanıcı adı yoksa (eski hesap ya da kayıtta yazılmadıysa) kısa bir kartla sor */}
-      <NamePrompt />
+      <NamePrompt onSaved={onNameSaved} />
       {/* Haritalar arası geçiş + "Harita ekle": harita eklemenin tek yeri burası */}
       {roadmaps.length > 0 && <MapSwitcher roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
       {/* key: harita değişince içteki açık/kapalı bölüm durumu sıfırdan başlasın */}
       <MapView key={roadmap.id} roadmap={roadmap} map={map} progress={progress} activity={activity} />
     </TabScreen>
   );
+}
+
+// Başlık + selamlama. Ayrı bileşen: ad değişince key ile yeniden kurulup adı tazeler.
+function RoadmapHeader() {
+  const { name } = useDisplayName();
+  const trimmedName = name?.trim();
+  const greeting = trimmedName ? `Merhaba, ${trimmedName}` : undefined;
+  return <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />;
 }
 
 function MapView({
@@ -124,8 +145,11 @@ function MapView({
     : '3-5';
   const goal: GoalId = isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
   // Kayıtlı kişisel işaretler; yoksa (eski kayıt) seviyeye göre kurallar
-  const personalization =
-    parsePersonalization(roadmap.personalization, map) ?? rulePersonalization(map, toLevelId(roadmap.level), goal);
+  // useMemo: her render'da yeni nesne üretilirse DailyTaskCard'ın efekti her seferinde yeniden çalışır
+  const personalization = useMemo(
+    () => personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal),
+    [map, roadmap.personalization, roadmap.level, goal]
+  );
 
   const plan =
     isAnswerId('weeklyHours', roadmap.weekly_hours) && isAnswerId('goal', roadmap.goal)
@@ -258,7 +282,7 @@ function JourneyCard({
 
 // Kullanıcı adı sorma kartı. Kayıtta yazılan ad hesabın bilgilerinde (user_metadata) bekler; varsa
 // otomatik kaydedilir ve kart hiç görünmez. Yoksa (eski hesaplar) burada bir kez sorulur.
-function NamePrompt() {
+function NamePrompt({ onSaved }: { onSaved: () => void }) {
   const theme = useTheme();
   const { session } = useAuth();
   const { name, status, save } = useDisplayName();
@@ -270,14 +294,24 @@ function NamePrompt() {
   useEffect(() => {
     if (status !== 'ready' || name || !fromSignup || tried.current) return;
     tried.current = true;
-    save(fromSignup.slice(0, MAX_NAME_LENGTH));
-  }, [status, name, fromSignup, save]);
+    // Kayıt başarısızsa bir sonraki denemede (yeniden odak) tekrar denensin
+    save(fromSignup.slice(0, MAX_NAME_LENGTH)).then((r) => {
+      if (r.ok) onSaved();
+      else tried.current = false;
+    });
+  }, [status, name, fromSignup, save, onSaved]);
 
   if (hidden || status !== 'ready' || name || fromSignup) return null;
   return (
     <View style={[styles.momentum, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
       <ThemedText type="cardTitle">👋 Sana nasıl hitap edelim?</ThemedText>
-      <DisplayNameForm submitLabel="Kaydet" onSaved={() => setHidden(true)} />
+      <DisplayNameForm
+        submitLabel="Kaydet"
+        onSaved={() => {
+          setHidden(true);
+          onSaved();
+        }}
+      />
     </View>
   );
 }

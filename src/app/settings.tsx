@@ -24,6 +24,9 @@ import { ERROR_TEXT } from '@/lib/supabase-errors';
 const MIN_PASSWORD = 8;
 const DELETE_WORD = 'SİL'; // kullanıcı bu kelimeyi yazmadan hesap silme düğmesi açılmaz
 
+// İngilizce klavyede "SIL" yazan da kabul edilsin: büyük harfe çevirip İ'yi I'ya indirgeriz (iki taraf da)
+const normalizeWord = (s: string) => s.trim().toLocaleUpperCase('tr-TR').replace(/İ/g, 'I');
+
 export default function SettingsScreen() {
   const { width } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
@@ -123,7 +126,7 @@ function Choice<T extends string>({
 // 1) Haritalarım: geç, kaldır, ekle
 
 function MapsSection() {
-  const { roadmap: active, roadmaps, leftovers, loading, activate, remove } = useLatestRoadmap();
+  const { roadmap: active, roadmaps, leftovers, loading, failed, retry, activate, remove } = useLatestRoadmap();
   // Haritalardaki biten konu sayıları (her odakta tazelenir)
   const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
   useFocusEffect(
@@ -156,6 +159,11 @@ function MapsSection() {
         <ThemedText type="small" themeColor="textSecondary">
           Yükleniyor…
         </ThemedText>
+      ) : failed ? (
+        <Card>
+          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
+          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
+        </Card>
       ) : roadmaps.length === 0 ? (
         <Card>
           <ThemedText>Henüz bir haritan yok.</ThemedText>
@@ -468,7 +476,7 @@ function DeleteAccountLink() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Türkçe büyük harf: "sil" yazan da kabul edilsin
-  const confirmed = word.trim().toLocaleUpperCase('tr-TR') === DELETE_WORD;
+  const confirmed = normalizeWord(word) === normalizeWord(DELETE_WORD);
 
   async function deleteAccount() {
     if (!confirmed || busy) return;
@@ -477,11 +485,18 @@ function DeleteAccountLink() {
     try {
       const { error: fnError } = await supabase.functions.invoke('delete-account', { body: { confirm: 'SIL' } });
       if (fnError) throw fnError;
-      // Hesap silindi: yerel oturumu da kapat; Stack.Protected karşılama ekranına götürür
-      await supabase.auth.signOut();
     } catch {
       setBusy(false);
       setError('Hesap silinemedi. İnternet bağlantını kontrol edip tekrar dene.');
+      return;
+    }
+    // Hesap silindi: yerel oturumu da kapat; Stack.Protected karşılama ekranına götürür.
+    // Ayrı try/catch: çıkış başarısız olsa bile hesap silinmiştir, "silinemedi" dememeliyiz.
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // Oturum jetonu sunucuda zaten geçersiz; bir sonraki istekte kendiliğinden düşer
+      setBusy(false);
     }
   }
 

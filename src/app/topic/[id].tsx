@@ -14,14 +14,16 @@ import { TopicAssist } from '@/components/topic-assist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { allTopics, findTopic, getRoadmap } from '@/constants/dev-roadmaps';
-import { computeProgress, parsePersonalization, planTopics, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
-import { toLevelId } from '@/constants/plan';
+import { computeProgress, personalizationFor, planTopics, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
+import { toLevelId, type GoalId } from '@/constants/plan';
+import { isAnswerId } from '@/constants/roadmap-questions';
 import { XP } from '@/constants/xp';
 import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, RESOURCE_KIND_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
+import { ERROR_TEXT } from '@/lib/supabase-errors';
 import { awardXp } from '@/lib/xp';
 
 const LEVEL_LABEL = { 1: 'Başlangıç konusu', 2: 'Orta seviye konu', 3: 'İleri seviye konu' } as const;
@@ -83,7 +85,10 @@ export default function TopicScreen() {
 
   const { topic, section } = found;
   const hue = HUES[map.hue];
-  const personalization = roadmap?.id === roadmapId ? parsePersonalization(roadmap.personalization, map) : null;
+  // Yol Haritam ekranıyla AYNI kural (kayıt yoksa seviye kuralları): "bölüm bitti" kararı iki ekranda tutarlı olsun
+  const goal: GoalId = roadmap && isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
+  const personalization =
+    roadmap?.id === roadmapId ? personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal) : null;
   const focusIndex = personalization?.focus.indexOf(topic.id) ?? -1;
   const skipHint = personalization?.skip.includes(topic.id) ?? false;
   const note = personalization?.notes[section.id];
@@ -222,7 +227,19 @@ export default function TopicScreen() {
                 Durumun
               </ThemedText>
               {progress.saveError && <Banner tone="warning">{progress.saveError}</Banner>}
-              {!ready ? (
+              {progress.status === 'schema' || progress.status === 'network' || progress.status === 'error' ? (
+                // Okunamadı: iskeleti sonsuza dek göstermek yerine hata ve "Tekrar dene"
+                <View style={styles.block}>
+                  <Banner tone="warning">
+                    {progress.status === 'schema'
+                      ? ERROR_TEXT.loadSchema
+                      : progress.status === 'network'
+                        ? ERROR_TEXT.network
+                        : ERROR_TEXT.other}
+                  </Banner>
+                  <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={progress.retry} />
+                </View>
+              ) : !ready ? (
                 <View style={styles.block}>
                   <Skeleton width="100%" height={72} radius={Radius.lg} />
                   <Skeleton width="100%" height={72} radius={Radius.lg} />
