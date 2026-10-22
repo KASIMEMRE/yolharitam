@@ -44,6 +44,8 @@ export const ERROR_TEXT = {
   profileSaveFailed: 'Adın kaydedilemedi. Biraz sonra tekrar dene.',
   // Yol haritaları listesi okunurken
   mapsLoadFailed: 'Haritaların yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  // Gelişmeler sekmesinde haberler okunurken
+  newsLoadFailed: 'Haberler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   markSchema: 'İşaret kaydedilemedi. Veritabanı güncellemesi bekleniyor olabilir.',

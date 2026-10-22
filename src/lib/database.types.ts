@@ -17,6 +17,83 @@ export type Database = {
   }
   public: {
     Tables: {
+      news_items: {
+        Row: {
+          created_at: string
+          id: number
+          published_at: string
+          source_id: string
+          summary: string | null
+          title: string
+          topic_paths: string[]
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          published_at: string
+          source_id: string
+          summary?: string | null
+          title: string
+          topic_paths: string[]
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          published_at?: string
+          source_id?: string
+          summary?: string | null
+          title?: string
+          topic_paths?: string[]
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "news_items_source_id_fkey"
+            columns: ["source_id"]
+            isOneToOne: false
+            referencedRelation: "news_sources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      news_sources: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          feed_url: string
+          id: string
+          last_error: string | null
+          last_fetched_at: string | null
+          name: string
+          site_url: string
+          topic_paths: string[]
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          feed_url: string
+          id: string
+          last_error?: string | null
+          last_fetched_at?: string | null
+          name: string
+          site_url: string
+          topic_paths: string[]
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          feed_url?: string
+          id?: string
+          last_error?: string | null
+          last_fetched_at?: string | null
+          name?: string
+          site_url?: string
+          topic_paths?: string[]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

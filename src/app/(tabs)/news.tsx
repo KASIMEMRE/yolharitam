@@ -1,124 +1,198 @@
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
-import { IconTile } from '@/components/icon-tile';
-import { StatusChip } from '@/components/level-badge';
+import { NewsCard } from '@/components/news-card';
 import { ScreenHeader } from '@/components/screen-header';
+import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
-import { Border, Radius, Spacing } from '@/constants/theme';
-import { describeTopic } from '@/constants/visuals';
+import { getRoadmap } from '@/constants/dev-roadmaps';
+import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
+import { useNews } from '@/hooks/use-news';
 import { useTheme } from '@/hooks/use-theme';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
-const INFO = 'Seçtiğin konularla ilgili güncel haberler burada olacak.';
-
-// Henüz haber akışı yok: sahte haber göstermeyiz, dürüstçe "Yakında" deriz.
-// Dokunulabilir hiçbir öğe yok (işlevsiz buton olmasın).
+// Gelişmeler: kullanıcının haritalarına bağlı haber akışı (başlık + kısa özet + kaynağa link).
 export default function NewsScreen() {
   const theme = useTheme();
-  const { width } = useWindowDimensions();
-  const { roadmap, failed, retry } = useLatestRoadmap();
+  const { roadmaps, status: mapsStatus } = useLatestRoadmap();
+  // null = "Tümü"; yoksa seçili haritanın id'si
+  const [selected, setSelected] = useState<string | null>(null);
 
-  // Konu çipi yalnız GERÇEK seçimi gösterir; yol haritası yoksa çip de yok
-  const { title: topicTitle, category, hue, hasTopic } = describeTopic(roadmap?.topic_path);
-  const topic = roadmap && hasTopic ? { title: topicTitle } : undefined;
+  // Kullanıcının haritaları: çip ve etiketler için emoji + başlık
+  const maps = roadmaps.flatMap((r) => {
+    const m = getRoadmap(r.topic_path);
+    return m ? [{ id: m.id, emoji: m.emoji, title: m.title }] : [];
+  });
+  const mapIds = maps.map((m) => m.id);
+  // Seçili harita artık listede yoksa (silindi) "Tümü"ne düş
+  const active = selected && mapIds.includes(selected) ? selected : null;
+  const filter = active ? [active] : mapIds; // boşsa tüm haberler gelir
+
+  // Haritalar yüklenirken filtre belli değil: haber sorgusu bekler (yoksa önce filtresiz liste, sonra süzülmüş liste zıplardı)
+  const mapsLoading = mapsStatus === 'loading';
+  const { items, status, refreshing, refresh, retry } = useNews(filter, !mapsLoading);
+  const newsLoading = mapsLoading || status === 'loading';
 
   return (
-    <TabScreen>
+    <TabScreen onRefresh={refresh} refreshing={refreshing}>
       <ScreenHeader title="Gelişmeler" emoji="📰" hue="sky" />
 
-      <Animated.View
-        entering={FadeInDown.duration(300)}
-        accessible
-        accessibilityRole="text"
-        accessibilityLabel={`Gelişmeler yakında. ${INFO}${topic ? ` Yayınlanınca haberler bu konudan gelecek: ${topic.title}` : ''}`}
-        style={[
-          styles.card,
-          {
-            backgroundColor: theme.card,
-            borderColor: theme.border,
-            padding: width < 360 ? Spacing.four : Spacing.five,
-          },
-        ]}>
-        <Listening />
-        {/* Kilitli kartlarla aynı dil: nötr + kilit (sarı yalnız "buradasın" işaretinde) */}
-        <StatusChip tone="neutral" emoji="🔒" label="Yakında" align="center" />
-        <ThemedText themeColor="textSecondary" style={styles.info}>
-          {INFO}
-        </ThemedText>
+      {mapsStatus === 'error' && <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>}
+      {mapsStatus === 'ready' && maps.length === 0 && (
+        <Banner tone="info">Bir yol haritası seçince haberler sana göre süzülür.</Banner>
+      )}
 
-        {topic && (
-          <View style={[styles.topicChip, { backgroundColor: theme[hue.soft], borderColor: theme[hue.line] }]}>
-            <IconTile emoji={category.emoji} tone={category.hue} size={40} />
-            <View style={styles.topicTexts}>
-              <ThemedText type="small" themeColor={hue.ink}>
-                Yayınlanınca haberler bu konudan gelecek
-              </ThemedText>
-              <ThemedText type="smallBold">{topic.title}</ThemedText>
+      {mapsLoading ? (
+        <Skeleton height={MinTouch} radius={Radius.pill} />
+      ) : (
+        maps.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            accessibilityRole="tablist"
+            style={styles.chipScroll}
+            contentContainerStyle={styles.chips}>
+            <FilterChip label="Tümü" a11yLabel="Tüm haberler" selected={active === null} onPress={() => setSelected(null)} />
+            {maps.map((m) => (
+              <FilterChip
+                key={m.id}
+                label={`${m.emoji} ${m.title}`}
+                a11yLabel={m.title}
+                selected={active === m.id}
+                onPress={() => setSelected(m.id)}
+              />
+            ))}
+          </ScrollView>
+        )
+      )}
+
+      {newsLoading && items.length === 0 && (
+        <View style={styles.list}>
+          {[0, 1, 2].map((i) => (
+            // Gerçek karta benzer iskelet: aynı kenarlık, alt kenar ve özet satırları
+            <View
+              key={i}
+              style={[styles.skeletonCard, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
+              <Skeleton width="40%" height={12} />
+              <Skeleton height={18} />
+              <Skeleton height={14} />
+              <Skeleton width="70%" height={14} />
             </View>
-          </View>
-        )}
-      </Animated.View>
+          ))}
+        </View>
+      )}
 
-      {/* Konu çipi yüklenemediyse "seçmedin" demek yerine nedenini söyle */}
-      {failed && (
-        <View style={styles.errorBox}>
-          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
+      {!newsLoading && status === 'error' && items.length === 0 && (
+        <View style={styles.list}>
+          <Banner tone="warning">{ERROR_TEXT.newsLoadFailed}</Banner>
           <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
+        </View>
+      )}
+
+      {!newsLoading && status === 'ready' && items.length === 0 && (
+        <View style={styles.empty}>
+          <Text accessibilityElementsHidden importantForAccessibility="no" allowFontScaling={false} style={styles.emptyEmoji}>
+            🧭
+          </Text>
+          <ThemedText type="cardTitle" accessibilityRole="header">
+            Henüz haber yok
+          </ThemedText>
+          <ThemedText themeColor="textSecondary" style={styles.center}>
+            Bu konuda henüz haber yok. Biraz sonra tekrar bak.
+          </ThemedText>
+          {active && <Button variant="secondary" label="Tümünü göster" onPress={() => setSelected(null)} />}
+        </View>
+      )}
+
+      {items.length > 0 && (
+        <View style={styles.list}>
+          {/* Yenileme başarısız olduysa eski liste kalır, ama kullanıcıya haber veririz */}
+          {status === 'error' && (
+            <>
+              <Banner tone="warning">{ERROR_TEXT.newsLoadFailed}</Banner>
+              <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
+            </>
+          )}
+          {items.map((item) => (
+            <NewsCard
+              key={item.id}
+              item={item}
+              // Belirli bir harita seçiliyken etiket zaten belli: tekrarlamayız
+              tags={active ? [] : maps.filter((m) => item.topic_paths.includes(m.id))}
+            />
+          ))}
+          <View style={styles.notes}>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+              Başlık ve kısa özet kaynaklardan alınır; haberin tamamı kaynağın sitesindedir.
+            </ThemedText>
+            <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+              Başlık ve özetler kaynağın dilindedir.
+            </ThemedText>
+          </View>
         </View>
       )}
     </TabScreen>
   );
 }
 
-// "Dinliyor" sahnesi: ikonun arkasında tek, durağan bir halka. Sürekli genişleyen halkalar
-// "canlı bir şey çalışıyor" izlenimi verirdi; henüz haber akışı olmadığı için hareket yok.
-function Listening() {
-  return (
-    <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={styles.stage}>
-      <StaticRing />
-      <IconTile emoji="📰" tone="sky" size={96} />
-    </View>
-  );
-}
-
-function StaticRing() {
+function FilterChip({
+  label,
+  a11yLabel,
+  selected,
+  onPress,
+}: {
+  label: string;
+  a11yLabel: string; // emojisiz, ekran okuyucu için
+  selected: boolean;
+  onPress: () => void;
+}) {
   const theme = useTheme();
   return (
-    <View
-      pointerEvents="none"
-      style={[styles.ring, { borderColor: theme.sky, opacity: 0.35, transform: [{ scale: 1.25 }] }]}
-    />
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="tab"
+      accessibilityLabel={a11yLabel}
+      accessibilityState={{ selected }}
+      style={({ pressed }) => [
+        styles.chip,
+        {
+          backgroundColor: selected ? theme.accentSoft : theme.card,
+          borderColor: selected ? theme.accent : theme.border,
+          opacity: pressed ? 0.85 : 1,
+        },
+      ]}>
+      <ThemedText type="chip" themeColor={selected ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
+        {label}
+      </ThemedText>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    alignItems: 'center',
-    gap: Spacing.three,
-    borderRadius: Radius.xl,
+  // Yatay kaydırma: çok haritası olan kullanıcıda çipler alt satırlara yığılmaz
+  chipScroll: { flexGrow: 0 },
+  chips: { gap: Spacing.two, paddingRight: Spacing.three },
+  chip: {
+    minHeight: MinTouch,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
     borderWidth: Border.thick,
   },
-  stage: { width: 96, height: 96, alignItems: 'center', justifyContent: 'center', marginVertical: Spacing.three },
-  ring: { position: 'absolute', width: 96, height: 96, borderRadius: 48, borderWidth: 2 },
-  errorBox: { gap: Spacing.three },
-  info: { textAlign: 'center', maxWidth: 300 },
-  topicChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
+  list: { gap: Spacing.three },
+  skeletonCard: {
     gap: Spacing.two,
-    padding: Spacing.two,
-    paddingRight: Spacing.three,
+    padding: Spacing.three,
     borderRadius: Radius.lg,
     borderWidth: Border.thick,
+    borderBottomWidth: Edge,
   },
-  topicTexts: { flexShrink: 1, gap: Spacing.half },
+  empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
+  emptyEmoji: { fontSize: 40, lineHeight: 48 },
+  center: { textAlign: 'center' },
+  notes: { gap: Spacing.one, paddingTop: Spacing.two },
 });
