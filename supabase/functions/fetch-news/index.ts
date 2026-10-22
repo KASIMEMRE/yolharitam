@@ -7,12 +7,15 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 import { parseFeed } from './parse.ts';
+import { translateBatch } from './translate.ts';
 
 const STALE_MINUTES = 60; // bir kaynak en sık bu aralıkla çekilir
 const CONCURRENCY = 5; // aynı anda en çok 5 kaynak
 const FETCH_TIMEOUT_MS = 8000;
 const MAX_FEED_BYTES = 2_000_000; // devasa yanıtlar belleği şişirmesin
 const KEEP_DAYS = 45;
+const TRANSLATE_BATCH = 10; // tek model isteğinde çevrilen haber sayısı
+const TRANSLATE_MAX_BATCHES = 3; // bir çalıştırmada en çok 30 haber çevrilir (süre ve kota sınırı)
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -25,6 +28,29 @@ function json(data: unknown, status = 200) {
 }
 
 type Source = { id: string; name: string; feed_url: string; topic_paths: string[] };
+type Service = ReturnType<typeof createClient>;
+
+// Henüz Türkçesi olmayan en yeni haberleri çevirir. Her çalıştırmada az sayıda: kalanlar sonraki
+// çalıştırmalarda (yarım saatte bir) tamamlanır. Hata olursa sessiz geçer; haber İngilizce görünür.
+async function translatePending(service: Service): Promise<number> {
+  const { data } = await service
+    .from('news_items')
+    .select('id, title, summary')
+    .is('title_tr', null)
+    .order('published_at', { ascending: false })
+    .limit(TRANSLATE_BATCH * TRANSLATE_MAX_BATCHES);
+  const pending = (data ?? []) as { id: number; title: string; summary: string | null }[];
+  let done = 0;
+  for (let i = 0; i < pending.length; i += TRANSLATE_BATCH) {
+    const out = await translateBatch(pending.slice(i, i + TRANSLATE_BATCH));
+    if (out.length === 0) break; // model yanıt vermiyor: bu çalıştırmada zorlamayalım
+    for (const t of out) {
+      const { error } = await service.from('news_items').update({ title_tr: t.title_tr, summary_tr: t.summary_tr }).eq('id', t.id);
+      if (!error) done++;
+    }
+  }
+  return done;
+}
 
 // Işçi havuzu: görevleri en çok `limit` tanesi aynı anda çalışacak biçimde yürütür.
 async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
@@ -65,7 +91,11 @@ Deno.serve(async (req) => {
     .eq('enabled', true)
     .or(`last_fetched_at.is.null,last_fetched_at.lt.${staleBefore}`);
   if (srcErr) return json({ error: 'db_error' }, 500);
-  if (!sources || sources.length === 0) return json({ refreshed: 0, inserted: 0, errors: [] }); // ucuz yol
+  if (!sources || sources.length === 0) {
+    // Çekilecek kaynak yok; yine de çevrilmeyi bekleyen haber varsa birkaçını çevir
+    const translated = await translatePending(service);
+    return json({ refreshed: 0, inserted: 0, translated, errors: [] });
+  }
 
   // 2) Önce "çekildi" damgasını vur: aynı anda gelen başka istek büyük olasılıkla bunları atlar
   //    (kesin kilit değil; çift çekim olsa da url unique + ignoreDuplicates sayesinde zararsız)
@@ -124,5 +154,8 @@ Deno.serve(async (req) => {
   // 4) Temizlik: 45 günden eski haberleri sil (tablo sonsuz büyümesin)
   await service.from('news_items').delete().lt('published_at', new Date(minDate).toISOString());
 
-  return json({ refreshed: sources.length, inserted, errors });
+  // 5) Yeni gelenleri (ve önceden kalanları) Türkçeye çevir
+  const translated = await translatePending(service);
+
+  return json({ refreshed: sources.length, inserted, translated, errors });
 });

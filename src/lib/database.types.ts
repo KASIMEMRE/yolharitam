@@ -24,7 +24,9 @@ export type Database = {
           published_at: string
           source_id: string
           summary: string | null
+          summary_tr: string | null
           title: string
+          title_tr: string | null
           topic_paths: string[]
           url: string
         }
@@ -34,7 +36,9 @@ export type Database = {
           published_at: string
           source_id: string
           summary?: string | null
+          summary_tr?: string | null
           title: string
+          title_tr?: string | null
           topic_paths: string[]
           url: string
         }
@@ -44,7 +48,9 @@ export type Database = {
           published_at?: string
           source_id?: string
           summary?: string | null
+          summary_tr?: string | null
           title?: string
+          title_tr?: string | null
           topic_paths?: string[]
           url?: string
         }

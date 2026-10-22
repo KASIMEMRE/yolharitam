@@ -130,7 +130,7 @@ export default function NewsScreen() {
               Başlık ve kısa özet kaynaklardan alınır; haberin tamamı kaynağın sitesindedir.
             </ThemedText>
             <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-              Başlık ve özetler kaynağın dilindedir.
+              Başlık ve özetler yapay zekâyla Türkçeye çevrilir; ayrıntı ve orijinal metin kaynağın sitesindedir.
             </ThemedText>
           </View>
         </View>

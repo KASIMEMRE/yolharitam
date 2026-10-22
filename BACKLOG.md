@@ -83,6 +83,10 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
   Gelişmeler ekranı (harita filtre çipleri, haber kartı, aşağı çekip yenileme, boş/hata/yükleniyor durumları).
 - Proje sahibinin açık izniyle migration canlıya uygulandı ve fonksiyon deploy edildi (ilk çekim: 18 kaynak, 175 haber).
 
+### Y-11 · Gelişmeler: haberler Türkçe (proje sahibinin doğrudan isteği) 🗄️
+- `fetch-news` yeni haberlerin başlık ve kısa özetini yapay zekâyla (Groq) Türkçeye çevirir (`title_tr`, `summary_tr`); her çalıştırmada en çok 30 haber, eskiler sırayla tamamlanır.
+- Ekran Türkçesi varsa onu, yoksa orijinali gösterir. Yalnız kısa parçalar çevrilir (telif: tam metin yok).
+
 ## Öneriler (ekipten)
 
 Sıraya konmadı; önceliği proje sahibi verir.
@@ -100,7 +104,6 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **personalize-roadmap için günlük kota** (QA-01'den): `ai_requests.kind` kısıtına 'personalize' ekleyen migration gerekir.
 - **Aynı haritanın iki kez eklenmesini engelleme** (QA-01'den): `roadmaps(user_id, topic_path)` benzersiz kısıtı + upsert (önce kopyaları temizleyen migration).
 - **topic-assist önbellek anahtarına özet (hash)** (QA-01'den): şimdilik içerik `_src` ile doğrulanıyor; kalıcı çözüm anahtara hash eklemek (migration).
-- **Haber özetlerini Türkçeleştirme** (Y-09'dan): başlık/özetler kaynağın dilinde (İngilizce); istenirse yapay zekâ ile kısa Türkçe özet (maliyet + telif değerlendirmesi gerekir).
 - **pg_net/cron kayıt temizliği** (Y-09'dan): `net._http_response` ve `cron.job_run_details` zamanla büyür; haftalık temizlik işi eklenebilir.
 
 ## Yayından sonra
