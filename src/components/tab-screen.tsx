@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, RefreshControl, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedView } from '@/components/themed-view';
@@ -7,7 +7,10 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 
 // Sekme ekranlarının ortak çerçevesi: güvenli alan + kaydırılabilir içerik + kenar boşlukları.
 // Neden ortak: üç sekme ekranı aynı boşlukları ve web sekme çubuğu payını paylaşıyor.
-export function TabScreen({ children }: { children: ReactNode }) {
+// onRefresh verilirse ekran aşağı çekilerek yenilenebilir (yoksa davranış değişmez).
+type TabScreenProps = { children: ReactNode; onRefresh?: () => void; refreshing?: boolean };
+
+export function TabScreen({ children, onRefresh, refreshing = false }: TabScreenProps) {
   const { width } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
   // Web'de sekme çubuğu içeriğin ÜSTÜNE biner (geniş ekranda üstte, dar ekranda altta): pay bırak
@@ -24,6 +27,7 @@ export function TabScreen({ children }: { children: ReactNode }) {
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets
+          refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
           contentContainerStyle={{
             padding: gutter,
             paddingTop: gutter + webTop,
