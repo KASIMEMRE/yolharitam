@@ -46,6 +46,19 @@ export const ERROR_TEXT = {
   mapsLoadFailed: 'Haritaların yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   // Gelişmeler sekmesinde haberler okunurken
   newsLoadFailed: 'Haberler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  // Topluluk: kullanıcı adı ve lig
+  usernameLoadFailed: 'Kullanıcı adın yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  usernameSaveFailed: 'Kullanıcı adı kaydedilemedi. Biraz sonra tekrar dene.',
+  usernameTaken: 'Bu kullanıcı adı alınmış.',
+  usernameCheckFailed: 'Uygunluk şu an denetlenemedi. Yine de kaydetmeyi deneyebilirsin.',
+  leagueLoadFailed: 'Lig sıralaması yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  // Topluluk: arkadaşlar ve proje vitrini
+  friendsLoadFailed: 'Arkadaşların yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  friendActionFailed: 'İşlem tamamlanamadı. İnternet bağlantını kontrol edip tekrar dene.',
+  showcaseLoadFailed: 'Projeler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
+  showcaseActionFailed: 'İşlem tamamlanamadı. İnternet bağlantını kontrol edip tekrar dene.',
+  showcaseSaveFailed: 'Projen paylaşılamadı. İnternet bağlantını kontrol edip tekrar dene.',
+  showcaseLimit: 'Bir haritada en çok 5 proje paylaşabilirsin. Önce eskilerinden birini sil.',
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   markSchema: 'İşaret kaydedilemedi. Veritabanı güncellemesi bekleniyor olabilir.',

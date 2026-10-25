@@ -72,6 +72,8 @@ function RootStack() {
         {/* Konu detayı (kaynaklar + durum işaretleme). Başlığı ekran kendisi koyar (bölüm adı). */}
         <Stack.Screen name="topic/[id]" options={{ title: 'Konu' }} />
         <Stack.Screen name="settings" options={{ title: 'Ayarlar' }} />
+        {/* Topluluk › Vitrin için proje paylaşma formu */}
+        <Stack.Screen name="showcase-new" options={{ title: 'Projeni paylaş' }} />
       </Stack.Protected>
     </Stack>
   );

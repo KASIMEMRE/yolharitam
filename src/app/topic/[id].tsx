@@ -273,6 +273,16 @@ export default function TopicScreen() {
               level={roadmap?.id === roadmapId ? toLevelId(roadmap.level) : undefined}
             />
 
+            {/* Proje konularında: bitirdiğin projeyi Topluluk vitrinine ekleme bağlantısı */}
+            {(topic.id.startsWith('project') || topic.id.startsWith('portfolio')) && (
+              <Button
+                variant="text"
+                icon="🧩"
+                label="Projeni vitrine ekle"
+                onPress={() => router.push({ pathname: '/showcase-new', params: { map: map.id } })}
+              />
+            )}
+
             {next && (
               <Button variant="secondary" icon="➡️" label={`Sonraki konu: ${next.title}`} onPress={openNext} />
             )}
