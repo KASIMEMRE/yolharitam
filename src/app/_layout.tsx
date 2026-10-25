@@ -53,9 +53,11 @@ function RootStack() {
         headerTitleStyle: { fontWeight: '900' },
         contentStyle: { backgroundColor: theme.background },
       }}>
+      {/* Karşılama ("/"): herkese açık. Giriş yapmışsa ekranın kendisi /roadmap'e yönlendirir. */}
+      <Stack.Screen name="index" options={{ headerShown: false }} />
+
       {/* GİRİŞ YAPMAMIŞ kullanıcının görebileceği ekranlar */}
       <Stack.Protected guard={!session}>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
         {/* Giriş ekranının üst "sahnesi" accentSoft olduğu için başlık çubuğu da aynı renk (kesintisiz görünsün) */}
         <Stack.Screen
           name="login"

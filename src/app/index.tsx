@@ -1,4 +1,4 @@
-import { Link } from 'expo-router';
+import { Link, Redirect } from 'expo-router';
 import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { TrailMap } from '@/components/route-steps';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
+import { useAuth } from '@/lib/auth-context';
 
 // Üç gerçek adım: uygulamanın gerçekten izlediği yol
 const STOPS = [
@@ -18,6 +19,7 @@ const STOPS = [
 
 // Karşılama ekranı: uygulama açılınca ilk görünen sayfa ("/")
 export default function WelcomeScreen() {
+  const { session } = useAuth();
   const { width } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
@@ -27,6 +29,11 @@ export default function WelcomeScreen() {
   // Hareketi azalt açıksa yalnız yumuşak belirme; kayma/yay yok
   const enter = (delay: number) =>
     reduceMotion ? FadeIn.duration(150) : FadeInDown.duration(300).delay(delay);
+
+  // Giriş yapmış kullanıcı karşılamayı görmez, doğrudan Yol Haritam sekmesine gider.
+  // (Bu ekran korumalı grupta değil: expo-router 58 korunan "/" yerine grup adresine "/(tabs)" yönlendirip
+  // web'de "sayfa bulunamadı" gösteriyordu. Yönlendirmeyi açık adresle kendimiz yapıyoruz.)
+  if (session) return <Redirect href="/roadmap" />;
 
   return (
     <ThemedView style={styles.container}>
