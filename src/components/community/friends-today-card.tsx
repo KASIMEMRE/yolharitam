@@ -25,8 +25,7 @@ export function FriendsTodayCard() {
         🤝 Arkadaşların bugün
       </ThemedText>
       {active.map((f) => {
-        // Kısa görünsün diye adın ilk sözcüğü ("Ahmet Yılmaz" → "Ahmet")
-        const name = f.display_name?.trim().split(/\s+/)[0] || (f.username ? `@${f.username}` : 'Bir arkadaşın');
+        const name = f.username ? `@${f.username}` : 'Bir arkadaşın';
         const { streak } = computeStreak(new Set(f.active_days));
         const what = f.today_done > 0 ? `bugün ${f.today_done} konu bitirdi` : 'bugün çalıştı';
         return (

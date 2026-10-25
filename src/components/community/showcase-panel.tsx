@@ -143,7 +143,7 @@ function ProjectCard({
   const [mode, setMode] = useState<'idle' | 'confirm' | 'reported'>('idle');
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
-  const owner = p.username ? `@${p.username}` : p.display_name?.trim() || 'Gezgin';
+  const owner = p.username ? `@${p.username}` : 'Gezgin';
 
   async function confirm() {
     setBusy(true);

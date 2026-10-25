@@ -13,7 +13,7 @@ import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Edge, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
-import { useDisplayName } from '@/hooks/use-display-name';
+import { useUsername } from '@/hooks/use-username';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { levelFor } from '@/constants/xp';
 import { useXp } from '@/lib/xp';
@@ -26,7 +26,7 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const { session } = useAuth();
   const { roadmap, loading, failed, retry } = useLatestRoadmap();
-  const { name } = useDisplayName();
+  const { username } = useUsername();
   const email = session?.user.email;
 
   // Bozuk/bilinmeyen yol gelirse varsayılan görünüm kullanılır (çökme yok)
@@ -45,7 +45,7 @@ export default function ProfileScreen() {
           badgeHue={hasTopic ? category.hue : undefined}
         />
         <ThemedText type="heading" style={styles.center}>
-          {name?.trim() || 'Gezgin'}
+          {username ? `@${username}` : 'Gezgin'}
         </ThemedText>
         <ThemedText
           themeColor="textSecondary"
