@@ -151,9 +151,8 @@ export function LeaguePanel() {
 function LeagueRowView({ row }: { row: LeagueRow }) {
   const theme = useTheme();
   const medal = row.rank >= 1 && row.rank <= 3 ? MEDALS[row.rank - 1] : null;
-  const title = row.username ? `@${row.username}` : (row.display_name ?? 'Gezgin');
-  // Ad ayrıca varsa ikinci satırda göster (kullanıcı adı zaten başlıkta)
-  const subtitle = row.username && row.display_name ? row.display_name : null;
+  // Uygulamada tek ad var: @kullanıcı adı
+  const title = row.username ? `@${row.username}` : 'Gezgin';
 
   return (
     <View
@@ -182,11 +181,6 @@ function LeagueRowView({ row }: { row: LeagueRow }) {
           {title}
           {row.is_me ? ' (sen)' : ''}
         </ThemedText>
-        {subtitle && (
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-            {subtitle}
-          </ThemedText>
-        )}
       </View>
       <ThemedText type="smallBold" themeColor={row.is_me ? 'accentInk' : 'text'}>
         {row.xp} XP

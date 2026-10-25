@@ -14,12 +14,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { TrailMap } from '@/components/route-steps';
-import { MAX_NAME_LENGTH, MIN_NAME_LENGTH } from '@/components/display-name-form';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { normalizeUsername, USERNAME_PATTERN } from '@/hooks/use-username';
 import { supabase } from '@/lib/supabase';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 import { isAuthRetryableFetchError, type AuthError } from '@supabase/supabase-js';
@@ -82,13 +82,53 @@ export default function LoginScreen() {
     if (error) scrollRef.current?.scrollToEnd({ animated: true });
   }, [error]);
   const [notice, setNotice] = useState<string | null>(null);
+  // Kullanıcı adı müsait mi? Son sonucu hangi ad için aldığımızı da tutarız (yazı değişince eski sonuç geçersiz)
+  const [nameCheck, setNameCheck] = useState<{ name: string; available: boolean | null } | null>(null);
 
   // Türetilmiş değerler
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
   const passwordValid = password.length >= 6;
-  const usernameValid = username.trim().length >= MIN_NAME_LENGTH;
-  // Kayıtta kullanıcı adı da zorunlu; girişte sorulmaz
+  const handle = normalizeUsername(username);
+  const handleFormatOk = USERNAME_PATTERN.test(handle);
+  const checked = nameCheck?.name === handle ? nameCheck.available : undefined; // undefined = henüz sorulmadı
+  const handleTaken = handleFormatOk && checked === false;
+  // Kayıtta kullanıcı adı da zorunlu; girişte sorulmaz. Kontrol başarısızsa (null) kayda izin veririz:
+  // son karar veritabanının (alınmışsa ad boş kalır, uygulama ilk girişte yeniden sorar).
+  const usernameValid = handleFormatOk && !handleTaken;
   const canSubmit = emailValid && passwordValid && (mode === 'login' || usernameValid) && !busy;
+
+  // Canlı "bu ad alınmış mı" kontrolü: yazmayı bıraktıktan 400 ms sonra sorulur (her tuşta sunucuya gitmeyelim)
+  useEffect(() => {
+    if (mode !== 'signup' || !handleFormatOk) return;
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      let available: boolean | null = null;
+      try {
+        const { data, error } = await supabase.rpc('username_available', { p: handle });
+        if (!error && typeof data === 'boolean') available = data;
+      } catch {
+        // ağ hatası: belirsiz bırak
+      }
+      if (!cancelled) setNameCheck({ name: handle, available });
+    }, 400);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [mode, handle, handleFormatOk]);
+
+  let usernameHint = 'Küçük harf (a-z), rakam ve _ · 3-20 karakter · Türkçe karakter yok';
+  let usernameHintTone: 'neutral' | 'good' = 'neutral';
+  if (username.length > 0 && !handleFormatOk) {
+    usernameHint = 'Yalnız küçük harf (a-z), rakam ve _ kullan; 3 ile 20 karakter arası olmalı.';
+  } else if (handleTaken) {
+    usernameHint = ERROR_TEXT.usernameTaken;
+  } else if (handleFormatOk && checked === undefined) {
+    usernameHint = 'Denetleniyor…';
+  } else if (handleFormatOk && checked === true) {
+    usernameHint = '✓ Bu ad müsait · sonradan Ayarlar’dan değiştirebilirsin';
+    usernameHintTone = 'good';
+  }
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -110,11 +150,11 @@ export default function LoginScreen() {
         if (error) setError(toTurkish(error));
         // Başarılıysa Stack.Protected bizi otomatik içeri alır.
       } else {
-        // Kullanıcı adı hesabın bilgilerine (user_metadata) yazılır. E-posta onayı gerektiği için kayıt anında
-        // oturum yoktur; ilk girişte Yol Haritam ekranı bu adı profile kaydeder (bkz. NamePrompt).
+        // Kullanıcı adı hesabın bilgilerine (user_metadata) yazılır; veritabanındaki handle_new_user
+        // tetikleyicisi hesap oluşurken onu profile kopyalar (e-posta onayı beklenmeden).
         const { data, error } = await supabase.auth.signUp({
           ...credentials,
-          options: { data: { display_name: username.trim().slice(0, MAX_NAME_LENGTH) } },
+          options: { data: { username: handle } },
         });
         if (error) {
           setError(toTurkish(error));
@@ -204,16 +244,18 @@ export default function LoginScreen() {
               {mode === 'signup' && (
                 <TextField
                   label="Kullanıcı adı"
-                  placeholder="Sana nasıl hitap edelim?"
+                  placeholder="örn. ayse_dev"
                   value={username}
                   onChangeText={setUsername}
-                  maxLength={MAX_NAME_LENGTH}
-                  autoCapitalize="words"
-                  autoComplete="name"
-                  textContentType="name"
+                  maxLength={21} // "@" ile yazanın son karakteri kesilmesin
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  autoComplete="username-new"
+                  textContentType="username"
                   returnKeyType="next"
-                  hint={usernameValid ? '✓ Sonradan Ayarlar’dan değiştirebilirsin' : `En az ${MIN_NAME_LENGTH} karakter · sonradan değiştirebilirsin`}
-                  hintTone={usernameValid ? 'good' : 'neutral'}
+                  invalid={(username.length > 0 && !handleFormatOk) || handleTaken}
+                  hint={usernameHint}
+                  hintTone={usernameHintTone}
                 />
               )}
 

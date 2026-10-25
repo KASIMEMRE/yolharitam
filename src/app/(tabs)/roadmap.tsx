@@ -1,12 +1,12 @@
 import { Link, router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { FriendsTodayCard } from '@/components/community/friends-today-card';
-import { DisplayNameForm, MAX_NAME_LENGTH } from '@/components/display-name-form';
+import { UsernameForm } from '@/components/community/username-gate';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge, StatusChip } from '@/components/level-badge';
 import { ProgressSummary } from '@/components/progress-summary';
@@ -31,11 +31,10 @@ import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questio
 import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useActivity, type Activity } from '@/hooks/use-activity';
-import { useDisplayName } from '@/hooks/use-display-name';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
-import { useAuth } from '@/lib/auth-context';
+import { useUsername } from '@/hooks/use-username';
 import { getTodayTask, taskTitle, type DailyTask } from '@/lib/daily-task';
 import { useXp } from '@/lib/xp';
 import { setPreferences, usePreferences, type MapViewPref } from '@/lib/preferences';
@@ -52,9 +51,9 @@ export default function RoadmapScreen() {
   const activity = useActivity();
   // Hook erken return'lerden ÖNCE çağrılır (hook kuralı)
   const progress = useTopicProgress(roadmap?.id);
-  // Ad kaydedilince artar: başlık (kendi useDisplayName örneği) yeniden kurulup güncel adı okur
+  // Ad kaydedilince artar: başlık (kendi useUsername örneği) yeniden kurulup güncel adı okur
   const [nameVersion, setNameVersion] = useState(0);
-  // useCallback: kimliği sabit kalsın, yoksa NamePrompt efekti her render'da yeniden çalışır
+  // useCallback: kimliği sabit kalsın (gereksiz yeniden çizimi önler)
   const onNameSaved = useCallback(() => setNameVersion((v) => v + 1), []);
 
   const header = <RoadmapHeader key={nameVersion} />;
@@ -112,7 +111,7 @@ export default function RoadmapScreen() {
     <TabScreen>
       {header}
       {/* Birden çok harita takip ediliyorsa üstte hızlı geçiş */}
-      {/* Kullanıcı adı yoksa (eski hesap ya da kayıtta yazılmadıysa) kısa bir kartla sor */}
+      {/* Kullanıcı adı yoksa (kayıtta ad seçilmeyen eski hesaplar) kısa bir kartla bir kez sor */}
       <NamePrompt onSaved={onNameSaved} />
       {/* Haritalar arası geçiş + "Harita ekle": harita eklemenin tek yeri burası */}
       {roadmaps.length > 0 && <MapSwitcher roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
@@ -124,9 +123,8 @@ export default function RoadmapScreen() {
 
 // Başlık + selamlama. Ayrı bileşen: ad değişince key ile yeniden kurulup adı tazeler.
 function RoadmapHeader() {
-  const { name } = useDisplayName();
-  const trimmedName = name?.trim();
-  const greeting = trimmedName ? `Merhaba, ${trimmedName}` : undefined;
+  const { username } = useUsername();
+  const greeting = username ? `Merhaba, @${username}` : undefined;
   return <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />;
 }
 
@@ -282,32 +280,21 @@ function JourneyCard({
   );
 }
 
-// Kullanıcı adı sorma kartı. Kayıtta yazılan ad hesabın bilgilerinde (user_metadata) bekler; varsa
-// otomatik kaydedilir ve kart hiç görünmez. Yoksa (eski hesaplar) burada bir kez sorulur.
+// Kullanıcı adı seçme kartı. Yeni hesaplar adı kayıtta seçer (veritabanı profile yazar), kart hiç görünmez.
+// Adı olmayan eski hesaplarda bir kez görünür; alan bir öneriyle dolu gelir (bkz. useUsername.suggestion).
 function NamePrompt({ onSaved }: { onSaved: () => void }) {
   const theme = useTheme();
-  const { session } = useAuth();
-  const { name, status, save } = useDisplayName();
-  const pending = (session?.user.user_metadata as { display_name?: unknown } | undefined)?.display_name;
-  const fromSignup = typeof pending === 'string' ? pending.trim() : '';
-  const tried = useRef(false);
+  const { username, status } = useUsername();
   const [hidden, setHidden] = useState(false);
 
-  useEffect(() => {
-    if (status !== 'ready' || name || !fromSignup || tried.current) return;
-    tried.current = true;
-    // Kayıt başarısızsa bir sonraki denemede (yeniden odak) tekrar denensin
-    save(fromSignup.slice(0, MAX_NAME_LENGTH)).then((r) => {
-      if (r.ok) onSaved();
-      else tried.current = false;
-    });
-  }, [status, name, fromSignup, save, onSaved]);
-
-  if (hidden || status !== 'ready' || name || fromSignup) return null;
+  if (hidden || status !== 'ready' || username) return null;
   return (
     <View style={[styles.momentum, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
-      <ThemedText type="cardTitle">👋 Sana nasıl hitap edelim?</ThemedText>
-      <DisplayNameForm
+      <ThemedText type="cardTitle">🏷️ Kullanıcı adını seç</ThemedText>
+      <ThemedText type="small" themeColor="textSecondary">
+        Uygulamada seni bu ad temsil eder; arkadaşların seni bununla bulur.
+      </ThemedText>
+      <UsernameForm
         submitLabel="Kaydet"
         onSaved={() => {
           setHidden(true);

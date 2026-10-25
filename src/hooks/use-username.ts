@@ -14,16 +14,32 @@ export function normalizeUsername(raw: string): string {
   return raw.trim().replace(/^@/, '').toLowerCase();
 }
 
+// Serbest bir addan (ör. "Emre Şekersoy", e-postanın baş kısmı) kurala uyan bir öneri üretir:
+// Türkçe harfler İngilizce karşılığına çevrilir, kalan uygunsuz karakterler "_" olur. "Emre Şekersoy" -> "emre_sekersoy"
+export function suggestUsername(raw: string): string {
+  let s = raw
+    .toLowerCase()
+    .replace(/ı/g, 'i') // noktasız ı'nın ayrıştırılabilir bir biçimi yok, elle çevrilir
+    .normalize('NFD') // ç -> c + çengel, ş -> s + çengel, ö -> o + iki nokta ...
+    .replace(/[\u0300-\u036f]/g, '') // ... sonra işaretler atılır
+    .replace(/[^a-z0-9_]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 20);
+  if (s.length > 0 && s.length < 3) s = `${s}_dev`.slice(0, 20); // çok kısa ad: "al" -> "al_dev"
+  return s;
+}
+
 export type UsernameStatus = 'loading' | 'ready' | 'error';
-type State = { status: UsernameStatus; username: string | null };
+type State = { status: UsernameStatus; username: string | null; oldName: string | null };
 type SaveResult = { ok: true } | { ok: false; message: string };
 
-// Kullanıcının topluluk adını (profiles.username) okur ve kaydeder. use-display-name.ts ile aynı kalıp:
-// ekran odaklanınca yeniden okur, yarış önleme için istek sayacı tutar.
+// Kullanıcının adını (profiles.username) okur ve kaydeder. Uygulamada TEK ad budur: selamlama, profil,
+// lig, arkadaşlar ve vitrin hep @kullanıcı adını gösterir. Ekran odaklanınca yeniden okur; yarış önleme için istek sayacı tutar.
 export function useUsername() {
   const { session } = useAuth();
   const uid = session?.user.id;
-  const [state, setState] = useState<State>({ status: 'loading', username: null });
+  const [state, setState] = useState<State>({ status: 'loading', username: null, oldName: null });
   const [reloadKey, setReloadKey] = useState(0);
   // Kayıt sırasında başlamış eski bir okuma, yeni adı ezmesin diye sayaç artırılır
   const reqId = useRef(0);
@@ -35,10 +51,10 @@ export function useUsername() {
       const id = uid;
       async function load() {
         try {
-          const { data, error } = await supabase.from('profiles').select('username').eq('id', id).maybeSingle();
+          const { data, error } = await supabase.from('profiles').select('username, display_name').eq('id', id).maybeSingle();
           if (my !== reqId.current) return;
           if (error) setState((s) => ({ ...s, status: 'error' }));
-          else setState({ status: 'ready', username: data?.username ?? null });
+          else setState({ status: 'ready', username: data?.username ?? null, oldName: data?.display_name ?? null });
         } catch {
           if (my === reqId.current) setState((s) => ({ ...s, status: 'error' }));
         }
@@ -86,15 +102,23 @@ export function useUsername() {
         return { ok: false, message: classifyError(error) === 'network' ? ERROR_TEXT.network : ERROR_TEXT.usernameSaveFailed };
       }
       if (!data) return { ok: false, message: ERROR_TEXT.usernameSaveFailed };
-      setState({ status: 'ready', username: data.username ?? name });
+      setState((s) => ({ ...s, status: 'ready', username: data.username ?? name }));
       return { ok: true };
     } catch {
       return { ok: false, message: ERROR_TEXT.network };
     }
   }
 
+  // Adı olmayan (eski) hesaba öneri: kayıtta yazılan ad, eski "görünen ad" ya da e-postanın baş kısmı
+  const meta = (session?.user.user_metadata ?? {}) as { username?: unknown; display_name?: unknown };
+  const source = [meta.username, state.oldName, meta.display_name, session?.user.email?.split('@')[0]].find(
+    (x): x is string => typeof x === 'string' && x.trim().length > 0
+  );
+  const suggestion = source ? suggestUsername(source) : '';
+
   return {
     username: uid ? state.username : null,
+    suggestion,
     status: uid ? state.status : ('error' as const),
     save,
     checkAvailable,

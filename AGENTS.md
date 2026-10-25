@@ -58,7 +58,7 @@ Sonraki aşamada "Gelişmeler" sekmesinde kullanıcının konularına bağlı ha
 Proje sahibi (Emre) yazılımı bu projeyi geliştirerek ÖĞRENİYOR. Kod okunabilir ve öğretici olmalı.
 
 ## Teknik yığın
-- Expo SDK 57 (Expo Go uyumlu kalmalı: native modül gerektiren paket ekleme), Expo Router, TypeScript
+- Expo SDK 58 (Expo Go uyumlu kalmalı: native modül gerektiren paket ekleme), Expo Router, TypeScript
 - Supabase: Postgres + Auth. İstemci: `src/lib/supabase.ts`, tipler: `src/lib/database.types.ts`
 - Oturum: `src/lib/auth-context.tsx` + `_layout.tsx` içinde `Stack.Protected`
 - Tema: `src/constants/theme.ts` (`accent` = harita yeşili, `marker` = patika sarısı). Renk sabit kodlama; temadan al.

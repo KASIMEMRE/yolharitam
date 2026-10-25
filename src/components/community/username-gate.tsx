@@ -13,10 +13,10 @@ import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 const CHECK_DELAY_MS = 400;
 
-// Kullanıcı adı formu: hem seçim kartında hem Ayarlar'da kullanılır (kurallar tek yerde).
-// Etiket "Topluluk kullanıcı adı": Profil'deki "görünen ad"dan ayrışsın diye.
+// Kullanıcı adı formu: Yol Haritam'daki seçim kartında, Topluluk kapısında ve Ayarlar'da kullanılır (kurallar tek yerde).
+// Adı henüz olmayan (eski) hesapta alan, mevcut bilgilerden üretilmiş bir öneriyle dolu gelir; tek dokunuşla kaydedilir.
 export function UsernameForm({ onSaved, submitLabel = 'Kaydet' }: { onSaved?: () => void; submitLabel?: string }) {
-  const { username, status, save, checkAvailable, retry } = useUsername();
+  const { username, suggestion, status, save, checkAvailable, retry } = useUsername();
   // draft = kullanıcının yazdığı; null = henüz yazmadı (alan kayıtlı adı gösterir)
   const [draft, setDraft] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -24,7 +24,7 @@ export function UsernameForm({ onSaved, submitLabel = 'Kaydet' }: { onSaved?: ()
   // Son uygunluk sonucu hangi ad için geldi? Yazı değiştikçe eski sonuç geçersiz sayılır.
   const [check, setCheck] = useState<{ name: string; result: boolean | null } | null>(null);
 
-  const typed = draft ?? username ?? '';
+  const typed = draft ?? username ?? suggestion;
   const name = normalizeUsername(typed);
   const formatOk = USERNAME_PATTERN.test(name);
   const unchanged = name === (username ?? '');
@@ -95,7 +95,7 @@ export function UsernameForm({ onSaved, submitLabel = 'Kaydet' }: { onSaved?: ()
         </>
       )}
       <TextField
-        label="Topluluk kullanıcı adı"
+        label="Kullanıcı adı"
         value={typed}
         onChangeText={(t) => {
           setDraft(t);
@@ -120,6 +120,7 @@ export function UsernameForm({ onSaved, submitLabel = 'Kaydet' }: { onSaved?: ()
 }
 
 // Topluluk sekmesinin kapısı: kullanıcı adı varsa içeriği gösterir, yoksa önce ad seçtirir.
+// Yeni hesaplar adı kayıtta seçtiği için bu kapıyı hiç görmez; yalnız adı olmayan eski hesaplar için yedek.
 // Neden zorunlu? Lig ve arkadaş ekleme @kullanıcıadı ile çalışır; adsız kullanıcı listelerde görünmez.
 export function UsernameGate({ children }: { children: ReactNode }) {
   const theme = useTheme();
@@ -150,7 +151,7 @@ export function UsernameGate({ children }: { children: ReactNode }) {
           🏷️ Bir kullanıcı adı seç
         </ThemedText>
         <ThemedText themeColor="textSecondary">
-          Lig ve arkadaşlar bu adla çalışır. Diğer kullanıcılar seni bu adla görür; sonradan Ayarlar&apos;dan değiştirebilirsin.
+          Diğer kullanıcılar seni bu adla görür, arkadaşların seni bu adla bulur. Sonradan Ayarlar&apos;dan değiştirebilirsin.
         </ThemedText>
         {/* Kapı ile form ayrı useUsername örnekleri; kayıttan sonra kapı kendi okumasını tazeler ve açılır */}
         <UsernameForm onSaved={retry} />

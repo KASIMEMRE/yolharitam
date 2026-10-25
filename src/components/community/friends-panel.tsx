@@ -142,9 +142,9 @@ function AddFriend({ onSend }: { onSend: (username: string) => Promise<RequestRe
   );
 }
 
-// Görünen ad: önce gerçek ad, yoksa @kullanıcıadı
+// Uygulamada tek ad var: @kullanıcıadı
 function nameOf(r: FriendRow) {
-  return r.display_name?.trim() || (r.username ? `@${r.username}` : 'Gezgin');
+  return r.username ? `@${r.username}` : 'Gezgin';
 }
 
 function Card({ children }: { children: ReactNode }) {
@@ -307,19 +307,13 @@ function FriendCard({ row, onRemove }: { row: FriendRow; onRemove: (id: number) 
   );
 }
 
-// Ad satırı: ad varsa başlık o, altında @kullanıcıadı. Ad yoksa başlık zaten @kullanıcıadı (tekrar yok).
+// Ad satırı: @kullanıcıadı
 function Who({ row }: { row: FriendRow }) {
-  const hasName = !!row.display_name?.trim();
   return (
     <View style={styles.flexText}>
       <ThemedText type="cardTitle" numberOfLines={1}>
         {nameOf(row)}
       </ThemedText>
-      {hasName && !!row.username && (
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={1}>
-          @{row.username}
-        </ThemedText>
-      )}
     </View>
   );
 }
