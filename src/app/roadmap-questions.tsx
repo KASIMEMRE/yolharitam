@@ -1,5 +1,5 @@
 import { Redirect, router, Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   BackHandler,
@@ -178,7 +178,7 @@ export default function RoadmapQuestionsScreen() {
   }, [step, busy]);
 
   // Soru değişince ekran okuyucu yeni başlığa odaklanır ve soruyu duyurur (ilk açılışta değil).
-  const headingRef = useRef<View>(null);
+  const headingRef = useRef<ComponentRef<typeof View>>(null);
   const firstRender = useRef(true);
   useEffect(() => {
     if (firstRender.current) {
