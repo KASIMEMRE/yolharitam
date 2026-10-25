@@ -10,6 +10,8 @@ export type NewsItem = {
   summary: string | null;
   url: string;
   published_at: string;
+  // Türkçe çeviri mi gösteriliyor? (Çeviri henüz yoksa orijinal metin gösterilir, bu false olur)
+  translated: boolean;
   topic_paths: string[];
   source_name: string;
 };
@@ -17,7 +19,11 @@ export type NewsItem = {
 export type NewsStatus = 'loading' | 'ready' | 'error';
 
 // Sorgudan dönen ham satır (kaynak adı ilişkili tablodan gelir)
-type Row = Omit<NewsItem, 'source_name'> & { news_sources: { name: string } | { name: string }[] | null };
+type Row = Omit<NewsItem, 'source_name' | 'translated'> & {
+  title_tr: string | null;
+  summary_tr: string | null;
+  news_sources: { name: string } | { name: string }[] | null;
+};
 
 // Kaynakları tazeleme (Edge Function) aynı oturumda en çok 10 dakikada bir tetiklenir.
 // Modül düzeyi değişken: ekranlar arası gidip gelmede sıfırlanmaz. Yalnız BAŞARILI çağrıdan sonra yazılır.
@@ -48,7 +54,7 @@ export function useNews(topicPaths: string[], enabled: boolean = true) {
       async function read(): Promise<boolean> {
         let query = supabase
           .from('news_items')
-          .select('id, title, summary, url, published_at, topic_paths, news_sources(name)')
+          .select('id, title, summary, title_tr, summary_tr, url, published_at, topic_paths, news_sources(name)')
           .order('published_at', { ascending: false })
           .limit(60);
         if (paths.length > 0) query = query.overlaps('topic_paths', paths);
@@ -62,7 +68,15 @@ export function useNews(topicPaths: string[], enabled: boolean = true) {
         const rows = (data ?? []) as unknown as Row[];
         const items = rows.map((r) => {
           const src = Array.isArray(r.news_sources) ? r.news_sources[0] : r.news_sources;
-          return { ...r, source_name: src?.name ?? '' };
+          // Türkçesi varsa onu göster; yoksa orijinal (sunucu yarım saatte bir çeviriyi tamamlar)
+          const { title_tr, summary_tr, news_sources: _src, ...rest } = r;
+          return {
+            ...rest,
+            title: title_tr ?? r.title,
+            summary: title_tr ? summary_tr : r.summary,
+            translated: !!title_tr,
+            source_name: src?.name ?? '',
+          };
         });
         setState({ items, status: 'ready', key: topicKey });
         return true;
