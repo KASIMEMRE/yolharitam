@@ -1,3 +1,4 @@
+import type { ComponentRef, Ref } from 'react';
 import {
   Tabs,
   TabList,
@@ -43,6 +44,7 @@ export function TabButton({
   children,
   isFocused,
   emoji,
+  ref,
   ...props
 }: TabTriggerSlotProps & { emoji?: string }) {
   const theme = useTheme();
@@ -52,6 +54,8 @@ export function TabButton({
   return (
     <Pressable
       {...props}
+      // expo-router'ın ref tipi RN 0.88'in yeni öğe tipiyle henüz uyuşmuyor; çalışma anında aynı nesne
+      ref={ref as Ref<ComponentRef<typeof Pressable>>}
       accessibilityRole="tab"
       accessibilityState={{ selected: !!isFocused }}
       style={[

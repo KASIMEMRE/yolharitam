@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { type ComponentRef, forwardRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type PressableProps } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -28,7 +28,7 @@ type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
 // Not: <Link asChild> içinde expo-router Pressable'a role="link" ekler; gezinme butonlarının
 // ekran okuyucuda "bağlantı" diye okunması bilinçlidir (gerçekten başka ekrana gidiyorlar).
 // forwardRef: <Link asChild> bu bileşene ref ve href/onPress verebilsin diye gerekli.
-export const Button = forwardRef<View, ButtonProps>(function Button(
+export const Button = forwardRef<ComponentRef<typeof View>, ButtonProps>(function Button(
   { label, variant = 'primary', loading = false, disabled = false, icon, onPressIn, onPressOut, ...rest },
   ref
 ) {

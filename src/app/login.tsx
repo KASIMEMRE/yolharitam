@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -77,7 +77,7 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   // Hata kutusu formun en altında; küçük ekranlarda görünür alanın dışında kalabiliyor.
   // Hata çıkınca sayfayı en alta kaydırıyoruz ki kullanıcı mesajı mutlaka görsün.
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   useEffect(() => {
     if (error) scrollRef.current?.scrollToEnd({ animated: true });
   }, [error]);
