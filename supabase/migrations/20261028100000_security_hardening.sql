@@ -248,9 +248,16 @@ alter table public.profiles
 -- =====================================================================================
 -- 7) Yapay zekâ kotası: kişiselleştirme de sayılsın
 -- =====================================================================================
-alter table public.ai_requests drop constraint if exists ai_requests_kind_check;
-alter table public.ai_requests
-  add constraint ai_requests_kind_check check (kind in ('explain', 'quiz', 'ask', 'personalize'));
+-- personalize-roadmap'in günlük sınırı yoktu (her çağrı Groq kotası harcar). Ayrı, küçük bir sayaç
+-- tablosu: yalnız Edge Function (service_role) yazar/okur; istemciye yetki ve politika yok.
+create table public.personalize_requests (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+create index personalize_requests_user_idx on public.personalize_requests (user_id, created_at desc);
+alter table public.personalize_requests enable row level security;
+revoke all on public.personalize_requests from anon, authenticated;
 
 -- =====================================================================================
 -- 8) Savunma derinliği: gereksiz tablo yetkileri
@@ -274,11 +281,3 @@ begin
     execute format('revoke select, insert, update, delete on public.%I from anon', t.tablename);
   end loop;
 end $$;
-
--- =====================================================================================
--- 9) pg_net uzantısı public şemasında olmasın (Supabase güvenlik önerisi)
--- =====================================================================================
--- pg_net taşınamaz (relocatable değil); kaldırıp extensions şemasında yeniden kuruyoruz.
--- Fonksiyonları yine net şemasında olduğu için cron işindeki net.http_post çağrısı değişmez.
-drop extension if exists pg_net;
-create extension pg_net with schema extensions;
