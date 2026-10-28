@@ -26,6 +26,8 @@ import { isAuthRetryableFetchError, type AuthError } from '@supabase/supabase-js
 
 type Mode = 'login' | 'signup';
 
+const MIN_NEW_PASSWORD = 8;
+
 const STEPS = [
   { emoji: '🔑', label: 'Hesabını oluştur' },
   { emoji: '🧭', label: 'Yol haritanı ve seviyeni seç' },
@@ -44,6 +46,8 @@ function toTurkish(error: AuthError): string {
   if (isAuthRetryableFetchError(error)) return NETWORK_TEXT;
   const m = error.message.toLowerCase();
   if (m.includes('invalid login credentials')) return 'E-posta veya şifre hatalı.';
+  if (m.includes('password should be') || m.includes('weak password'))
+    return `Bu şifre çok zayıf. En az ${MIN_NEW_PASSWORD} karakterli, tahmini zor bir şifre seç.`;
   if (m.includes('already registered')) return 'Bu e-postayla zaten bir hesap var. Giriş yapmayı dene.';
   if (m.includes('email not confirmed'))
     return 'E-postanı henüz onaylamadın. Gelen kutundaki bağlantıya tıkla, sonra giriş yap.';
@@ -87,7 +91,9 @@ export default function LoginScreen() {
 
   // Türetilmiş değerler
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
-  const passwordValid = password.length >= 6;
+  // Yeni şifre en az 8 karakter (Supabase ayarıyla aynı). Girişte 6 yeter: kural değişmeden önce
+  // 6-7 karakterlik şifreyle kaydolmuş kullanıcılar giriş yapabilmeli.
+  const passwordValid = password.length >= (mode === 'signup' ? MIN_NEW_PASSWORD : 6);
   const handle = normalizeUsername(username);
   const handleFormatOk = USERNAME_PATTERN.test(handle);
   const checked = nameCheck?.name === handle ? nameCheck.available : undefined; // undefined = henüz sorulmadı
@@ -281,7 +287,7 @@ export default function LoginScreen() {
                 textContentType={mode === 'login' ? 'password' : 'newPassword'}
                 returnKeyType="go"
                 onSubmitEditing={() => canSubmit && handleSubmit()}
-                hint={mode === 'signup' ? (passwordValid ? '✓ En az 6 karakter' : 'En az 6 karakter') : undefined}
+                hint={mode === 'signup' ? `${passwordValid ? '✓ ' : ''}En az ${MIN_NEW_PASSWORD} karakter` : undefined}
                 hintTone={passwordValid ? 'good' : 'neutral'}
                 right={
                   <Pressable
