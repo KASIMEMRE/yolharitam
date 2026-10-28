@@ -52,6 +52,17 @@ async function translatePending(service: Service): Promise<number> {
   return done;
 }
 
+// Hatayı sabit bir koda çevirir. Ham mesaj (URL, sunucu metni vb.) veritabanına ve istemciye
+// sızmasın diye yalnız bu kodlar saklanır/dönülür; ayrıntı sadece console.error'a gider.
+type ErrorCode = 'timeout' | `http_${number}` | 'feed_format_unknown' | 'too_large' | 'db' | 'fetch_failed';
+function errorCode(e: unknown): ErrorCode {
+  if (!(e instanceof Error)) return 'fetch_failed';
+  if (e.name === 'TimeoutError') return 'timeout';
+  if (/^http_\d{3}$/.test(e.message)) return e.message as ErrorCode;
+  if (e.message === 'feed_format_unknown' || e.message === 'too_large' || e.message === 'db') return e.message;
+  return 'fetch_failed';
+}
+
 // Işçi havuzu: görevleri en çok `limit` tanesi aynı anda çalışacak biçimde yürütür.
 async function runPool<T>(items: T[], limit: number, worker: (item: T) => Promise<void>) {
   let next = 0;
@@ -73,9 +84,11 @@ Deno.serve(async (req) => {
   // bkz. migration news_cron); (b) uygulamadan giriş yapmış kullanıcı.
   const cronSecret = req.headers.get('x-cron-secret');
   let allowed = false;
+  let isCron = false; // çeviri (Groq kotası) yalnız zamanlanmış işte çalışır
   if (cronSecret) {
     const { data: ok } = await service.rpc('news_cron_secret_ok', { p_secret: cronSecret });
     allowed = ok === true;
+    isCron = allowed;
   } else {
     const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
     const { data: userData } = await service.auth.getUser(token);
@@ -92,8 +105,8 @@ Deno.serve(async (req) => {
     .or(`last_fetched_at.is.null,last_fetched_at.lt.${staleBefore}`);
   if (srcErr) return json({ error: 'db_error' }, 500);
   if (!sources || sources.length === 0) {
-    // Çekilecek kaynak yok; yine de çevrilmeyi bekleyen haber varsa birkaçını çevir
-    const translated = await translatePending(service);
+    // Çekilecek kaynak yok; yine de çevrilmeyi bekleyen haber varsa birkaçını çevir (yalnız cron)
+    const translated = isCron ? await translatePending(service) : 0;
     return json({ refreshed: 0, inserted: 0, translated, errors: [] });
   }
 
@@ -121,6 +134,11 @@ Deno.serve(async (req) => {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
       });
       if (!res.ok) throw new Error(`http_${res.status}`);
+      // Başlık dev bir yanıt bildiriyorsa gövdeyi hiç okumadan reddet (bellek koruması)
+      if (Number(res.headers.get('content-length') ?? 0) > MAX_FEED_BYTES) {
+        await res.body?.cancel();
+        throw new Error('too_large');
+      }
       const xml = (await res.text()).slice(0, MAX_FEED_BYTES);
 
       // 45 günden eski öğeleri hiç yazma (yoksa sonda silinip her seferinde yeniden eklenirlerdi)
@@ -140,14 +158,18 @@ Deno.serve(async (req) => {
             { onConflict: 'url', ignoreDuplicates: true },
           )
           .select('id'); // ignoreDuplicates ile yalnız YENİ eklenen satırlar döner
-        if (error) throw new Error(`db_${error.code ?? 'insert'}`);
+        if (error) {
+          console.error('news insert failed', src.id, error.code, error.message);
+          throw new Error('db');
+        }
         inserted += data?.length ?? 0;
       }
       await service.from('news_sources').update({ last_error: null }).eq('id', src.id);
     } catch (e) {
-      const msg = (e instanceof Error ? (e.name === 'TimeoutError' ? 'timeout' : e.message) : 'error').slice(0, 200);
-      errors.push({ source: src.id, error: msg });
-      await service.from('news_sources').update({ last_error: msg }).eq('id', src.id);
+      const code = errorCode(e);
+      console.error('feed failed', src.id, code, e instanceof Error ? e.message : e);
+      errors.push({ source: src.id, error: code });
+      await service.from('news_sources').update({ last_error: code }).eq('id', src.id);
     }
   });
 
@@ -155,7 +177,8 @@ Deno.serve(async (req) => {
   await service.from('news_items').delete().lt('published_at', new Date(minDate).toISOString());
 
   // 5) Yeni gelenleri (ve önceden kalanları) Türkçeye çevir
-  const translated = await translatePending(service);
+  // Kullanıcı çağrısında çevrilmez: her kullanıcı Groq kotasını tetikleyemesin
+  const translated = isCron ? await translatePending(service) : 0;
 
   return json({ refreshed: sources.length, inserted, translated, errors });
 });

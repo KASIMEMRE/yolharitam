@@ -3,6 +3,7 @@ import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
@@ -17,17 +18,18 @@ import { HUES } from '@/constants/visuals';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
+import { MIN_PASSWORD } from '@/lib/auth-rules';
 import { setPreferences, usePreferences, type MapViewPref, type ThemePref } from '@/lib/preferences';
 import { supabase } from '@/lib/supabase';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
-const MIN_PASSWORD = 8;
 const DELETE_WORD = 'SİL'; // kullanıcı bu kelimeyi yazmadan hesap silme düğmesi açılmaz
 
 // İngilizce klavyede "SIL" yazan da kabul edilsin: büyük harfe çevirip İ'yi I'ya indirgeriz (iki taraf da)
 const normalizeWord = (s: string) => s.trim().toLocaleUpperCase('tr-TR').replace(/İ/g, 'I');
 
 export default function SettingsScreen() {
+  const { session } = useAuth();
   const { width } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
 
@@ -51,7 +53,7 @@ export default function SettingsScreen() {
             <AppearanceSection />
             <AccountSection />
             <AboutSection />
-            <DeleteAccountLink />
+            <DeleteAccountLink email={session?.user.email ?? null} />
           </View>
         </ScrollView>
       </SafeAreaView>
@@ -470,19 +472,35 @@ function PasswordCard({ email }: { email: string | null }) {
 
 // Hesabı silme: sayfanın EN ALTINDA, sade bir metin bağlantısı. Göze batmaz ama aranınca bulunur
 // (mağaza kuralı). Dokununca açıklama ve "SİL" yazarak onay açılır.
-function DeleteAccountLink() {
+function DeleteAccountLink({ email }: { email: string | null }) {
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const [word, setWord] = useState('');
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Türkçe büyük harf: "sil" yazan da kabul edilsin
-  const confirmed = normalizeWord(word) === normalizeWord(DELETE_WORD);
+  // Türkçe büyük harf: "sil" yazan da kabul edilsin. Şifre de şart: açık kalmış bir telefonu bulan
+  // biri hesabı silemesin.
+  const confirmed = normalizeWord(word) === normalizeWord(DELETE_WORD) && password.length > 0 && !!email;
 
   async function deleteAccount() {
-    if (!confirmed || busy) return;
+    if (!confirmed || busy || !email) return;
     setBusy(true);
     setError(null);
+    // Önce şifreyi doğrula (şifre değiştirme kartındaki kalıp: mevcut şifreyle yeniden giriş)
+    try {
+      const check = await supabase.auth.signInWithPassword({ email, password });
+      if (check.error) {
+        setBusy(false);
+        // Ağ hatası ile yanlış şifre ayrılsın: bağlantı sorununda "şifre hatalı" demek yanıltır
+        setError(isAuthRetryableFetchError(check.error) ? ERROR_TEXT.network : 'Şifre hatalı.');
+        return;
+      }
+    } catch {
+      setBusy(false);
+      setError(ERROR_TEXT.network);
+      return;
+    }
     try {
       const { error: fnError } = await supabase.functions.invoke('delete-account', { body: { confirm: 'SIL' } });
       if (fnError) throw fnError;
@@ -492,12 +510,14 @@ function DeleteAccountLink() {
       return;
     }
     // Hesap silindi: yerel oturumu da kapat; Stack.Protected karşılama ekranına götürür.
+    // scope 'local': sunucuya gitmez (kullanıcı artık yok, ağ isteği hata verirdi); yalnız cihazdaki oturumu siler.
     // Ayrı try/catch: çıkış başarısız olsa bile hesap silinmiştir, "silinemedi" dememeliyiz.
     try {
-      await supabase.auth.signOut();
+      const { error: outError } = await supabase.auth.signOut({ scope: 'local' });
+      if (outError) throw outError;
     } catch {
-      // Oturum jetonu sunucuda zaten geçersiz; bir sonraki istekte kendiliğinden düşer
       setBusy(false);
+      setError('Hesabın silindi. Uygulamayı kapatıp yeniden aç.');
     }
   }
 
@@ -528,6 +548,17 @@ function DeleteAccountLink() {
         autoCapitalize="characters"
         autoCorrect={false}
       />
+      <TextField
+        label="Şifren"
+        value={password}
+        onChangeText={(t) => {
+          setPassword(t);
+          setError(null);
+        }}
+        secureTextEntry
+        autoComplete="current-password"
+        textContentType="password"
+      />
       {error && <Banner tone="warning">{error}</Banner>}
       <View style={styles.rowActions}>
         <Button variant="secondary" label="Hesabımı kalıcı olarak sil" disabled={!confirmed} loading={busy} onPress={deleteAccount} />
@@ -538,6 +569,7 @@ function DeleteAccountLink() {
           onPress={() => {
             setOpen(false);
             setWord('');
+            setPassword('');
           }}
         />
       </View>

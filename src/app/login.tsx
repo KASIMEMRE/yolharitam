@@ -20,6 +20,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { normalizeUsername, USERNAME_PATTERN } from '@/hooks/use-username';
+import { MIN_PASSWORD } from '@/lib/auth-rules';
 import { supabase } from '@/lib/supabase';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 import { isAuthRetryableFetchError, type AuthError } from '@supabase/supabase-js';
@@ -87,7 +88,7 @@ export default function LoginScreen() {
 
   // Türetilmiş değerler
   const emailValid = /^\S+@\S+\.\S+$/.test(email.trim());
-  const passwordValid = password.length >= 6;
+  const passwordValid = password.length >= MIN_PASSWORD;
   const handle = normalizeUsername(username);
   const handleFormatOk = USERNAME_PATTERN.test(handle);
   const checked = nameCheck?.name === handle ? nameCheck.available : undefined; // undefined = henüz sorulmadı
@@ -281,7 +282,7 @@ export default function LoginScreen() {
                 textContentType={mode === 'login' ? 'password' : 'newPassword'}
                 returnKeyType="go"
                 onSubmitEditing={() => canSubmit && handleSubmit()}
-                hint={mode === 'signup' ? (passwordValid ? '✓ En az 6 karakter' : 'En az 6 karakter') : undefined}
+                hint={mode === 'signup' ? (passwordValid ? `✓ En az ${MIN_PASSWORD} karakter` : `En az ${MIN_PASSWORD} karakter`) : undefined}
                 hintTone={passwordValid ? 'good' : 'neutral'}
                 right={
                   <Pressable

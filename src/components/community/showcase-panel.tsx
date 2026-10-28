@@ -1,7 +1,6 @@
 import { router } from 'expo-router';
-import { openBrowserAsync } from 'expo-web-browser';
 import { useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
@@ -10,20 +9,10 @@ import { ThemedText } from '@/components/themed-text';
 import { getRoadmap } from '@/constants/dev-roadmaps';
 import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
-import { useShowcase, type ShowcaseProject } from '@/hooks/use-showcase';
+import { useShowcase, type ReportResult, type ShowcaseProject } from '@/hooks/use-showcase';
 import { useTheme } from '@/hooks/use-theme';
+import { openExternalUrl } from '@/lib/open-url';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
-
-// Linki uygulama içi tarayıcıda açar; olmazsa sistemin linkine düşer (news-card.tsx ile aynı kalıp)
-async function openLink(url: string) {
-  // Yalnız https bağlantıları açılır (sunucu da bunu zorlar; istemcide ikinci güvence)
-  if (!/^https:\/\//.test(url)) return;
-  try {
-    await openBrowserAsync(url);
-  } catch {
-    Linking.openURL(url).catch(() => {});
-  }
-}
 
 // Topluluk › Vitrin. Kullanıcı adı zorunluluğunu üstteki ekran (UsernameGate) sağlar.
 export function ShowcasePanel() {
@@ -134,7 +123,7 @@ function ProjectCard({
 }: {
   project: ShowcaseProject;
   onDelete: (id: number) => Promise<boolean>;
-  onReport: (id: number) => Promise<boolean>;
+  onReport: (id: number) => Promise<ReportResult>;
   showMap: boolean;
 }) {
   const theme = useTheme();
@@ -142,17 +131,26 @@ function ProjectCard({
   // 'confirm' = onay bekleniyor; 'reported' = bildirildi
   const [mode, setMode] = useState<'idle' | 'confirm' | 'reported'>('idle');
   const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
+  // Hata varsa kullanıcıya gösterilecek metin (sunucu nedenine göre değişir)
+  const [failText, setFailText] = useState<string | null>(null);
   const owner = p.username ? `@${p.username}` : 'Gezgin';
 
   async function confirm() {
     setBusy(true);
-    setFailed(false);
-    const ok = p.is_me ? await onDelete(p.id) : await onReport(p.id);
-    setBusy(false);
+    setFailText(null);
     // Silinince kart listeden kalkar; yalnız bildirimde ya da hatada kartta kalırız
-    if (!ok) setFailed(true);
-    else if (!p.is_me) setMode('reported');
+    if (p.is_me) {
+      const ok = await onDelete(p.id);
+      setBusy(false);
+      if (!ok) setFailText(ERROR_TEXT.showcaseActionFailed);
+      return;
+    }
+    const result = await onReport(p.id);
+    setBusy(false);
+    if (result === 'ok') setMode('reported');
+    else if (result === 'too_soon') setFailText(ERROR_TEXT.reportTooSoon);
+    else if (result === 'limit') setFailText(ERROR_TEXT.reportLimit);
+    else setFailText(ERROR_TEXT.showcaseActionFailed);
   }
 
   return (
@@ -180,8 +178,8 @@ function ProjectCard({
       )}
 
       <View style={styles.links}>
-        <LinkButton label="GitHub'da aç ↗" onPress={() => openLink(p.repo_url)} />
-        {!!p.demo_url && <LinkButton label="Demo ↗" onPress={() => openLink(p.demo_url!)} />}
+        <LinkButton label="GitHub'da aç ↗" onPress={() => openExternalUrl(p.repo_url)} />
+        {!!p.demo_url && <LinkButton label="Demo ↗" onPress={() => openExternalUrl(p.demo_url!)} />}
         {/* Sil/Bildir satırın sonunda: yanlışlıkla basılmasın */}
         {mode === 'idle' && (
           <View style={styles.pushRight}>
@@ -206,7 +204,7 @@ function ProjectCard({
               ? 'Projen vitrinden silinecek. Bu geri alınamaz.'
               : 'Bu proje uygunsuz ya da zararlı olduğu için bildirilecek. Emin misin?'}
           </ThemedText>
-          {failed && <Banner tone="warning">{ERROR_TEXT.showcaseActionFailed}</Banner>}
+          {failText && <Banner tone="warning">{failText}</Banner>}
           <View style={styles.actions}>
             <Button
               variant={p.is_me ? 'quiet' : 'primary'}
