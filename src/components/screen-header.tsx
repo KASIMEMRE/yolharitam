@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { IconTile } from '@/components/icon-tile';
@@ -11,9 +12,11 @@ type ScreenHeaderProps = {
   eyebrow?: string;
   emoji?: string;
   hue?: Hue;
+  // İsteğe bağlı sağ eylem alanı (ör. Profil'de Ayarlar düğmesi). Verilmezse başlık eskisi gibi görünür.
+  right?: ReactNode;
 };
 
-export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent' }: ScreenHeaderProps) {
+export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent', right }: ScreenHeaderProps) {
   return (
     <View style={styles.wrapper}>
       <View style={styles.row}>
@@ -28,6 +31,8 @@ export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent' }: ScreenHe
             {title}
           </ThemedText>
         </View>
+        {/* flexShrink 0: uzun başlık sıkışsa da eylem düğmesi küçülmesin */}
+        {right && <View style={styles.right}>{right}</View>}
       </View>
     </View>
   );
@@ -39,4 +44,5 @@ const styles = StyleSheet.create({
   // ikonsuz başlık (Profil) da diğer sekmelerle aynı yükseklikte kalsın
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two, minHeight: 72 },
   texts: { flex: 1, minWidth: 0 },
+  right: { flexShrink: 0 },
 });

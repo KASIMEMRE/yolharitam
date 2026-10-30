@@ -164,7 +164,7 @@ function MapsSection() {
       <SectionTitle
         emoji="🗺️"
         title="Haritalarım"
-        subtitle="Takip ettiğin yol haritaları. Yeni harita Yol Haritam sekmesinden eklenir. Birini kaldırınca o haritadaki ilerlemen de silinir."
+        subtitle="Takip ettiğin yol haritaları. Birini kaldırınca o haritadaki ilerlemen de silinir."
       />
       {loading ? (
         <ThemedText type="small" themeColor="textSecondary">
@@ -194,6 +194,14 @@ function MapsSection() {
           />
         ))
       )}
+
+      {/* Her durumda görünür (yükleniyor/hata dahil). Hiç harita yoksa asıl eylem bu olduğu için birincil. */}
+      <Button
+        variant={!loading && !failed && roadmaps.length === 0 ? 'primary' : 'secondary'}
+        icon="➕"
+        label="Harita ekle"
+        onPress={() => router.push('/onboarding')}
+      />
 
       {leftovers.length > 0 && (
         <LeftoversRow count={leftovers.length} onClean={async () => {

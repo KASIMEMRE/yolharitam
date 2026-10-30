@@ -1,6 +1,7 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { openBrowserAsync } from 'expo-web-browser';
 import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Glyph, IconLabel } from '@/components/icon';
@@ -19,7 +20,7 @@ import { computeProgress, personalizationFor, planTopics, type TopicStatus } fro
 import { toLevelId, type GoalId } from '@/constants/plan';
 import { isAnswerId } from '@/constants/roadmap-questions';
 import { XP } from '@/constants/xp';
-import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, RESOURCE_KIND_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
@@ -52,6 +53,9 @@ export default function TopicScreen() {
   const { roadmap } = useLatestRoadmap();
   // Bölüm/harita bitince açılan kutlama (hook erken return'lerden ÖNCE çağrılır)
   const [milestone, setMilestone] = useState<Milestone | null>(null);
+  // Kaynak bağlantısı açılamadıysa true; opening çift dokunuşta tarayıcının iki kez açılmasını önler
+  const [linkError, setLinkError] = useState(false);
+  const [opening, setOpening] = useState(false);
 
   const theme = useTheme();
   const { width } = useWindowDimensions();
@@ -138,8 +142,25 @@ export default function TopicScreen() {
     }
   }
 
+  // Kaynaklar için ezber link tutmuyoruz (linkler zamanla kırılır); adı + konu başlığıyla web araması açarız.
+  // encodeURIComponent: boşluk ve Türkçe karakterler adreste güvenle taşınsın diye kodlanır.
+  async function openResource(title: string) {
+    if (opening) return;
+    setLinkError(false);
+    setOpening(true);
+    try {
+      await openBrowserAsync(`https://www.google.com/search?q=${encodeURIComponent(`${title} ${topic.title}`)}`);
+    } catch {
+      // Tarayıcı açılamazsa uygulama çökmesin; kullanıcıya düz bir mesaj göster
+      setLinkError(true);
+    } finally {
+      setOpening(false);
+    }
+  }
+
   function openNext() {
     if (!next) return;
+    setLinkError(false);
     router.setParams({ id: next.id });
   }
 
@@ -193,18 +214,26 @@ export default function TopicScreen() {
               </View>
             )}
 
-            {/* Kaynaklar: ad olarak verilir (linkler zamanla kırılır); adını aratman yeterli */}
+            {/* Kaynaklar: dokununca adı + konu başlığı tarayıcıda aranır */}
             {topic.resources.length > 0 && (
               <View style={styles.block}>
                 <ThemedText type="cardTitle" accessibilityRole="header">
                   Önerilen kaynaklar
                 </ThemedText>
+                <ThemedText type="small" themeColor="textSecondary">
+                  Dokununca kaynak tarayıcıda aranır.
+                </ThemedText>
                 {topic.resources.map((r) => (
-                  <View
+                  <Pressable
                     key={r.title}
-                    accessible
+                    onPress={() => openResource(r.title)}
+                    accessibilityRole="link"
                     accessibilityLabel={`${RESOURCE_KIND_STYLE[r.kind].label}: ${r.title}`}
-                    style={[styles.resource, { borderColor: theme.border, backgroundColor: theme.card }]}>
+                    accessibilityHint="Tarayıcıda arama açar"
+                    style={({ pressed }) => [
+                      styles.resource,
+                      { borderColor: theme.border, backgroundColor: pressed ? theme.backgroundSelected : theme.card },
+                    ]}>
                     <Glyph emoji={RESOURCE_KIND_STYLE[r.kind].emoji} size={20} color={theme.accentInk} />
                     <View style={styles.flexText}>
                       <ThemedText type="smallBold">{r.title}</ThemedText>
@@ -212,11 +241,14 @@ export default function TopicScreen() {
                         {RESOURCE_KIND_STYLE[r.kind].label}
                       </ThemedText>
                     </View>
-                  </View>
+                    {/* "Dışarı aç" simgesi: bu satır uygulamadan çıkar */}
+                    <Glyph emoji="↗" size={18} color={theme.textSecondary} />
+                  </Pressable>
                 ))}
-                <ThemedText type="small" themeColor="textSecondary">
-                  Kaynağın adını arama motoruna yazman yeterli.
-                </ThemedText>
+                {/* liveRegion: hata sonradan çıkınca ekran okuyucu da duyurur */}
+                <View accessibilityLiveRegion="polite">
+                  {linkError && <Banner tone="warning">Bağlantı açılamadı. Birazdan tekrar dene.</Banner>}
+                </View>
               </View>
             )}
 
@@ -263,6 +295,18 @@ export default function TopicScreen() {
               )}
             </View>
 
+            {/* Sonraki konu durumun hemen altında: işaretledikten sonra ilerlemek için sayfayı kaydırmak gerekmesin.
+                Konu bitince birincil (dolu) olur; aksi halde ikincil. Durum yüklenmese de görünür. */}
+            {next && (
+              <Button
+                variant={current === 'done' ? 'primary' : 'secondary'}
+                icon="➡️"
+                label={`Sonraki konu: ${next.title}`}
+                accessibilityHint={current === 'done' ? 'Konu bitti, sonraki konuya geç' : undefined}
+                onPress={openNext}
+              />
+            )}
+
             {/* Yapay zekâ araçları. key: "Sonraki konu"ya geçince önceki konunun cevapları kalmasın */}
             <TopicAssist
               key={topic.id}
@@ -282,9 +326,6 @@ export default function TopicScreen() {
               />
             )}
 
-            {next && (
-              <Button variant="secondary" icon="➡️" label={`Sonraki konu: ${next.title}`} onPress={openNext} />
-            )}
             <Button variant="text" label="Haritaya dön" onPress={goBack} />
             <MilestoneCelebration milestone={milestone} map={map} onClose={() => setMilestone(null)} />
           </View>
@@ -310,6 +351,7 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     borderRadius: Radius.md,
     borderWidth: Border.thick,
+    minHeight: MinTouch,
   },
   flexText: { flex: 1, minWidth: 0, gap: Spacing.half },
   problem: { flex: 1, justifyContent: 'center', gap: Spacing.three },

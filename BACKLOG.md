@@ -5,18 +5,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-### UX-01 · Kullanılabilirlik denetimi ve en etkili iyileştirmeler (proje sahibinin isteği)
-Amaç: uygulama daha kolay ve kullanışlı olsun. Önce DENETLE, sonra en çok fark yaratanları uygula.
-- Ürün sorumlusu + tasarımcı ana akışları kullanıcı gözüyle gezer ve sürtünme noktalarını listeler:
-  1) İlk açılış → kayıt → harita seçimi → ilk konuya ulaşma (kaç dokunuş? nerede takılır?)
-  2) Yol Haritam ekranı: önemli bilgi (sıradaki konu, günün görevi) hemen görünüyor mu, ekran gereksiz uzun mu?
-  3) Konu detayı: durum işaretleme, kaynak açma, quiz/soru sorma ne kadar kolay?
-  4) Topluluk ve Ayarlar: aranan şey bulunuyor mu, gereksiz adım var mı?
-- Bulguları etki/çaba ile sırala; en etkili 3-5 iyileştirmeyi TEK PR'da uygula (büyük yeniden tasarım yok).
-- Mevcut tasarım dili ve simge seti korunur (simgeler: `src/components/icon.tsx`, emoji yazma).
-- Kabul: PR açıklamasında bulgu listesi (uygulananlar + sonraya bırakılanlar), önce/sonra ekran görüntüleri,
-  tsc + lint temiz. Sonraya bırakılanlar bu dosyaya yeni görev olarak eklenir.
-
 ### Y-07 · Boş, yükleniyor ve hata durumları
 - Tüm ekranlarda ağ hatasında Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
 - Yükleniyor durumlarında yerleşimi zıplatmayan iskelet görünümler.
@@ -26,6 +14,28 @@ Amaç: uygulama daha kolay ve kullanışlı olsun. Önce DENETLE, sonra en çok 
   (Türkçe karakterlere duyarsız: ı/i, ş/s…); sonuca basınca o harita seçilsin.
 - Kabul: Arama boşken mevcut seçim akışı aynen çalışır.
 
+### UX-02 · Kayıttan sonra doğrudan harita seçimi (UX-01'den)
+- Hiç haritası olmayan yeni kullanıcı Yol Haritam'a düşünce harita seçimi bir kez otomatik açılsın (boş durum ekranı atlanır).
+- Döngü olmasın: "bu oturumda bir kez" bayrağı; okuma hatasında (ağ) yönlendirme yapılmaz, yalnız "kayıt yok" durumunda.
+
+### UX-03 · Sorularda tek dokunuş (UX-01'den)
+- roadmap-questions'ta seçeneğe basınca kısa gecikmeyle sonraki soruya geç; son soruda "Haritamı hazırla" onayı kalsın.
+- Ekran okuyucu ve yanlış dokunmayı geri alma (üstteki geri) test edilmeli.
+
+### UX-04 · Giriş formunda klavye akışı (UX-01'den)
+- Alanlar arası `returnKeyType="next"` ile odak geçişi (`ref` zinciri), son alanda "go" formu gönderir.
+
+### UX-05 · Yol Haritam ve konu ekranını sadeleştirme (UX-01'den)
+- Momentum + Arkadaşlar kartlarını kısa bir özet satırına indirgeme; JourneyCard ile ProgressSummary'deki tekrar eden bilgiyi birleştirme.
+- Konu ekranında 3 büyük durum kartı yerine kompakt 3'lü anahtar.
+
+### UX-06 · Yapay zekâ araçları ve plan güncellemenin bulunurluğu (UX-01'den)
+- Konu detayında "Quiz çöz / Soru sor" kısayolu (sayfanın altına inmeden); "Planımı güncelle" bağlantısı daha görünür bir yerde.
+
+### UX-07 · Kurulum hatası ekranı ve isteğe bağlı kullanıcı adı (UX-01'den)
+- `.env.local` yokken beyaz ekran yerine anlamlı hata (`src/lib/supabase.ts`).
+- Kayıtta kullanıcı adını isteğe bağlı yapıp ilk girişte sormak (veritabanı `handle_new_user` etkilenir, 🗄️ olabilir).
+
 ## Beklemede (sırada değil)
 
 ### OTP-01 · E-postaya gelen kodla doğrulama (PR #4)
@@ -33,6 +43,12 @@ Amaç: uygulama daha kolay ve kullanışlı olsun. Önce DENETLE, sonra en çok 
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### UX-01 · Kullanılabilirlik denetimi ve en etkili iyileştirmeler
+- Denetim (ürün sorumlusu + tasarımcı) sonrası 5 iyileştirme: Yol Haritam'da "Günün görevi / Sıradaki konu" en üstte (aynı konuysa tek kart);
+  konu ekranında kaynaklar dokununca tarayıcıda aranır; "Sonraki konu" durum seçiminin hemen altında; karşılamadan kayıt/giriş ayrı düğmeler;
+  Profil başlığında Ayarlar dişlisi ve Ayarlar > Haritalarım'da "Harita ekle". Ek: 44 pt dokunma alanları, arayüzdeki emojiler simgeye çevrildi.
+- Sonraya bırakılanlar: UX-02..UX-07 (Sıradaki bölümünde). Ders notu: `docs/dersler/UX-01.md`.
 
 ### Y-08 · Uygulama kimliği
 - Görünen ad "Yol Haritam", yeni uygulama simgesi, açılış ekranı ve favicon (modern simgeler PR'ı, #39).
@@ -125,6 +141,10 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Push bildirimi** (Y-12'den): "Ahmet bugün 2 konu bitirdi" şimdilik uygulama içi kart; gerçek bildirim için development build + expo-notifications gerekir (Expo Go'da yok).
 - **Kullanıcı adı denetimi ve hız sınırı** (Y-12'den): küfür filtresi, `username_available`/`friend_request` için hız sınırı.
 - **XP'yi tamamen sunucuya taşımak** (Y-12'den): tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
+
+- **Erişilebilirlik etiketlerini görünür metinle hizalama** (UX-01'den): "Harita ekle" çipinin etiketi "Yeni harita ekle", Harita/Liste anahtarının etiketi "Harita görünümü"; sesli kontrol için etiket görünür metinle başlamalı.
+- **Aynı konuyu açan iki kart** (UX-01'den): günün görevi quiz/bitir türündeyken sıradaki konuyla aynı konuysa iki kart da görünür; birleştirilebilir.
+- **Gün değişiminde günün görevi** (UX-01'den): uygulama gece yarısı açık kalırsa görev bayat kalır; `AppState` ile yeniden hesaplanabilir.
 
 ## Yayından sonra
 - [ ] **Yapay zekâ katmanı ücretli abonelik (freemium):** kişisel işaretleme (`src/lib/personalize-roadmap.ts` → `personalize-roadmap` Edge Function) abonelere açık olsun; ücretsiz kullanıcılar kural tabanlı işaretlemeyi görür. Mağaza içi satın alma (RevenueCat vb.) + sunucu tarafında abonelik kontrolü.

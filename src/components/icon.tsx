@@ -66,6 +66,7 @@ import {
   PartyPopper,
   Pencil,
   Plug,
+  Plus,
   Puzzle,
   RefreshCw,
   Repeat,
@@ -228,6 +229,8 @@ const GLYPHS: Record<string, LucideIcon> = {
   '📄': FileText,
   '🟩': Hexagon, // Node.js
   '⚓': Anchor,
+  '➕': Plus,
+  '＋': Plus,
 };
 
 // Emojinin sonundaki "renkli göster" işaretini (U+FE0F) atar: "🗺️" ile "🗺" aynı simgeye gitsin
