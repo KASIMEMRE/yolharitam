@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { IconTile } from '@/components/icon-tile';
+import { Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { NewsCard } from '@/components/news-card';
@@ -60,7 +62,8 @@ export default function NewsScreen() {
             {maps.map((m) => (
               <FilterChip
                 key={m.id}
-                label={`${m.emoji} ${m.title}`}
+                label={m.title}
+                icon={m.emoji}
                 a11yLabel={m.title}
                 selected={active === m.id}
                 onPress={() => setSelected(m.id)}
@@ -95,9 +98,7 @@ export default function NewsScreen() {
 
       {!newsLoading && status === 'ready' && items.length === 0 && (
         <View style={styles.empty}>
-          <Text accessibilityElementsHidden importantForAccessibility="no" allowFontScaling={false} style={styles.emptyEmoji}>
-            🧭
-          </Text>
+          <IconTile emoji="📰" tone="sky" size={64} />
           <ThemedText type="cardTitle" accessibilityRole="header">
             Henüz haber yok
           </ThemedText>
@@ -141,12 +142,14 @@ export default function NewsScreen() {
 
 function FilterChip({
   label,
+  icon,
   a11yLabel,
   selected,
   onPress,
 }: {
   label: string;
-  a11yLabel: string; // emojisiz, ekran okuyucu için
+  icon?: string; // simge (emoji adıyla)
+  a11yLabel: string; // ekran okuyucu için
   selected: boolean;
   onPress: () => void;
 }) {
@@ -165,6 +168,7 @@ function FilterChip({
           opacity: pressed ? 0.85 : 1,
         },
       ]}>
+      {icon && <Glyph emoji={icon} size={14} color={selected ? theme.accentInk : theme.textSecondary} strokeWidth={2.25} />}
       <ThemedText type="chip" themeColor={selected ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
         {label}
       </ThemedText>
@@ -177,6 +181,9 @@ const styles = StyleSheet.create({
   chipScroll: { flexGrow: 0 },
   chips: { gap: Spacing.two, paddingRight: Spacing.three },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     minHeight: MinTouch,
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
@@ -192,7 +199,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: Edge,
   },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
-  emptyEmoji: { fontSize: 40, lineHeight: 48 },
   center: { textAlign: 'center' },
   notes: { gap: Spacing.one, paddingTop: Spacing.two },
 });

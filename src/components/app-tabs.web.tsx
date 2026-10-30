@@ -7,15 +7,16 @@ import {
   TabTriggerSlotProps,
   TabListProps,
 } from 'expo-router/ui';
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { ThemedText } from './themed-text';
 
+import { Glyph } from '@/components/icon';
 import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // Web'deki sekme çubuğu (geliştirme/önizleme için). Geniş ekranda üstte yüzen kapsül,
-// dar ekranda altta tam genişlik çubuk. Emoji kullanıyoruz: ek ikon paketi gerekmez.
+// dar ekranda altta tam genişlik çubuk. Simgeler uygulamanın ortak çizgi simge setinden (icon.tsx).
 export default function AppTabs() {
   return (
     <Tabs>
@@ -66,9 +67,9 @@ export function TabButton({
           borderColor: isFocused ? theme.accent : 'transparent',
         },
       ]}>
-      <Text allowFontScaling={false} style={narrow ? styles.emojiNarrow : styles.emoji}>
-        {emoji}
-      </Text>
+      {emoji && (
+        <Glyph emoji={emoji} size={narrow ? 22 : 18} color={isFocused ? theme.accentInk : theme.textSecondary} strokeWidth={isFocused ? 2.25 : 2} />
+      )}
       <ThemedText
         type={isFocused ? 'smallBold' : 'small'}
         themeColor={isFocused ? 'accentInk' : 'textSecondary'}
@@ -136,7 +137,5 @@ const styles = StyleSheet.create({
     borderWidth: Border.thick,
   },
   tabNarrow: { flex: 1, minWidth: 0, flexDirection: 'column', justifyContent: 'center', gap: 0, paddingHorizontal: 2 },
-  emoji: { fontSize: 18 },
-  emojiNarrow: { fontSize: 22, lineHeight: 26 },
   labelNarrow: { fontSize: 13, lineHeight: 16, textAlign: 'center', maxWidth: '100%' },
 });

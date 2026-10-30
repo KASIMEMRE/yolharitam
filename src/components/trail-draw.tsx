@@ -11,6 +11,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { MapPin } from '@/components/map-pin';
 import { Border, Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -89,9 +90,9 @@ export function TrailDraw({ width, slow = false }: TrailDrawProps) {
                   reduceMotion ? FadeIn.duration(150) : FadeInDown.springify().damping(8).stiffness(220)
                 }
                 style={styles.pin}>
-                <Animated.Text allowFontScaling={false} style={[styles.pinText, pinStyle]}>
-                  📍
-                </Animated.Text>
+                <Animated.View style={pinStyle}>
+                  <MapPin size={26} />
+                </Animated.View>
               </Animated.View>
             )}
           </Animated.View>
@@ -118,5 +119,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   pin: { position: 'absolute', top: -26 },
-  pinText: { fontSize: 22, lineHeight: 28 },
 });

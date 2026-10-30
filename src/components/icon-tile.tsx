@@ -1,11 +1,13 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { Glyph } from '@/components/icon';
 
 import { Border } from '@/constants/theme';
 import { HUES, type Hue } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 
-// Renkli kutu içinde emoji: kategori, konu ve seviye ikonlarının hepsi bu bileşenle çizilir.
-// Emoji kullanmamızın nedeni: ek paket gerekmez, iOS/Android/Expo Go'da aynı çalışır.
+// Renkli kutu içinde çizgi simge: kategori, konu ve seviye simgelerinin hepsi bu bileşenle çizilir.
+// İçerik "emoji" adıyla hangi simgenin çizileceğini söyler; çevirme tablosu icon.tsx içinde.
 type IconTileProps = {
   emoji: string;
   tone?: Hue | 'neutral'; // 'neutral' = seviye gibi renk ailesi taşımayan öğeler
@@ -18,15 +20,19 @@ export function IconTile({ emoji, tone = 'accent', size = 48, locked = false }: 
 
   let backgroundColor: string;
   let borderColor: string;
+  let ink: string; // simgenin rengi: zeminle aynı renk ailesinin koyusu
   if (locked) {
     backgroundColor = theme.backgroundSelected;
     borderColor = theme.borderStrong;
+    ink = theme.textSecondary;
   } else if (tone === 'neutral') {
     backgroundColor = theme.backgroundElement;
     borderColor = theme.border;
+    ink = theme.text;
   } else {
     backgroundColor = theme[HUES[tone].soft];
     borderColor = theme[HUES[tone].line];
+    ink = theme[HUES[tone].ink];
   }
 
   return (
@@ -45,17 +51,12 @@ export function IconTile({ emoji, tone = 'accent', size = 48, locked = false }: 
           borderStyle: locked ? 'dashed' : 'solid',
         },
       ]}>
-      {/* allowFontScaling kapalı: büyük yazı boyutunda emoji kutudan taşmasın */}
-      <Text
-        allowFontScaling={false}
-        style={{ fontSize: size * 0.5, lineHeight: size * 0.62, opacity: locked ? 0.55 : 1 }}>
-        {emoji}
-      </Text>
+      <View style={{ opacity: locked ? 0.55 : 1 }}>
+        <Glyph emoji={emoji} size={Math.round(size * 0.5)} color={ink} strokeWidth={size >= 64 ? 1.75 : 2} />
+      </View>
       {locked && (
         <View style={[styles.lock, { backgroundColor: theme.card, borderColor: theme.border }]}>
-          <Text allowFontScaling={false} style={styles.lockEmoji}>
-            🔒
-          </Text>
+          <Glyph emoji="🔒" size={11} color={theme.textSecondary} strokeWidth={2.5} />
         </View>
       )}
     </View>
@@ -75,5 +76,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  lockEmoji: { fontSize: 10, lineHeight: 12 },
 });

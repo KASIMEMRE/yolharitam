@@ -1,9 +1,11 @@
 import Constants from 'expo-constants';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { IconTile } from '@/components/icon-tile';
+import { Glyph, IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { UsernameForm } from '@/components/community/username-gate';
@@ -65,9 +67,12 @@ export default function SettingsScreen() {
 function SectionTitle({ emoji, title, subtitle }: { emoji: string; title: string; subtitle?: string }) {
   return (
     <View style={styles.sectionTitle}>
-      <ThemedText type="heading" accessibilityRole="header">
-        {emoji} {title}
-      </ThemedText>
+      <View style={styles.sectionHead}>
+        <IconTile emoji={emoji} tone="neutral" size={40} />
+        <ThemedText type="heading" accessibilityRole="header" style={styles.sectionHeadText}>
+          {title}
+        </ThemedText>
+      </View>
       {subtitle && (
         <ThemedText type="small" themeColor="textSecondary">
           {subtitle}
@@ -91,7 +96,7 @@ function Choice<T extends string>({
 }: {
   label: string;
   value: T;
-  options: { id: T; label: string }[];
+  options: { id: T; label: string; icon?: string }[];
   onChange: (v: T) => void;
 }) {
   const theme = useTheme();
@@ -111,9 +116,15 @@ function Choice<T extends string>({
               accessibilityRole="radio"
               accessibilityState={{ selected }}
               style={[styles.choiceItem, selected && { backgroundColor: theme.card, borderColor: theme.accent }]}>
-              <ThemedText type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
-                {o.label}
-              </ThemedText>
+              {o.icon ? (
+                <IconLabel emoji={o.icon} type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
+                  {o.label}
+                </IconLabel>
+              ) : (
+                <ThemedText type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
+                  {o.label}
+                </ThemedText>
+              )}
             </Pressable>
           );
         })}
@@ -228,9 +239,7 @@ function MapRow({
     <View style={[styles.mapRow, { backgroundColor: theme.card, borderColor: active ? theme[hue.line] : theme.border }]}>
       <View style={styles.mapHead}>
         <View style={[styles.mapIcon, { backgroundColor: theme[hue.soft] }]}>
-          <Text allowFontScaling={false} style={styles.mapEmoji}>
-            {map.emoji}
-          </Text>
+          <Glyph emoji={map.emoji} size={20} color={theme[hue.ink]} />
         </View>
         <View style={styles.flexText}>
           <ThemedText type="cardTitle">{map.title}</ThemedText>
@@ -300,8 +309,8 @@ function AppearanceSection() {
           value={prefs.theme}
           options={[
             { id: 'system', label: 'Sistem' },
-            { id: 'light', label: '☀️ Açık' },
-            { id: 'dark', label: '🌙 Koyu' },
+            { id: 'light', label: 'Açık', icon: '☀️' },
+            { id: 'dark', label: 'Koyu', icon: '🌙' },
           ]}
           onChange={(theme) => setPreferences({ theme })}
         />
@@ -309,8 +318,8 @@ function AppearanceSection() {
           label="Haritanın varsayılan görünümü"
           value={prefs.mapView}
           options={[
-            { id: 'tree', label: '🗺️ Harita' },
-            { id: 'list', label: '☰ Liste' },
+            { id: 'tree', label: 'Harita', icon: '🗺️' },
+            { id: 'list', label: 'Liste', icon: '☰' },
           ]}
           onChange={(mapView) => setPreferences({ mapView })}
         />
@@ -573,6 +582,8 @@ const styles = StyleSheet.create({
   inner: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.five },
   section: { gap: Spacing.three },
   sectionTitle: { gap: Spacing.one },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  sectionHeadText: { flexShrink: 1 },
   card: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
   deleteLink: { alignSelf: 'center', minHeight: MinTouch, justifyContent: 'center', paddingHorizontal: Spacing.three },
   underline: { textDecorationLine: 'underline' },
@@ -590,7 +601,6 @@ const styles = StyleSheet.create({
   mapRow: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
   mapHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   mapIcon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },
-  mapEmoji: { fontSize: 24, lineHeight: 30 },
   flexText: { flex: 1, minWidth: 0, gap: Spacing.half },
   rowActions: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   confirm: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md },

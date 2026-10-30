@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { Glyph } from '@/components/icon';
 import { FriendsPanel } from '@/components/community/friends-panel';
 import { LeaguePanel } from '@/components/community/league-panel';
 import { ShowcasePanel } from '@/components/community/showcase-panel';
@@ -60,6 +61,7 @@ function SegmentBar({ value, onChange }: { value: Segment; onChange: (s: Segment
               styles.segment,
               { backgroundColor: selected ? theme.accent : 'transparent', opacity: pressed ? 0.85 : 1 },
             ]}>
+            {!compact && <Glyph emoji={s.emoji} size={15} color={selected ? theme.onAccent : theme.textSecondary} strokeWidth={2.25} />}
             <ThemedText
               type="chip"
               themeColor={selected ? 'onAccent' : 'text'}
@@ -67,7 +69,7 @@ function SegmentBar({ value, onChange }: { value: Segment; onChange: (s: Segment
               adjustsFontSizeToFit
               minimumFontScale={0.85}
               maxFontSizeMultiplier={1.3}>
-              {compact ? s.label : `${s.emoji} ${s.label}`}
+              {s.label}
             </ThemedText>
           </Pressable>
         );
@@ -82,6 +84,8 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     minHeight: MinTouch,
+    flexDirection: 'row',
+    gap: 6,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.one,

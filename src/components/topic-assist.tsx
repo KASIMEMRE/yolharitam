@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { IconLabel , Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { TextField } from '@/components/text-field';
@@ -125,9 +126,9 @@ function Block({
   return (
     <View style={[styles.block, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={styles.blockHead}>
-        <Text allowFontScaling={false} style={styles.emoji}>
-          {emoji}
-        </Text>
+        <View style={[styles.headIcon, { backgroundColor: theme.accentSoft }]}>
+          <Glyph emoji={emoji} size={20} color={theme.accentInk} />
+        </View>
         <View style={styles.flex}>
           <ThemedText type="cardTitle" accessibilityRole="header">
             {title}
@@ -148,7 +149,7 @@ function Block({
       )}
       {load.state === 'loading' && (
         <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-          ✨ Yapay zekâ hazırlıyor, ilk açılışta birkaç saniye sürebilir…
+          Yapay zekâ hazırlıyor, ilk açılışta birkaç saniye sürebilir…
         </ThemedText>
       )}
       {load.state === 'ready' && <Animated.View entering={FadeIn.duration(200)}>{children}</Animated.View>}
@@ -190,9 +191,9 @@ function ExplainView({ data }: { data: Explain }) {
         <View style={styles.inner}>
           <ThemedText type="smallBold">Sık yapılan hatalar</ThemedText>
           {data.mistakes.map((m, mi) => (
-            <ThemedText key={`mistake-${mi}`} type="small" themeColor="textSecondary">
-              ⚠️ {m}
-            </ThemedText>
+            <IconLabel key={`mistake-${mi}`} emoji="⚠️" themeColor="textSecondary">
+              {m}
+            </IconLabel>
           ))}
         </View>
       )}
@@ -259,10 +260,13 @@ function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId
                     accessibilityState={{ selected: isPicked, disabled: done }}
                     accessibilityLabel={`${o}${done && isRight ? ', doğru cevap' : ''}${done && isPicked && !isRight ? ', senin cevabın, yanlış' : ''}`}
                     style={[styles.option, { backgroundColor: bg, borderColor: border }]}>
-                    <ThemedText type="small">
-                      {done && isRight ? '✅ ' : done && isPicked ? '❌ ' : ''}
-                      {o}
-                    </ThemedText>
+                    {done && (isRight || isPicked) ? (
+                      <IconLabel emoji={isRight ? '✅' : '❌'} themeColor={isRight ? 'accentInk' : 'coralInk'} iconSize={16}>
+                        {o}
+                      </IconLabel>
+                    ) : (
+                      <ThemedText type="small">{o}</ThemedText>
+                    )}
                   </Pressable>
                 );
               })}
@@ -317,9 +321,9 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
   return (
     <View style={[styles.block, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={styles.blockHead}>
-        <Text allowFontScaling={false} style={styles.emoji}>
-          💬
-        </Text>
+        <View style={[styles.headIcon, { backgroundColor: theme.accentSoft }]}>
+          <Glyph emoji="💬" size={20} color={theme.accentInk} />
+        </View>
         <View style={styles.flex}>
           <ThemedText type="cardTitle" accessibilityRole="header">
             Yapay zekâya sor
@@ -370,7 +374,7 @@ const styles = StyleSheet.create({
   wrap: { gap: Spacing.three },
   block: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
   blockHead: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
-  emoji: { fontSize: 26, lineHeight: 32 },
+  headIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1, minWidth: 0, gap: Spacing.half },
   center: { textAlign: 'center' },
   inner: { gap: Spacing.two },
