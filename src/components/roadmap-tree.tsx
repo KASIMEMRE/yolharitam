@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { IconLabel , Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import type { DevRoadmap, Topic } from '@/constants/dev-roadmaps';
 import type { Personalization, TopicStatus } from '@/constants/dev-roadmaps/personalize';
@@ -48,9 +49,7 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
                   styles.sectionBox,
                   { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge, borderBottomColor: theme.markerEdge },
                 ]}>
-                <Text allowFontScaling={false} style={styles.sectionEmoji}>
-                  {section.emoji}
-                </Text>
+                <Glyph emoji={section.emoji} size={20} color={theme.markerInk} strokeWidth={2} />
                 <ThemedText type="smallBold" themeColor="markerInk" style={styles.sectionTitle}>
                   {section.title}
                 </ThemedText>
@@ -65,9 +64,9 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
               <View style={styles.noteRow}>
                 <View style={[styles.spineLine, { backgroundColor: theme.borderStrong }]} />
                 <View style={[styles.note, { backgroundColor: theme.card, borderColor: theme[hue.line] }]}>
-                  <ThemedText type="small" themeColor={hue.ink}>
-                    ✨ {personalization.notes[section.id]}
-                  </ThemedText>
+                  <IconLabel emoji="✨" themeColor={hue.ink}>
+                    {personalization.notes[section.id]}
+                  </IconLabel>
                 </View>
               </View>
             )}
@@ -95,9 +94,7 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
       <View style={styles.sectionRow}>
         <View style={[styles.spineFill, { backgroundColor: theme.borderStrong }]} />
         <View style={[styles.finish, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
-          <Text allowFontScaling={false} style={styles.sectionEmoji}>
-            🏁
-          </Text>
+          <Glyph emoji="🏁" size={20} color={theme.accentInk} strokeWidth={2.25} />
         </View>
       </View>
     </View>
@@ -165,14 +162,15 @@ function TopicNode({
       ]}>
       <View style={styles.nodeTop}>
         {status && (
-          <Text allowFontScaling={false} style={styles.nodeIcon}>
-            {status === 'done' ? '✅' : status === 'in_progress' ? '⏳' : '⏭️'}
-          </Text>
+          <Glyph
+            emoji={status === 'done' ? '✅' : status === 'in_progress' ? '⏳' : '⏭️'}
+            size={14}
+            color={status === 'done' ? theme.accentInk : status === 'in_progress' ? theme.markerInk : theme.textSecondary}
+            strokeWidth={2.5}
+          />
         )}
         {!status && focus && (
-          <Text allowFontScaling={false} style={styles.nodeIcon}>
-            ✨
-          </Text>
+          <Glyph emoji="✨" size={14} color={theme.markerInk} strokeWidth={2.25} />
         )}
         <ThemedText
           type="smallBold"
@@ -236,7 +234,7 @@ export function TreeLegend() {
         </View>
       ))}
       <View style={styles.legendItem}>
-        <Text allowFontScaling={false}>✨</Text>
+        <Glyph emoji="✨" size={14} color={theme.markerInk} strokeWidth={2.25} />
         <ThemedText type="small" themeColor="textSecondary">
           Senin için öncelikli
         </ThemedText>
@@ -260,7 +258,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: Border.thick + 2,
     maxWidth: '90%',
   },
-  sectionEmoji: { fontSize: 20, lineHeight: 26 },
   sectionTitle: { flexShrink: 1 },
   noteRow: { alignItems: 'center', paddingBottom: Spacing.two },
   note: { maxWidth: '90%', padding: Spacing.two, borderRadius: Radius.sm, borderWidth: Border.thin },
@@ -283,7 +280,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
   },
   nodeTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.one },
-  nodeIcon: { fontSize: 13, lineHeight: 18 },
   nodeTitle: { flexShrink: 1 },
   strike: { textDecorationLine: 'line-through' },
   finish: {

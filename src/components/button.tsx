@@ -8,6 +8,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -22,7 +23,7 @@ type ButtonProps = Omit<PressableProps, 'children' | 'style'> & {
   label: string;
   variant?: 'primary' | 'secondary' | 'quiet' | 'text';
   loading?: boolean;
-  icon?: string; // emoji
+  icon?: string; // simge (emoji adıyla; bkz. icon.tsx)
 };
 
 // Not: <Link asChild> içinde expo-router Pressable'a role="link" ekler; gezinme butonlarının
@@ -109,7 +110,7 @@ export const Button = forwardRef<ComponentRef<typeof View>, ButtonProps>(functio
             <ActivityIndicator color={spinnerColor} />
           ) : (
             <>
-              {icon && <ThemedText type={isText ? 'smallBold' : 'button'}>{icon}</ThemedText>}
+              {icon && <Glyph emoji={icon} size={isText ? 16 : 18} color={theme[textColor]} strokeWidth={2.25} />}
               <ThemedText type={isText ? 'smallBold' : 'button'} themeColor={textColor} style={styles.label}>
                 {label}
               </ThemedText>

@@ -1,8 +1,9 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Glyph, IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { HeaderBackButton } from '@/components/header-back-button';
@@ -175,9 +176,9 @@ export default function TopicScreen() {
             {(focusIndex >= 0 || skipHint || note) && (
               <View style={[styles.personal, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge }]}>
                 {focusIndex >= 0 && (
-                  <ThemedText type="smallBold" themeColor="markerInk">
-                    ✨ Senin için öncelikli konulardan biri ({focusIndex + 1}. sırada)
-                  </ThemedText>
+                  <IconLabel emoji="✨" type="smallBold" themeColor="markerInk">
+                    {`Senin için öncelikli konulardan biri (${focusIndex + 1}. sırada)`}
+                  </IconLabel>
                 )}
                 {skipHint && (
                   <ThemedText type="smallBold" themeColor="markerInk">
@@ -204,9 +205,7 @@ export default function TopicScreen() {
                     accessible
                     accessibilityLabel={`${RESOURCE_KIND_STYLE[r.kind].label}: ${r.title}`}
                     style={[styles.resource, { borderColor: theme.border, backgroundColor: theme.card }]}>
-                    <Text allowFontScaling={false} style={styles.resourceEmoji}>
-                      {RESOURCE_KIND_STYLE[r.kind].emoji}
-                    </Text>
+                    <Glyph emoji={RESOURCE_KIND_STYLE[r.kind].emoji} size={20} color={theme.accentInk} />
                     <View style={styles.flexText}>
                       <ThemedText type="smallBold">{r.title}</ThemedText>
                       <ThemedText type="small" themeColor="textSecondary">
@@ -312,7 +311,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: Border.thick,
   },
-  resourceEmoji: { fontSize: 22, lineHeight: 28 },
   flexText: { flex: 1, minWidth: 0, gap: Spacing.half },
   problem: { flex: 1, justifyContent: 'center', gap: Spacing.three },
 });

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { XP_LABEL } from '@/constants/xp';
@@ -39,9 +40,7 @@ export function XpToast() {
         accessibilityLiveRegion="polite"
         accessibilityLabel={`${visible.amount} XP kazandın. ${visible.label ?? XP_LABEL[visible.kind]}`}
         style={[styles.toast, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge }]}>
-        <Text allowFontScaling={false} style={styles.star}>
-          ⭐
-        </Text>
+        <Glyph emoji="⭐" size={16} color={theme.markerInk} fill={theme.marker} strokeWidth={2} />
         <ThemedText type="smallBold" themeColor="markerInk">
           +{visible.amount} XP · {visible.label ?? XP_LABEL[visible.kind]}
         </ThemedText>
@@ -61,5 +60,4 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: Border.thick,
   },
-  star: { fontSize: 16, lineHeight: 20 },
 });

@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { Glyph } from '@/components/icon';
+import { IconTile } from '@/components/icon-tile';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Skeleton } from '@/components/skeleton';
@@ -74,9 +76,7 @@ export function FriendsPanel() {
         </ThemedText>
         {status === 'ready' && friends.length === 0 && (
           <View style={styles.empty}>
-            <Text accessibilityElementsHidden importantForAccessibility="no" allowFontScaling={false} style={styles.emptyEmoji}>
-              🤝
-            </Text>
+            <IconTile emoji="🤝" tone="sky" size={64} />
             <ThemedText themeColor="textSecondary" style={styles.center}>
               Henüz arkadaşın yok. Bir arkadaşının kullanıcı adını yazıp istek gönder; birbirinizin seri ve günlük
               çalışmasını görürsünüz.
@@ -272,9 +272,12 @@ function FriendCard({ row, onRemove }: { row: FriendRow; onRemove: (id: number) 
           accessible
           accessibilityLabel={streak > 0 ? `${streak} günlük seri` : 'Seri yok'}
           style={[styles.streak, { backgroundColor: streak > 0 ? theme.coralSoft : theme.backgroundSelected }]}>
-          <Text allowFontScaling={false} style={styles.streakEmoji}>
-            {streak > 0 ? '🔥' : '🌱'}
-          </Text>
+          <Glyph
+            emoji={streak > 0 ? '🔥' : '🌱'}
+            size={20}
+            color={streak > 0 ? theme.coralInk : theme.accentInk}
+            fill={streak > 0 ? theme.coralSoft : undefined}
+          />
           <ThemedText type="smallBold" themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}>
             {streak}
           </ThemedText>
@@ -355,12 +358,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
   },
-  streakEmoji: { fontSize: 16, lineHeight: 20 },
   actions: { gap: Spacing.two },
   rowActions: { flexDirection: 'row', gap: Spacing.two },
   flex1: { flex: 1 },
   confirm: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.four },
-  emptyEmoji: { fontSize: 40, lineHeight: 48 },
   center: { textAlign: 'center' },
 });
