@@ -36,7 +36,7 @@ export const DEVOPS: DevRoadmap = {
         t('net-basics', 'Ağ temelleri', 'IP, alt ağ (subnet), TCP/UDP, portlar, DNS, HTTP/HTTPS.', 1, 5, [course('Cloudflare Learning Center'), book('Computer Networking: A Top-Down Approach')]),
         t('ssh-tls', 'SSH, TLS ve sertifikalar', 'Güvenli bağlantı, anahtar yönetimi, Let’s Encrypt.', 2, 3, [doc('Let’s Encrypt Docs')]),
         t('proxy', 'Ters vekil ve yük dengeleme', 'Nginx ile trafik yönlendirme, yük dengeleme, önbellek.', 2, 4, [doc('Nginx Beginner’s Guide')]),
-        opt('firewall', 'Güvenlik duvarı', 'ufw/iptables ile sunucu sıkılaştırma.', 2, 2, []),
+        opt('firewall', 'Güvenlik duvarı', 'ufw/iptables ile sunucu sıkılaştırma.', 2, 2, [doc('Linux man: iptables'), doc('Ubuntu Docs: UFW'), doc('AWS Docs: Security Groups')]),
       ],
     },
     {
@@ -66,7 +66,7 @@ export const DEVOPS: DevRoadmap = {
         t('github-actions', 'GitHub Actions', 'Test, derleme ve yayın adımlarını iş akışına (workflow) dök.', 2, 4, [doc('GitHub Actions Docs')]),
         alt('gitlab-ci', 'GitLab CI', 'GitLab kullanan ekiplerde aynı işin karşılığı.', 2, 4, [doc('GitLab CI/CD Docs')]),
         opt('gitops', 'GitOps: Argo CD', 'Kümenin durumunu Git’ten otomatik senkronize et.', 3, 4, [doc('Argo CD Docs')]),
-        t('deploy-strategies', 'Yayın stratejileri', 'Blue-green, canary ve geri alma (rollback).', 3, 2, []),
+        t('deploy-strategies', 'Yayın stratejileri', 'Blue-green, canary ve geri alma (rollback).', 3, 2, [doc('Kubernetes Docs: Deployments (Rolling Update)'), book('Continuous Delivery (Humble & Farley)')]),
       ],
     },
     {
@@ -77,7 +77,7 @@ export const DEVOPS: DevRoadmap = {
         t('aws', 'AWS temel servisleri', 'EC2, S3, IAM, VPC, RDS; en yaygın bulut sağlayıcı.', 2, 15, [course('AWS Skill Builder'), course('AWS Cloud Practitioner Essentials')]),
         alt('gcp', 'Google Cloud', 'AWS yerine seçilebilir; veri ve Kubernetes tarafında güçlü.', 2, 15, [course('Google Cloud Skills Boost')]),
         alt('azure', 'Microsoft Azure', 'Kurumsal ve Microsoft ağırlıklı şirketlerde yaygın.', 2, 15, [course('Microsoft Learn: Azure Fundamentals')]),
-        opt('cost', 'Maliyet yönetimi', 'Bütçe uyarıları, doğru boyutlandırma, kullanılmayan kaynakları temizleme.', 3, 2, []),
+        opt('cost', 'Maliyet yönetimi', 'Bütçe uyarıları, doğru boyutlandırma, kullanılmayan kaynakları temizleme.', 3, 2, [doc('AWS Well-Architected: Cost Optimization Pillar'), doc('FinOps Foundation: Framework')]),
       ],
     },
     {
@@ -105,8 +105,8 @@ export const DEVOPS: DevRoadmap = {
       title: 'Projeler ve kariyer',
       emoji: '🚀',
       topics: [
-        t('project-pipeline', 'Proje: Uçtan uca hat', 'Bir uygulamayı Docker’la paketle, Actions ile test et, Terraform’la kurduğun buluta yayınla.', 3, 20, []),
-        t('project-k8s', 'Proje: Kubernetes’te izlenen servis', 'Uygulamayı kümeye kur, Prometheus/Grafana ile izle, uyarı tanımla.', 3, 20, []),
+        t('project-pipeline', 'Proje: Uçtan uca hat', 'Bir uygulamayı Docker’la paketle, Actions ile test et, Terraform’la kurduğun buluta yayınla.', 3, 20, [doc('GitHub Docs: GitHub Actions'), doc('Terraform Docs: Get Started'), doc('Docker Docs: Build')]),
+        t('project-k8s', 'Proje: Kubernetes’te izlenen servis', 'Uygulamayı kümeye kur, Prometheus/Grafana ile izle, uyarı tanımla.', 3, 20, [doc('Kubernetes Docs: Tutorials'), doc('Prometheus Docs: Getting Started'), doc('Grafana Docs: Get started')]),
         opt('certs', 'Sertifikalar', 'AWS Cloud Practitioner → Solutions Architect Associate, CKA.', 3, 40, [doc('AWS Certification'), doc('CNCF: CKA')]),
       ],
     },

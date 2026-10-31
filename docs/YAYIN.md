@@ -94,7 +94,7 @@ Play ayrıca 512×512 simge (`assets/images/icon.png` küçültülerek) ve 1024�
 
 > Yol Haritam, yazılım öğrenirken "şimdi ne çalışmalıyım?" sorusunu cevaplayan Türkçe bir yol haritası uygulamasıdır.
 >
-> Frontend, Backend, DevOps, Yapay Zekâ Mühendisi, Siber Güvenlik gibi rol haritalarından ya da Python, SQL, Git, TypeScript gibi beceri haritalarından birini seç. Seviyeni belirle; harita sana göre şekillensin.
+> 32 yol haritası, 1.000'den fazla konu: Frontend, Backend, iOS, Android, DevOps, Yapay Zekâ, MLOps, Veri Mühendisliği, Siber Güvenlik, Oyun Geliştirme gibi rol haritalarından ya da JavaScript, Python, Java, Go, Rust, Kubernetes, AWS, SQL, Veri Yapıları gibi beceri haritalarından birini seç. Seviyeni belirle; harita sana göre şekillensin. Her konuda özet, tahmini süre ve seçilmiş kaynaklar var.
 >
 > NELER YAPABİLİRSİN
 > • Konu konu ilerle: Her konuyu "bitirdim", "çalışıyorum" ya da "atladım" diye işaretle. Günün görevi ve sıradaki konun hep en üstte.

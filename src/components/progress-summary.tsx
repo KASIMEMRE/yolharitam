@@ -12,9 +12,10 @@ type Props = {
   done: number;
   total: number;
   remainingHours: number; // planda bitmemiş konuların tahmini saat toplamı
+  weeks?: number; // (isteğe bağlı) tüm planın tahmini süresi, hafta olarak
 };
 
-export function ProgressSummary({ done, total, remainingHours }: Props) {
+export function ProgressSummary({ done, total, remainingHours, weeks }: Props) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
   const ratio = total > 0 ? done / total : 0;
@@ -28,7 +29,7 @@ export function ProgressSummary({ done, total, remainingHours }: Props) {
 
   const hours = Math.round(remainingHours);
   const remainingText =
-    done === total ? 'Planındaki tüm konuları bitirdin.' : `Kalan süre: yaklaşık ${hours} saat`;
+    done === total ? 'Planındaki tüm konuları bitirdin.' : `Kalan süre: yaklaşık ${hours} saat${weeks ? ` · plan yaklaşık ${weeks} hafta` : ''}`;
 
   return (
     <View style={styles.box}>

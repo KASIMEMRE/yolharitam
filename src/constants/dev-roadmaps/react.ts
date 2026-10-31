@@ -38,7 +38,7 @@ export const REACT: DevRoadmap = {
         t('effect', 'useEffect ve yan etkiler', 'Dış sistemlerle senkronizasyon; ne zaman effect GEREKMEZ?', 2, 4, [doc('react.dev: You Might Not Need an Effect')]),
         t('ref', 'useRef', 'DOM’a erişim ve çizimi tetiklemeyen değerler.', 2, 2, [doc('react.dev: Referencing Values with Refs')]),
         t('context', 'useContext', 'Prop zincirine girmeden veriyi derine aktar.', 2, 2, [doc('react.dev: Passing Data Deeply with Context')]),
-        t('reducer', 'useReducer', 'Karmaşık state geçişlerini tek yerde topla.', 2, 2, []),
+        t('reducer', 'useReducer', 'Karmaşık state geçişlerini tek yerde topla.', 2, 2, [doc('React Docs: useReducer'), doc('React Docs: Extracting State Logic into a Reducer')]),
         t('custom-hooks', 'Kendi hook’ların', 'Tekrarlanan mantığı paylaşılabilir hook’a çıkar.', 2, 3, [doc('react.dev: Reusing Logic with Custom Hooks')]),
         opt('memo', 'useMemo, useCallback ve React Compiler', 'Gereksiz hesap ve çizimleri önleme; derleyicinin bunu nasıl otomatikleştirdiği.', 3, 3, [doc('React Compiler Docs')]),
       ],
@@ -54,7 +54,7 @@ export const REACT: DevRoadmap = {
         alt('redux', 'Redux Toolkit', 'Büyük ve kurumsal projelerde yaygın alternatif.', 3, 5, [doc('Redux Toolkit Docs')]),
         t('forms', 'Form kütüphaneleri', 'React Hook Form + Zod ile doğrulama.', 2, 3, [doc('React Hook Form Docs'), doc('Zod Docs')]),
         t('styling', 'Stil: Tailwind CSS', 'Yardımcı sınıflarla hızlı stil.', 2, 3, [doc('Tailwind CSS Docs')]),
-        alt('css-modules', 'Stil: CSS Modules', 'Bileşene özel klasik CSS.', 2, 2, []),
+        alt('css-modules', 'Stil: CSS Modules', 'Bileşene özel klasik CSS.', 2, 2, [doc('Vite Docs: CSS Modules'), doc('MDN: CSS')]),
       ],
     },
     {
@@ -63,7 +63,7 @@ export const REACT: DevRoadmap = {
       emoji: '🔷',
       topics: [
         t('ts-props', 'Props ve state tipleri', 'Bileşenleri tiplerle güvene al.', 2, 3, [doc('React TypeScript Cheatsheet')]),
-        opt('ts-generics', 'Generic bileşenler', 'Farklı veri tipleriyle çalışan tablo, liste gibi bileşenler.', 3, 3, []),
+        opt('ts-generics', 'Generic bileşenler', 'Farklı veri tipleriyle çalışan tablo, liste gibi bileşenler.', 3, 3, [doc('TypeScript Handbook: Generics'), doc('React TypeScript Cheatsheets')]),
       ],
     },
     {
@@ -91,7 +91,7 @@ export const REACT: DevRoadmap = {
       title: 'Projeler',
       emoji: '🚀',
       topics: [
-        t('project-todo', 'Proje: Görev listesi', 'State, formlar, localStorage; ilk tam React uygulaman.', 1, 6, []),
+        t('project-todo', 'Proje: Görev listesi', 'State, formlar, localStorage; ilk tam React uygulaman.', 1, 6, [doc('React Docs: Tutorial: Tic-Tac-Toe'), doc('React Docs: Thinking in React')]),
         t('project-api', 'Proje: API uygulaması', 'Film ya da hava durumu: arama, detay, yönlendirme, TanStack Query.', 2, 12, [prac('Frontend Mentor')]),
         opt('project-full', 'Proje: Tam ürün', 'Kimlik doğrulama ve veritabanıyla (Supabase) gerçek bir uygulama.', 3, 25, [course('Scrimba: Learn React')]),
       ],

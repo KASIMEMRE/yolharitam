@@ -91,7 +91,7 @@ export const FULLSTACK: DevRoadmap = {
       title: 'Projeler ve kariyer',
       emoji: '🚀',
       topics: [
-        t('project-crud', 'Proje: Tam CRUD uygulaması', 'Kimlik doğrulamalı, veritabanlı bir görev ya da not uygulaması.', 2, 20, []),
+        t('project-crud', 'Proje: Tam CRUD uygulaması', 'Kimlik doğrulamalı, veritabanlı bir görev ya da not uygulaması.', 2, 20, [doc('React Docs: Learn React'), doc('Express Docs: Routing'), prac('freeCodeCamp')]),
         t('project-saas', 'Proje: Küçük bir SaaS', 'Kullanıcı hesapları, ödeme (test modu), yönetim paneli ve canlı yayın.', 3, 30, [prac('Frontend Mentor (arayüz için)')]),
         opt('interview', 'Mülakat hazırlığı', 'Projeni uçtan uca anlatmak, sistem tasarımı ve canlı kodlama.', 3, 10, [book('System Design Primer (GitHub)')]),
       ],

@@ -10,7 +10,7 @@ import { Button } from '@/components/button';
 import { FriendsTodayCard } from '@/components/community/friends-today-card';
 import { UsernameForm } from '@/components/community/username-gate';
 import { IconTile } from '@/components/icon-tile';
-import { LevelBadge, StatusChip } from '@/components/level-badge';
+import { LevelBadge } from '@/components/level-badge';
 import { ProgressSummary } from '@/components/progress-summary';
 import { RoadmapTree, TreeLegend } from '@/components/roadmap-tree';
 import { ScreenHeader } from '@/components/screen-header';
@@ -33,6 +33,7 @@ import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questio
 import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useActivity, type Activity } from '@/hooks/use-activity';
+import { useFirstMapRedirect } from '@/hooks/use-first-map-redirect';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
@@ -49,7 +50,9 @@ function openTopic(roadmap: Roadmap, topicId: string) {
 
 export default function RoadmapScreen() {
   // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda
-  const { roadmap, roadmaps, loading, failed, retry, activate } = useLatestRoadmap();
+  const { roadmap, roadmaps, leftovers, status, loading, failed, retry, activate } = useLatestRoadmap();
+  // Yeni kullanıcı (hiç haritası yok): harita seçimi bir kez kendiliğinden açılır (UX-02)
+  useFirstMapRedirect(status, roadmaps.length + leftovers.length);
   const activity = useActivity();
   // Hook erken return'lerden ÖNCE çağrılır (hook kuralı)
   const progress = useTopicProgress(roadmap?.id);
@@ -219,6 +222,8 @@ function MapView({
       )}
 
       <JourneyCard roadmap={roadmap} map={map} plan={plan} sum={ready ? sum : null} />
+      {/* Seri + XP + haftalık hedef tek şeritte; arkadaş etkinliği şeridin genişleyen kısmında */}
+      {ready && activity && <MomentumStrip activity={activity} roadmapId={roadmap.id} weekly={weekly} />}
 
       {(progress.status === 'schema' || progress.status === 'network' || progress.status === 'error') && (
         <View style={styles.errorBox}>
@@ -235,9 +240,6 @@ function MapView({
 
       {ready && (
         <>
-          <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} />
-          {activity && <MomentumCard activity={activity} roadmapId={roadmap.id} weekly={weekly} />}
-          <FriendsTodayCard />
           <Sections
             roadmap={roadmap}
             map={map}
@@ -248,12 +250,6 @@ function MapView({
         </>
       )}
 
-      {/* İkincil eylemler en sonda: nadir yapılan işler uzun listenin önüne geçmesin */}
-      <View style={styles.actions}>
-        <Link href={{ pathname: '/roadmap-questions', params: { roadmapId: roadmap.id } }} asChild>
-          <Button variant="text" icon="🎯" label="Planımı güncelle" />
-        </Link>
-      </View>
     </>
   );
 }
@@ -268,7 +264,7 @@ function JourneyCard({
   roadmap: Roadmap;
   map: DevRoadmap;
   plan: string | null;
-  sum: { total: number; totalHours: number; weeks: number } | null;
+  sum: { done: number; total: number; remainingHours: number; weeks: number } | null;
 }) {
   const theme = useTheme();
   const shadow = useShadow();
@@ -313,21 +309,19 @@ function JourneyCard({
             </ThemedText>
           )}
         </View>
+        {/* Konu sayısı/süre yalnız burada (ProgressSummary'de): aynı bilgi iki yerde tekrarlanmaz */}
         {sum ? (
-          <View
-            accessible
-            accessibilityLabel={`Planında ${sum.total} konu, yaklaşık ${sum.totalHours} saat, yaklaşık ${sum.weeks} hafta`}
-            style={styles.chips}>
-            <StatusChip tone="neutral" emoji="🧭" label={`${sum.total} konu`} />
-            <StatusChip tone="neutral" emoji="⏱" label={`yaklaşık ${sum.totalHours} saat`} />
-            <StatusChip tone="neutral" emoji="📅" label={`yaklaşık ${sum.weeks} hafta`} />
-          </View>
+          <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} weeks={sum.weeks} />
         ) : (
           <View style={styles.chips}>
-            <Skeleton width={80} height={28} radius={Radius.pill} />
-            <Skeleton width={130} height={28} radius={Radius.pill} />
+            <Skeleton width="60%" height={16} />
+            <Skeleton width="100%" height={12} radius={Radius.pill} />
           </View>
         )}
+        {/* Planı yeniden kişiselleştirme (soruları tekrar cevaplama): eskiden sayfanın en altındaydı */}
+        <Link href={{ pathname: '/roadmap-questions', params: { roadmapId: roadmap.id } }} asChild>
+          <Button variant="secondary" icon="🎯" label="Planımı güncelle" />
+        </Link>
       </View>
     </View>
   );
@@ -418,10 +412,12 @@ function MapSwitcher({
   );
 }
 
-// Motivasyon kartı: günlük seri + bu haftanın hedefi
-function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roadmapId: string; weekly: WeeklyHoursId }) {
+// Motivasyon şeridi: seri, seviye/XP ve haftalık hedef tek bakışta. Dokununca ayrıntılar
+// (ipucu, seri koruyucu, XP'ye kalan, arkadaşların) açılır; böylece ekran uzamaz.
+function MomentumStrip({ activity, roadmapId, weekly }: { activity: Activity; roadmapId: string; weekly: WeeklyHoursId }) {
   const theme = useTheme();
   const xp = useXp();
+  const [open, setOpen] = useState(false);
   // Aktif gün: konu işaretlenen günler + XP kazanılan günler (quiz, soru, görev)
   const days = new Set([...activity.activeDays, ...xp.days]);
   const { streak, activeToday, freezeUsedThisWeek } = computeStreak(days);
@@ -432,79 +428,90 @@ function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roa
     : streak > 0
       ? 'Bugün bir şey yap, serin devam etsin.'
       : 'Günün görevini yap, serin başlasın.';
+  const weekDone = week.ratio >= 1;
 
   return (
-    <View
-      accessible
-      accessibilityLabel={`Seviye ${level.title}, ${xp.total} XP. Seri: ${streak} gün. ${hint} Bu hafta ${week.hours} / ${week.target} saat.`}
-      style={[styles.momentum, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      {/* Seviye ve XP */}
-      <View style={styles.weekBlock}>
-        <View style={styles.weekRow}>
-          <IconLabel emoji={level.emoji} type="smallBold">
-            {level.title}
-          </IconLabel>
-          <IconLabel emoji="⭐" themeColor="textSecondary">
-            {`${xp.total} XP${level.next ? ` · ${level.next.title} için ${level.next.remaining}` : ''}`}
-          </IconLabel>
+    <View style={[styles.strip, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`Seviye ${level.title}, ${xp.total} XP. Seri: ${streak} gün. Bu hafta ${week.hours} / ${week.target} saat. ${open ? 'Ayrıntıları gizlemek' : 'Ayrıntılar'} için dokun.`}
+        style={({ pressed }) => [styles.stripMain, pressed && { backgroundColor: theme.backgroundSelected }]}>
+        <View style={styles.stripRow}>
+          {/* Seri */}
+          <View style={[styles.streakBadge, { backgroundColor: streak > 0 ? theme.coralSoft : theme.backgroundSelected }]}>
+            <Glyph
+              emoji={streak > 0 ? '🔥' : '🌱'}
+              size={20}
+              color={streak > 0 ? theme.coralInk : theme.accentInk}
+              fill={streak > 0 ? theme.coralSoft : undefined}
+            />
+            <ThemedText type="smallBold" themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}>
+              {streak} gün
+            </ThemedText>
+          </View>
+          {/* Seviye + XP */}
+          <View style={styles.stripLevel}>
+            <IconLabel emoji={level.emoji} type="smallBold" iconSize={16}>
+              {level.title}
+            </IconLabel>
+            <ThemedText type="small" themeColor="textSecondary">
+              {xp.total} XP
+            </ThemedText>
+          </View>
+          <ThemedText type="smallBold" themeColor="textSecondary">
+            {open ? '▴' : '▾'}
+          </ThemedText>
         </View>
-        <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
-          <View style={[styles.weekFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
+        {/* Haftalık hedef */}
+        <View style={styles.weekBlock}>
+          <View style={styles.weekRow}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Bu haftanın hedefi
+            </ThemedText>
+            {/* Hedef tamamsa kutlama simgesi; simge yazının içinde değil, IconLabel ile ayrı çizilir */}
+            {weekDone ? (
+              <IconLabel emoji="🎉" type="smallBold" themeColor="accentInk" iconSize={16}>
+                {`${week.hours} / ${week.target} saat`}
+              </IconLabel>
+            ) : (
+              <ThemedText type="smallBold">
+                {week.hours} / {week.target} saat
+              </ThemedText>
+            )}
+          </View>
+          <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
+            <View
+              style={[
+                styles.weekFill,
+                { width: `${Math.round(week.ratio * 100)}%`, backgroundColor: weekDone ? theme.accent : theme.marker },
+              ]}
+            />
+          </View>
         </View>
-      </View>
+      </Pressable>
 
-      {/* Seri + koruyucu */}
-      <View style={styles.momentumRow}>
-        <View style={[styles.streakBadge, { backgroundColor: streak > 0 ? theme.coralSoft : theme.backgroundSelected }]}>
-          <Glyph
-            emoji={streak > 0 ? '🔥' : '🌱'}
-            size={26}
-            color={streak > 0 ? theme.coralInk : theme.accentInk}
-            fill={streak > 0 ? theme.coralSoft : undefined}
-          />
-          <ThemedText type="cardTitle" themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}>
-            {streak}
-          </ThemedText>
-        </View>
-        <View style={styles.bandTexts}>
-          <ThemedText type="smallBold">{streak > 0 ? `${streak} günlük seri` : 'Seri henüz başlamadı'}</ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {hint}
-          </ThemedText>
+      {open && (
+        <Animated.View entering={FadeIn.duration(150)} style={[styles.stripDetail, { borderTopColor: theme.border }]}>
+          <View style={styles.weekBlock}>
+            <ThemedText type="small" themeColor="textSecondary">
+              {level.next ? `${level.next.title} seviyesi için ${level.next.remaining} XP kaldı` : 'En yüksek seviyedesin.'}
+            </ThemedText>
+            <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
+              <View style={[styles.weekFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
+            </View>
+          </View>
+          <ThemedText type="small">{hint}</ThemedText>
           <IconLabel emoji="🧊" themeColor="skyInk">
             {freezeUsedThisWeek
               ? 'Bu haftaki seri koruyucun kullanıldı.'
               : 'Seri koruyucu hazır: bu hafta bir gün kaçırsan da serin bozulmaz.'}
           </IconLabel>
-        </View>
-      </View>
-
-      {/* Haftalık hedef */}
-      <View style={styles.weekBlock}>
-        <View style={styles.weekRow}>
-          <ThemedText type="small" themeColor="textSecondary">
-            Bu haftanın hedefi
-          </ThemedText>
-          {/* Hedef tamamsa kutlama simgesi; simge yazının içinde değil, IconLabel ile ayrı çizilir */}
-          {week.ratio >= 1 ? (
-            <IconLabel emoji="🎉" type="smallBold" themeColor="accentInk">
-              {`${week.hours} / ${week.target} saat`}
-            </IconLabel>
-          ) : (
-            <ThemedText type="smallBold">
-              {week.hours} / {week.target} saat
-            </ThemedText>
-          )}
-        </View>
-        <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
-          <View
-            style={[
-              styles.weekFill,
-              { width: `${Math.round(week.ratio * 100)}%`, backgroundColor: week.ratio >= 1 ? theme.accent : theme.marker },
-            ]}
-          />
-        </View>
-      </View>
+          {/* Bugün çalışan arkadaş yoksa bu bileşen hiçbir şey çizmez */}
+          <FriendsTodayCard compact />
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -956,14 +963,18 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: Border.thick,
   },
+  strip: { borderRadius: Radius.lg, borderWidth: Border.thick, overflow: 'hidden' },
+  stripMain: { gap: Spacing.two, padding: Spacing.three, minHeight: MinTouch },
+  stripRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  stripLevel: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.two },
+  stripDetail: { gap: Spacing.two, padding: Spacing.three, borderTopWidth: Border.thin },
   momentum: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
-  momentumRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   streakBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
     paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: Spacing.two,
     borderRadius: Radius.pill,
   },
   weekBlock: { gap: Spacing.one },
@@ -1036,7 +1047,6 @@ const styles = StyleSheet.create({
   },
   checkText: { fontSize: 13, fontWeight: '900' },
   strike: { textDecorationLine: 'line-through' },
-  actions: { alignItems: 'center' },
   empty: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.five },
   centerText: { textAlign: 'center' },
 });

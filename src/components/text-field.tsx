@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ReactNode, type ComponentRef, type Ref } from 'react';
 import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
 import Animated, {
   interpolateColor,
@@ -15,6 +15,8 @@ import { useTheme } from '@/hooks/use-theme';
 // Etiketli metin alanı. TextInput'un tüm özelliklerini alır (...rest),
 // üstüne etiket, alt bilgi ve sağda bir ek (örn. "Göster" butonu) ekler.
 type TextFieldProps = TextInputProps & {
+  // Odak zinciri için (ör. "ileri" ile sonraki alana geç). React 19'da ref normal bir prop gibi geçer.
+  ref?: Ref<ComponentRef<typeof TextInput>>;
   label: string;
   hint?: string; // Alanın altındaki küçük açıklama
   hintTone?: 'neutral' | 'good';
@@ -29,6 +31,7 @@ export function TextField({
   invalid = false,
   right,
   style,
+  ref,
   ...rest
 }: TextFieldProps) {
   const theme = useTheme();
@@ -59,6 +62,7 @@ export function TextField({
         <Animated.View style={[styles.box, { backgroundColor: theme.card }, borderStyle]}>
           <TextInput
             {...rest}
+            ref={ref}
             style={[styles.input, { color: theme.text }, style]}
             placeholderTextColor={theme.textSecondary}
             accessibilityLabel={label}

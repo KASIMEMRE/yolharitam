@@ -15,12 +15,14 @@ import { HeaderBackButton } from '@/components/header-back-button';
 import { OptionCard } from '@/components/option-card';
 import { StepIndicator } from '@/components/step-indicator';
 import { ThemedText } from '@/components/themed-text';
+import { TextField } from '@/components/text-field';
 import { ThemedView } from '@/components/themed-view';
 import { LEVELS } from '@/constants/onboarding';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { countTopics, DEV_ROADMAPS, getRoadmap, KIND_LABEL } from '@/constants/dev-roadmaps';
 import { LEVEL_STYLE } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
+import { searchRoadmaps } from '@/lib/search-roadmaps';
 import { resetWizardDone } from '@/lib/wizard-done';
 
 export default function OnboardingScreen() {
@@ -30,6 +32,9 @@ export default function OnboardingScreen() {
   const rawMap = Array.isArray(params.map) ? params.map[0] : params.map;
   const selected = getRoadmap(rawMap);
   const [level, setLevel] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const hits = searchRoadmaps(DEV_ROADMAPS, query);
+  const searching = query.trim().length > 0;
 
   // Yeni bir akış başlıyor: önceki sihirbaz kayıtlarını unut (bkz. wizard-done.ts)
   useEffect(() => {
@@ -107,8 +112,48 @@ export default function OnboardingScreen() {
               {inlineIndicator && <StepIndicator current={isPicked ? 1 : 0} />}
             </View>
 
+            {/* Arama: harita adında, açıklamasında ve konu başlıklarında (32 harita olunca liste uzun) */}
+            {!selected && (
+              <TextField
+                label="Ara"
+                placeholder="Örn. Kubernetes, React, veri, oyun"
+                value={query}
+                onChangeText={setQuery}
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="search"
+                hint={searching ? `${hits.length} harita bulundu` : 'Harita ya da konu adı yazabilirsin'}
+              />
+            )}
+
+            {/* Arama sonuçları: tek liste; eşleşme bir konudaysa hangi konu olduğu yazılır */}
+            {!selected && searching && (
+              <View style={styles.list}>
+                {hits.length === 0 && (
+                  <ThemedText themeColor="textSecondary">
+                    Sonuç bulunamadı. Daha kısa ya da farklı bir kelime dene.
+                  </ThemedText>
+                )}
+                {hits.map(({ map: m, topicTitle }, index) => (
+                  <OptionCard
+                    key={m.id}
+                    title={m.title}
+                    description={topicTitle ? `${KIND_LABEL[m.kind]} · Konu: ${topicTitle}` : `${m.tagline} · ${countTopics(m).total} konu`}
+                    icon={m.emoji}
+                    hue={m.hue}
+                    variant="list"
+                    trailing="chevron"
+                    hint="Bu yol haritasını seçmek için dokun"
+                    index={index}
+                    onPress={() => changeMap(m.id, 'push')}
+                  />
+                ))}
+              </View>
+            )}
+
             {/* Harita listesi: önce roller, sonra beceriler (roadmap.sh'teki ayrım) */}
             {!selected &&
+              !searching &&
               (['role', 'skill'] as const).map((kind) => (
                 <View key={kind} style={styles.list}>
                   <View style={styles.groupHead}>

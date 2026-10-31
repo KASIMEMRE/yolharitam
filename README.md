@@ -2,7 +2,7 @@
 
 Yazılım öğrenenler için Türkçe yol haritası uygulaması (iOS / Android, Expo + Supabase).
 
-- **Rol ve beceri haritaları:** Frontend, Backend, DevOps, Yapay Zekâ, Python, SQL, Git ve daha fazlası (bölüm → konu ağacı)
+- **32 rol ve beceri haritası, 1.000+ konu:** Frontend, Backend, iOS, Android, DevOps, Yapay Zekâ, MLOps, Veri, Siber Güvenlik, Oyun; JavaScript, Python, Java, Go, Rust, Kubernetes, AWS ve daha fazlası (bölüm → konu ağacı, arama)
 - **İlerleme:** konuları bitti / çalışıyorum / atladım olarak işaretle; günün görevi, seri, XP ve rozetler
 - **Yapay zekâ:** harita kişiye göre işaretlenir; konu başına alt başlıklar, mini quiz ve soru sorma (Groq, Supabase Edge Functions üzerinden)
 - **Gelişmeler:** seçtiğin konulara bağlı yazılım haberleri (başlık + kısa özet + kaynağa bağlantı)

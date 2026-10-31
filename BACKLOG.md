@@ -18,33 +18,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Tüm ekranlarda ağ hatasında Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
 - Yükleniyor durumlarında yerleşimi zıplatmayan iskelet görünümler.
 
-### Y-03 · Harita seçiminde arama
-- Onboarding'deki harita listesinin üstünde arama kutusu: harita ve konu başlıklarında arasın
-  (Türkçe karakterlere duyarsız: ı/i, ş/s…); sonuca basınca o harita seçilsin.
-- Kabul: Arama boşken mevcut seçim akışı aynen çalışır.
-
-### UX-02 · Kayıttan sonra doğrudan harita seçimi (UX-01'den)
-- Hiç haritası olmayan yeni kullanıcı Yol Haritam'a düşünce harita seçimi bir kez otomatik açılsın (boş durum ekranı atlanır).
-- Döngü olmasın: "bu oturumda bir kez" bayrağı; okuma hatasında (ağ) yönlendirme yapılmaz, yalnız "kayıt yok" durumunda.
-
-### UX-03 · Sorularda tek dokunuş (UX-01'den)
-- roadmap-questions'ta seçeneğe basınca kısa gecikmeyle sonraki soruya geç; son soruda "Haritamı hazırla" onayı kalsın.
-- Ekran okuyucu ve yanlış dokunmayı geri alma (üstteki geri) test edilmeli.
-
-### UX-04 · Giriş formunda klavye akışı (UX-01'den)
-- Alanlar arası `returnKeyType="next"` ile odak geçişi (`ref` zinciri), son alanda "go" formu gönderir.
-
-### UX-05 · Yol Haritam ve konu ekranını sadeleştirme (UX-01'den)
-- Momentum + Arkadaşlar kartlarını kısa bir özet satırına indirgeme; JourneyCard ile ProgressSummary'deki tekrar eden bilgiyi birleştirme.
-- Konu ekranında 3 büyük durum kartı yerine kompakt 3'lü anahtar.
-
-### UX-06 · Yapay zekâ araçları ve plan güncellemenin bulunurluğu (UX-01'den)
-- Konu detayında "Quiz çöz / Soru sor" kısayolu (sayfanın altına inmeden); "Planımı güncelle" bağlantısı daha görünür bir yerde.
-
-### UX-07 · Kurulum hatası ekranı ve isteğe bağlı kullanıcı adı (UX-01'den)
-- `.env.local` yokken beyaz ekran yerine anlamlı hata (`src/lib/supabase.ts`).
-- Kayıtta kullanıcı adını isteğe bağlı yapıp ilk girişte sormak (veritabanı `handle_new_user` etkilenir, 🗄️ olabilir).
-
 ## Beklemede (sırada değil)
 
 ### OTP-01 · E-postaya gelen kodla doğrulama (PR #4)
@@ -52,6 +25,39 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### Y-03 · Harita seçiminde arama
+- Onboarding'deki harita listesinin üstünde arama kutusu: harita ve konu başlıklarında arasın
+  (Türkçe karakterlere duyarsız: ı/i, ş/s…); sonuca basınca o harita seçilsin.
+- Kabul: Arama boşken mevcut seçim akışı aynen çalışır.
+- ✅ Harita seçiminde arama (ad, açıklama, konu başlıkları; Türkçe karakter duyarsız).
+
+### UX-07 · Kurulum hatası ekranı ve isteğe bağlı kullanıcı adı (UX-01'den)
+- `.env.local` yokken beyaz ekran yerine anlamlı hata (`src/lib/supabase.ts`).
+- Kayıtta kullanıcı adını isteğe bağlı yapıp ilk girişte sormak (veritabanı `handle_new_user` etkilenir, 🗄️ olabilir).
+- ✅ Supabase değerleri config.ts'te varsayılan (beyaz ekran yok); kullanıcı adı kayıtta kalıyor (tek ad kararı).
+
+### UX-04 · Giriş formunda klavye akışı (UX-01'den)
+- Alanlar arası `returnKeyType="next"` ile odak geçişi (`ref` zinciri), son alanda "go" formu gönderir.
+- ✅ İçerik genişletme PR'ında yapıldı.
+
+### UX-03 · Sorularda tek dokunuş (UX-01'den)
+- roadmap-questions'ta seçeneğe basınca kısa gecikmeyle sonraki soruya geç; son soruda "Haritamı hazırla" onayı kalsın.
+- Ekran okuyucu ve yanlış dokunmayı geri alma (üstteki geri) test edilmeli.
+- ✅ İçerik genişletme PR'ında yapıldı.
+
+### UX-02 · Kayıttan sonra doğrudan harita seçimi (UX-01'den)
+- Hiç haritası olmayan yeni kullanıcı Yol Haritam'a düşünce harita seçimi bir kez otomatik açılsın (boş durum ekranı atlanır).
+- Döngü olmasın: "bu oturumda bir kez" bayrağı; okuma hatasında (ağ) yönlendirme yapılmaz, yalnız "kayıt yok" durumunda.
+- ✅ İçerik genişletme PR'ında yapıldı.
+
+### UX-05 · Yol Haritam ve konu ekranını sadeleştirme (UX-01'den)
+- Momentum + Arkadaşlar kartları tek şeritte (seri, seviye/XP, haftalık hedef; dokununca ayrıntı + arkadaşlar). JourneyCard ile ProgressSummary birleşti (konu sayısı/süre tek yerde).
+- Konu ekranında 3 durum kartı yerine kompakt 3'lü seçici (radio rolü, 44 pt). Davranış değişmedi.
+
+### UX-06 · Yapay zekâ araçları ve plan güncellemenin bulunurluğu (UX-01'den)
+- Konu ekranında durumun altında "Alt konular / Quiz çöz / Yapay zekâya sor" kısayolları (ilgili bloğa kaydırır).
+- "Planımı güncelle" Yolculuk kartının içinde ikincil düğme (aynı `/roadmap-questions` bağlantısı).
 
 ### UX-01 · Kullanılabilirlik denetimi ve en etkili iyileştirmeler
 - Denetim (ürün sorumlusu + tasarımcı) sonrası 5 iyileştirme: Yol Haritam'da "Günün görevi / Sıradaki konu" en üstte (aynı konuysa tek kart);
