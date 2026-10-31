@@ -34,13 +34,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 ### UX-04 · Giriş formunda klavye akışı (UX-01'den)
 - Alanlar arası `returnKeyType="next"` ile odak geçişi (`ref` zinciri), son alanda "go" formu gönderir.
 
-### UX-05 · Yol Haritam ve konu ekranını sadeleştirme (UX-01'den)
-- Momentum + Arkadaşlar kartlarını kısa bir özet satırına indirgeme; JourneyCard ile ProgressSummary'deki tekrar eden bilgiyi birleştirme.
-- Konu ekranında 3 büyük durum kartı yerine kompakt 3'lü anahtar.
-
-### UX-06 · Yapay zekâ araçları ve plan güncellemenin bulunurluğu (UX-01'den)
-- Konu detayında "Quiz çöz / Soru sor" kısayolu (sayfanın altına inmeden); "Planımı güncelle" bağlantısı daha görünür bir yerde.
-
 ### UX-07 · Kurulum hatası ekranı ve isteğe bağlı kullanıcı adı (UX-01'den)
 - `.env.local` yokken beyaz ekran yerine anlamlı hata (`src/lib/supabase.ts`).
 - Kayıtta kullanıcı adını isteğe bağlı yapıp ilk girişte sormak (veritabanı `handle_new_user` etkilenir, 🗄️ olabilir).
@@ -52,6 +45,14 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### UX-05 · Yol Haritam ve konu ekranını sadeleştirme (UX-01'den)
+- Momentum + Arkadaşlar kartları tek şeritte (seri, seviye/XP, haftalık hedef; dokununca ayrıntı + arkadaşlar). JourneyCard ile ProgressSummary birleşti (konu sayısı/süre tek yerde).
+- Konu ekranında 3 durum kartı yerine kompakt 3'lü seçici (radio rolü, 44 pt). Davranış değişmedi.
+
+### UX-06 · Yapay zekâ araçları ve plan güncellemenin bulunurluğu (UX-01'den)
+- Konu ekranında durumun altında "Alt konular / Quiz çöz / Yapay zekâya sor" kısayolları (ilgili bloğa kaydırır).
+- "Planımı güncelle" Yolculuk kartının içinde ikincil düğme (aynı `/roadmap-questions` bağlantısı).
 
 ### UX-01 · Kullanılabilirlik denetimi ve en etkili iyileştirmeler
 - Denetim (ürün sorumlusu + tasarımcı) sonrası 5 iyileştirme: Yol Haritam'da "Günün görevi / Sıradaki konu" en üstte (aynı konuysa tek kart);

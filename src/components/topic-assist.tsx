@@ -28,7 +28,17 @@ type Explain = {
 };
 type Quiz = { questions: { question: string; options: string[]; answer: number; why: string }[] };
 
-type Props = { map: DevRoadmap; section: Section; topic: Topic; level?: LevelId };
+// Bloklar: konu ekranındaki kısayollar (Alt konular / Quiz çöz / Yapay zekâya sor) bunlara kaydırır.
+export type AssistBlockId = 'explain' | 'quiz' | 'ask';
+
+type Props = {
+  map: DevRoadmap;
+  section: Section;
+  topic: Topic;
+  level?: LevelId;
+  // Her blok yerleşince üst y konumunu (bu bileşenin içindeki) bildirir; kaydırma için kullanılır
+  onBlockLayout?: (id: AssistBlockId, y: number) => void;
+};
 
 type Load<T> = { state: 'idle' | 'loading' | 'ready' | 'error'; data?: T; error?: string };
 
@@ -51,7 +61,7 @@ async function callAssist<T>(body: Record<string, unknown>): Promise<{ data?: T;
   }
 }
 
-export function TopicAssist({ map, section, topic, level }: Props) {
+export function TopicAssist({ map, section, topic, level, onBlockLayout }: Props) {
   const base = {
     mapId: map.id,
     mapTitle: map.title,
@@ -85,7 +95,8 @@ export function TopicAssist({ map, section, topic, level }: Props) {
         subtitle="Alt konular, kısa bir örnek, sık yapılan hatalar ve bir mini alıştırma."
         load={explain}
         actionLabel="Alt konuları göster"
-        onLoad={loadExplain}>
+        onLoad={loadExplain}
+        onLayout={(y) => onBlockLayout?.('explain', y)}>
         {explain.data && <ExplainView data={explain.data} />}
       </Block>
 
@@ -96,12 +107,13 @@ export function TopicAssist({ map, section, topic, level }: Props) {
         subtitle="Kısa quiz: konuyu gerçekten anladın mı?"
         load={quiz}
         actionLabel="Quiz'i başlat"
-        onLoad={loadQuiz}>
+        onLoad={loadQuiz}
+        onLayout={(y) => onBlockLayout?.('quiz', y)}>
         {quiz.data && <QuizView data={quiz.data} xpRef={`${map.id}:${topic.id}`} topicId={topic.id} />}
       </Block>
 
       {/* 3) Soru sor */}
-      <AskBox base={base} />
+      <AskBox base={base} onLayout={(y) => onBlockLayout?.('ask', y)} />
     </View>
   );
 }
@@ -113,6 +125,7 @@ function Block({
   load,
   actionLabel,
   onLoad,
+  onLayout,
   children,
 }: {
   emoji: string;
@@ -121,11 +134,14 @@ function Block({
   load: Load<unknown>;
   actionLabel: string;
   onLoad: () => void;
+  onLayout?: (y: number) => void;
   children: React.ReactNode;
 }) {
   const theme = useTheme();
   return (
-    <View style={[styles.block, { backgroundColor: theme.card, borderColor: theme.border }]}>
+    <View
+      onLayout={(e) => onLayout?.(e.nativeEvent.layout.y)}
+      style={[styles.block, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={styles.blockHead}>
         <View style={[styles.headIcon, { backgroundColor: theme.accentSoft }]}>
           <Glyph emoji={emoji} size={20} color={theme.accentInk} />
@@ -301,7 +317,7 @@ function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId
   );
 }
 
-function AskBox({ base }: { base: Record<string, unknown> }) {
+function AskBox({ base, onLayout }: { base: Record<string, unknown>; onLayout?: (y: number) => void }) {
   const theme = useTheme();
   const [question, setQuestion] = useState('');
   const [state, setState] = useState<Load<{ answer: string }> & { asked?: string; remaining?: number }>({
@@ -325,7 +341,9 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
   }
 
   return (
-    <View style={[styles.block, { backgroundColor: theme.card, borderColor: theme.border }]}>
+    <View
+      onLayout={(e) => onLayout?.(e.nativeEvent.layout.y)}
+      style={[styles.block, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={styles.blockHead}>
         <View style={[styles.headIcon, { backgroundColor: theme.accentSoft }]}>
           <Glyph emoji="💬" size={20} color={theme.accentInk} />
