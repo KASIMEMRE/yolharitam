@@ -115,7 +115,7 @@ export const BACKEND: DevRoadmap = {
       emoji: '🚀',
       topics: [
         t('project-api', 'Proje: Tam bir REST API', 'Kimlik doğrulamalı, veritabanlı, testli ve belgelenmiş bir API (ör. not uygulaması).', 2, 20, [prac('roadmap.sh projeler sayfası (fikir için)')]),
-        t('project-deploy', 'Proje: Canlı servis', 'API’ni Docker ile paketle, CI ile test et, buluta yayınla.', 3, 10, []),
+        t('project-deploy', 'Proje: Canlı servis', 'API’ni Docker ile paketle, CI ile test et, buluta yayınla.', 3, 10, [prac('Docker Docs: Get started'), doc('GitHub Docs: GitHub Actions'), doc('Render Docs: Deploy a Web Service')]),
         opt('interview', 'Mülakat hazırlığı', 'Veri yapıları, SQL soruları ve sistem tasarımı mülakatları.', 3, 10, [prac('LeetCode'), book('System Design Interview (Alex Xu)')]),
       ],
     },

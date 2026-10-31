@@ -24,7 +24,7 @@ export const CYBER_SECURITY: DevRoadmap = {
       emoji: '🌐',
       topics: [
         t('osi-tcpip', 'OSI ve TCP/IP modelleri', 'Katmanlar, IP adresleme, alt ağlar, portlar ve protokoller.', 1, 6, [course('Professor Messer: CompTIA Network+')]),
-        t('protocols', 'Yaygın protokoller', 'DNS, DHCP, HTTP(S), SSH, SMB; nasıl çalışır, nasıl kötüye kullanılır?', 2, 4, []),
+        t('protocols', 'Yaygın protokoller', 'DNS, DHCP, HTTP(S), SSH, SMB; nasıl çalışır, nasıl kötüye kullanılır?', 2, 4, [course('Professor Messer: Network+ (ücretsiz)'), doc('Cloudflare Learning: What is DNS?')]),
         t('wireshark', 'Trafik analizi: Wireshark', 'Paketleri yakala ve incele.', 2, 4, [doc('Wireshark User’s Guide')]),
       ],
     },
@@ -35,8 +35,8 @@ export const CYBER_SECURITY: DevRoadmap = {
       topics: [
         t('cia', 'Temel kavramlar', 'Gizlilik-bütünlük-erişilebilirlik (CIA), risk, tehdit, zafiyet.', 1, 3, [course('Professor Messer: CompTIA Security+')]),
         t('crypto', 'Kriptografi temelleri', 'Simetrik/asimetrik şifreleme, özet (hash), dijital imza, sertifikalar.', 2, 4, [course('Khan Academy: Cryptography')]),
-        t('iam', 'Kimlik ve erişim yönetimi', 'MFA, en az yetki ilkesi, parola politikaları.', 1, 2, []),
-        t('threats', 'Saldırı türleri', 'Oltalama (phishing), kötü amaçlı yazılım, DDoS, sosyal mühendislik.', 1, 3, []),
+        t('iam', 'Kimlik ve erişim yönetimi', 'MFA, en az yetki ilkesi, parola politikaları.', 1, 2, [doc('OWASP Authentication Cheat Sheet'), doc('NIST SP 800-63: Digital Identity Guidelines')]),
+        t('threats', 'Saldırı türleri', 'Oltalama (phishing), kötü amaçlı yazılım, DDoS, sosyal mühendislik.', 1, 3, [doc('OWASP Top 10'), doc('MITRE ATT&CK')]),
       ],
     },
     {
@@ -57,7 +57,7 @@ export const CYBER_SECURITY: DevRoadmap = {
       topics: [
         t('siem', 'SIEM ve log analizi', 'Splunk ya da Elastic ile logları ara, korelasyon kuralları yaz.', 2, 6, [course('Splunk Free Training')]),
         t('ir', 'Olay müdahalesi', 'Tespit → sınırlama → temizleme → kurtarma → ders çıkarma.', 3, 4, [doc('NIST SP 800-61')]),
-        opt('edr-forensics', 'Uç nokta ve adli bilişim', 'EDR, bellek ve disk incelemesi temelleri.', 3, 6, []),
+        opt('edr-forensics', 'Uç nokta ve adli bilişim', 'EDR, bellek ve disk incelemesi temelleri.', 3, 6, [doc('SANS: Digital Forensics Resources'), prac('TryHackMe: Digital Forensics')]),
         opt('threat-intel', 'Tehdit istihbaratı', 'MITRE ATT&CK ile saldırgan davranışlarını sınıflandır.', 3, 3, [doc('MITRE ATT&CK')]),
       ],
     },
@@ -79,7 +79,7 @@ export const CYBER_SECURITY: DevRoadmap = {
       topics: [
         opt('frameworks', 'Standartlar', 'ISO 27001, NIST CSF; kurumlar güvenliği nasıl yönetir?', 2, 3, [doc('NIST Cybersecurity Framework')]),
         opt('kvkk', 'Mevzuat: KVKK ve GDPR', 'Kişisel verilerin korunması ve veri ihlali bildirim yükümlülükleri.', 2, 2, [doc('KVKK resmi sitesi')]),
-        t('ethics', 'Etik ve yasal sınırlar', 'İzinsiz test suçtur: yetki, kapsam ve sorumlu ifşa.', 1, 1, []),
+        t('ethics', 'Etik ve yasal sınırlar', 'İzinsiz test suçtur: yetki, kapsam ve sorumlu ifşa.', 1, 1, [doc('EC-Council: Code of Ethics'), doc('OWASP Web Security Testing Guide')]),
       ],
     },
     {
@@ -88,7 +88,7 @@ export const CYBER_SECURITY: DevRoadmap = {
       emoji: '🚀',
       topics: [
         t('security-plus', 'CompTIA Security+', 'Giriş seviyesi işler için en çok aranan sertifika.', 2, 40, [course('Professor Messer: CompTIA Security+')]),
-        opt('advanced-certs', 'İleri sertifikalar', 'Yönüne göre: CySA+, OSCP, BTL1, AWS Security Specialty.', 3, 80, []),
+        opt('advanced-certs', 'İleri sertifikalar', 'Yönüne göre: CySA+, OSCP, BTL1, AWS Security Specialty.', 3, 80, [doc('Offensive Security: OSCP'), doc('ISC2: CISSP')]),
         t('homelab', 'Ev laboratuvarı ve portfolyo', 'Sanal makinelerle lab kur, yazdığın CTF çözümlerini ve raporlarını yayınla.', 2, 15, [doc('VirtualBox'), prac('TryHackMe')]),
       ],
     },

@@ -23,11 +23,11 @@ export const DOCKER: DevRoadmap = {
       title: 'İmajlar ve konteynerler',
       emoji: '📦',
       topics: [
-        t('run', 'Konteyner çalıştırma', 'run, ps, logs, exec, stop; port eşleme.', 1, 2, []),
-        t('images', 'İmajlar ve kayıt defterleri', 'Docker Hub, etiketler (tag), pull/push.', 1, 2, []),
+        t('run', 'Konteyner çalıştırma', 'run, ps, logs, exec, stop; port eşleme.', 1, 2, [doc('Docker Docs: docker run'), doc('Docker Docs: Get started')]),
+        t('images', 'İmajlar ve kayıt defterleri', 'Docker Hub, etiketler (tag), pull/push.', 1, 2, [doc('Docker Docs: Images'), doc('Docker Hub Docs')]),
         t('dockerfile', 'Dockerfile yazmak', 'FROM, COPY, RUN, CMD; katmanlar ve önbellek.', 1, 4, [doc('Docker Docs: Dockerfile reference')]),
         t('best-practices', 'İyi Dockerfile', 'Küçük temel imaj, .dockerignore, katman sırası.', 2, 2, [doc('Docker Docs: Building best practices')]),
-        t('multi-stage', 'Çok aşamalı derleme', 'Derleme ve çalışma imajını ayırarak küçük imaj.', 2, 2, []),
+        t('multi-stage', 'Çok aşamalı derleme', 'Derleme ve çalışma imajını ayırarak küçük imaj.', 2, 2, [doc('Docker Docs: Multi-stage builds'), doc('Docker Docs: Building best practices')]),
       ],
     },
     {
@@ -37,7 +37,7 @@ export const DOCKER: DevRoadmap = {
       topics: [
         t('volumes', 'Volume ve bind mount', 'Konteyner silinince veri kaybolmasın.', 2, 2, [doc('Docker Docs: Volumes')]),
         t('networks', 'Ağlar', 'Konteynerler arası iletişim, bridge ağ, DNS.', 2, 2, [doc('Docker Docs: Networking')]),
-        t('env-secrets', 'Ortam değişkenleri ve gizli bilgiler', 'Gizli anahtarları imaja gömmemek.', 2, 1, []),
+        t('env-secrets', 'Ortam değişkenleri ve gizli bilgiler', 'Gizli anahtarları imaja gömmemek.', 2, 1, [doc('Docker Docs: Environment variables'), doc('Docker Docs: Build secrets')]),
       ],
     },
     {
@@ -46,7 +46,7 @@ export const DOCKER: DevRoadmap = {
       emoji: '🎼',
       topics: [
         t('compose-basics', 'compose.yaml', 'Uygulama + veritabanı + önbelleği tek komutla ayağa kaldır.', 2, 3, [doc('Docker Compose Docs')]),
-        t('dev-workflow', 'Geliştirme akışı', 'Canlı yeniden yükleme, sağlık kontrolleri, bağımlılık sırası.', 2, 2, []),
+        t('dev-workflow', 'Geliştirme akışı', 'Canlı yeniden yükleme, sağlık kontrolleri, bağımlılık sırası.', 2, 2, [doc('Docker Docs: Compose Watch'), doc('Docker Docs: Bind mounts')]),
       ],
     },
     {
@@ -56,8 +56,8 @@ export const DOCKER: DevRoadmap = {
       topics: [
         t('security', 'İmaj güvenliği', 'root olmayan kullanıcı, imaj tarama (Docker Scout/Trivy).', 3, 3, [doc('Trivy Docs')]),
         t('ci', 'CI içinde Docker', 'GitHub Actions ile imaj derleyip kayıt defterine göndermek.', 2, 3, [doc('GitHub Actions Docs')]),
-        t('resources', 'Kaynak sınırları ve loglama', 'CPU/bellek sınırı, yeniden başlatma politikası.', 3, 2, []),
-        opt('registry', 'Özel kayıt defteri', 'GHCR, ECR gibi özel kayıt defterleri.', 3, 1, []),
+        t('resources', 'Kaynak sınırları ve loglama', 'CPU/bellek sınırı, yeniden başlatma politikası.', 3, 2, [doc('Docker Docs: Resource constraints'), doc('Docker Docs: Logging drivers')]),
+        opt('registry', 'Özel kayıt defteri', 'GHCR, ECR gibi özel kayıt defterleri.', 3, 1, [doc('Docker Docs: Deploy a registry server'), doc('GitHub Docs: Working with the Container registry')]),
       ],
     },
     {
@@ -66,7 +66,7 @@ export const DOCKER: DevRoadmap = {
       emoji: '🧭',
       topics: [
         opt('kubernetes', 'Kubernetes’e giriş', 'Birçok konteyneri birçok sunucuda yönetmek.', 3, 10, [doc('Kubernetes Docs: Tutorials')]),
-        t('project', 'Proje: Konteynerli uygulama', 'Bir web uygulamasını veritabanıyla Compose’la çalıştır, CI ile imaj üret.', 2, 8, []),
+        t('project', 'Proje: Konteynerli uygulama', 'Bir web uygulamasını veritabanıyla Compose’la çalıştır, CI ile imaj üret.', 2, 8, [doc('Docker Docs: Compose'), doc('Docker Docs: Language-specific guides')]),
       ],
     },
   ],

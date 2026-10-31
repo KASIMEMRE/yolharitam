@@ -6,6 +6,7 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  TextInput,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -92,6 +93,9 @@ export default function LoginScreen() {
   // Hata çıkınca sayfayı en alta kaydırıyoruz ki kullanıcı mesajı mutlaka görsün.
   const [notice, setNotice] = useState<string | null>(null);
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  // Klavye akışı: kullanıcı adı → e-posta → şifre → gönder
+  const emailRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
   // Kayıttan sonra gelen bilgi kutusu (notice) da aynı yerde; o da görünür alana kaydırılsın
   useEffect(() => {
     if (error || notice) scrollRef.current?.scrollToEnd({ animated: true });
@@ -269,6 +273,9 @@ export default function LoginScreen() {
                   autoComplete="username-new"
                   textContentType="username"
                   returnKeyType="next"
+                  // Klavyedeki "ileri" ile sıradaki alana geç (klavye kapanıp açılmasın)
+                  submitBehavior="submit"
+                  onSubmitEditing={() => emailRef.current?.focus()}
                   invalid={(username.length > 0 && !handleFormatOk) || handleTaken}
                   hint={usernameHint}
                   hintTone={usernameHintTone}
@@ -285,6 +292,9 @@ export default function LoginScreen() {
                 autoComplete="email"
                 textContentType="emailAddress"
                 returnKeyType="next"
+                ref={emailRef}
+                submitBehavior="submit"
+                onSubmitEditing={() => passwordRef.current?.focus()}
               />
 
               <TextField
@@ -296,6 +306,7 @@ export default function LoginScreen() {
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 textContentType={mode === 'login' ? 'password' : 'newPassword'}
                 returnKeyType="go"
+                ref={passwordRef}
                 onSubmitEditing={() => canSubmit && handleSubmit()}
                 hint={mode === 'signup' ? `${passwordValid ? '✓ ' : ''}En az ${MIN_NEW_PASSWORD} karakter` : undefined}
                 hintTone={passwordValid ? 'good' : 'neutral'}

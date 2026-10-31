@@ -26,7 +26,7 @@ export const AI_ENGINEER: DevRoadmap = {
       topics: [
         t('how-llm', 'LLM nasıl çalışır?', 'Token, bağlam penceresi, sıcaklık, olasılıksal üretim; transformer’a giriş.', 1, 4, [vid('Andrej Karpathy: Intro to Large Language Models')]),
         t('providers', 'Model sağlayıcıları', 'Kapalı (Claude, GPT, Gemini) ve açık modeller (Llama, Qwen); maliyet ve hız farkları.', 1, 2, [doc('Anthropic Docs'), doc('OpenAI Docs')]),
-        t('limits', 'Sınırlar ve riskler', 'Halüsinasyon, önyargı, güncellik ve gizlilik sorunları.', 1, 2, []),
+        t('limits', 'Sınırlar ve riskler', 'Halüsinasyon, önyargı, güncellik ve gizlilik sorunları.', 1, 2, [doc('Anthropic Docs: Reduce hallucinations'), doc('OpenAI Docs: Safety best practices')]),
         opt('open-models', 'Açık modelleri yerelde çalıştır', 'Ollama ile bilgisayarında model çalıştırma.', 2, 2, [doc('Ollama Docs')]),
       ],
     },
@@ -58,9 +58,9 @@ export const AI_ENGINEER: DevRoadmap = {
       topics: [
         t('embeddings', 'Embedding ve benzerlik', 'Metni vektöre çevir, kosinüs benzerliğiyle ara.', 2, 4, [course('DeepLearning.AI: Vector Databases')]),
         t('vector-db', 'Vektör veritabanları', 'pgvector, Qdrant, Chroma; indeks türleri.', 2, 4, [doc('pgvector (GitHub)'), doc('Qdrant Docs')]),
-        t('chunking', 'Belge parçalama ve hazırlama', 'Parça boyutu, örtüşme, meta veri; PDF ve web sayfası işleme.', 2, 3, []),
+        t('chunking', 'Belge parçalama ve hazırlama', 'Parça boyutu, örtüşme, meta veri; PDF ve web sayfası işleme.', 2, 3, [doc('LangChain Docs: Text splitters'), doc('LlamaIndex Docs: Node Parsers')]),
         t('rag-pipeline', 'RAG hattı', 'Getir → yeniden sırala → cevapla; kaynak gösterimi.', 3, 6, [doc('Anthropic: Contextual Retrieval')]),
-        opt('hybrid', 'Hibrit arama', 'Anahtar kelime (BM25) ve vektör aramasını birleştir.', 3, 3, []),
+        opt('hybrid', 'Hibrit arama', 'Anahtar kelime (BM25) ve vektör aramasını birleştir.', 3, 3, [doc('Elasticsearch Docs: Hybrid search'), doc('Pinecone Docs: Hybrid search')]),
       ],
     },
     {
@@ -70,7 +70,7 @@ export const AI_ENGINEER: DevRoadmap = {
       topics: [
         t('agent-basics', 'Ajan döngüsü', 'Planla → araç kullan → gözlemle; ne zaman ajan, ne zaman basit akış?', 2, 4, [doc('Anthropic: Building effective agents')]),
         t('mcp', 'Model Context Protocol (MCP)', 'Modelleri araç ve veri kaynaklarına standart yolla bağla.', 3, 4, [doc('modelcontextprotocol.io')]),
-        opt('multi-agent', 'Çoklu ajan sistemleri', 'Görev dağıtımı, alt ajanlar, maliyet ve güvenilirlik dengesi.', 3, 4, []),
+        opt('multi-agent', 'Çoklu ajan sistemleri', 'Görev dağıtımı, alt ajanlar, maliyet ve güvenilirlik dengesi.', 3, 4, [doc('Anthropic: Building effective agents'), doc('LangGraph Docs: Multi-agent systems')]),
         t('guardrails', 'Güvenlik ve korumalar', 'Prompt enjeksiyonu, yetki sınırlama, insan onayı.', 3, 3, [doc('OWASP Top 10 for LLM Applications')]),
       ],
     },
@@ -99,8 +99,8 @@ export const AI_ENGINEER: DevRoadmap = {
       title: 'Projeler ve kariyer',
       emoji: '🚀',
       topics: [
-        t('project-rag', 'Proje: Belgelerinle sohbet', 'PDF yükle, sorulara kaynak göstererek cevap veren RAG uygulaması.', 2, 15, []),
-        t('project-agent', 'Proje: Araç kullanan ajan', 'Takvim, arama ya da veritabanı araçlarıyla iş gören bir ajan; eval seti ile.', 3, 20, []),
+        t('project-rag', 'Proje: Belgelerinle sohbet', 'PDF yükle, sorulara kaynak göstererek cevap veren RAG uygulaması.', 2, 15, [doc('LangChain Docs: Build a RAG app'), doc('Anthropic Docs: Embeddings')]),
+        t('project-agent', 'Proje: Araç kullanan ajan', 'Takvim, arama ya da veritabanı araçlarıyla iş gören bir ajan; eval seti ile.', 3, 20, [doc('Anthropic Docs: Tool use'), doc('OpenAI Docs: Function calling')]),
         opt('portfolio', 'Paylaş ve anlat', 'Projelerini GitHub’da belgeleyip demo videosu ve yazı ile paylaş.', 2, 4, [prac('Hugging Face Spaces')]),
       ],
     },

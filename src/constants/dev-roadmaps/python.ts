@@ -16,8 +16,8 @@ export const PYTHON: DevRoadmap = {
         t('setup', 'Kurulum ve ilk program', 'Python’u kur, editörünü (VS Code) hazırla, ilk betiğini çalıştır.', 1, 1, [doc('Python Resmi Eğitimi (docs.python.org)')]),
         t('syntax', 'Sözdizimi ve veri tipleri', 'Değişkenler, sayılar, metinler (string), bool, tip dönüşümü.', 1, 4, [course('BTK Akademi: Python'), book('Automate the Boring Stuff with Python (ücretsiz)')]),
         t('control-flow', 'Koşullar ve döngüler', 'if/elif/else, for, while, break/continue.', 1, 3, [prac('Exercism: Python')]),
-        t('functions', 'Fonksiyonlar', 'Parametreler, dönüş değeri, varsayılan değerler, *args/**kwargs.', 1, 3, []),
-        t('collections', 'Listeler, sözlükler, kümeler', 'Yerleşik veri yapıları ve liste üreteçleri (comprehension).', 1, 4, []),
+        t('functions', 'Fonksiyonlar', 'Parametreler, dönüş değeri, varsayılan değerler, *args/**kwargs.', 1, 3, [doc('Python Docs: Defining Functions'), prac('Exercism: Python Track')]),
+        t('collections', 'Listeler, sözlükler, kümeler', 'Yerleşik veri yapıları ve liste üreteçleri (comprehension).', 1, 4, [doc('Python Docs: Data Structures'), prac('Exercism: Python Track')]),
       ],
     },
     {
@@ -26,7 +26,7 @@ export const PYTHON: DevRoadmap = {
       emoji: '🧭',
       topics: [
         t('modules', 'Modüller ve paketler', 'import sistemi, pip, sanal ortam (venv) ve uv.', 1, 2, [doc('Python Packaging User Guide')]),
-        t('files-errors', 'Dosyalar ve hata yönetimi', 'Dosya okuma/yazma, with, try/except, kendi istisnaların.', 1, 3, []),
+        t('files-errors', 'Dosyalar ve hata yönetimi', 'Dosya okuma/yazma, with, try/except, kendi istisnaların.', 1, 3, [doc('Python Docs: Reading and Writing Files'), doc('Python Docs: Errors and Exceptions')]),
         t('oop', 'Nesne yönelimli programlama', 'Sınıflar, kalıtım, dunder metotlar, dataclass.', 2, 5, [doc('Real Python: OOP in Python')]),
         t('stdlib', 'Standart kütüphane', 'pathlib, datetime, json, collections, itertools.', 2, 3, [doc('Python Module of the Week')]),
         t('typing', 'Tip ipuçları', 'Type hints ve mypy ile daha güvenli kod.', 2, 2, [doc('mypy Docs')]),
@@ -37,8 +37,8 @@ export const PYTHON: DevRoadmap = {
       title: 'İleri seviye',
       emoji: '🏔️',
       topics: [
-        t('iterators', 'İteratörler ve üreteçler', 'yield, tembel değerlendirme, bellek dostu veri işleme.', 3, 3, []),
-        t('decorators', 'Dekoratörler ve bağlam yöneticileri', 'Fonksiyonları sarmalamak, kendi with yapın.', 3, 3, []),
+        t('iterators', 'İteratörler ve üreteçler', 'yield, tembel değerlendirme, bellek dostu veri işleme.', 3, 3, [doc('Python Docs: Iterators'), doc('Python Docs: Generators')]),
+        t('decorators', 'Dekoratörler ve bağlam yöneticileri', 'Fonksiyonları sarmalamak, kendi with yapın.', 3, 3, [doc('Python Docs: Function definitions (decorators)'), doc('Python Docs: contextlib')]),
         t('async', 'Eşzamanlılık', 'asyncio, threading ve multiprocessing farkı; GIL.', 3, 5, [doc('Real Python: Async IO')]),
         opt('internals', 'Python’un iç yapısı', 'Bellek yönetimi, referans sayımı, bayt kodu.', 3, 4, [book('Fluent Python')]),
       ],
@@ -70,7 +70,7 @@ export const PYTHON: DevRoadmap = {
       emoji: '🚀',
       topics: [
         t('project-cli', 'Proje: Komut satırı aracı', 'Görev takibi ya da dosya düzenleyici; argparse/Typer ile.', 1, 6, [doc('Typer Docs')]),
-        t('project-api', 'Proje: Web API ya da veri analizi', 'Seçtiğin uzmanlık alanında, testli ve belgelenmiş bir proje.', 2, 15, []),
+        t('project-api', 'Proje: Web API ya da veri analizi', 'Seçtiğin uzmanlık alanında, testli ve belgelenmiş bir proje.', 2, 15, [doc('FastAPI Docs: Tutorial'), doc('pandas Docs: 10 minutes to pandas')]),
         opt('open-source', 'Açık kaynağa katkı', '“good first issue” etiketli bir projeye ilk katkını yap.', 3, 6, [prac('Good First Issue (goodfirstissue.dev)')]),
       ],
     },

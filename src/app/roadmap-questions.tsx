@@ -210,9 +210,23 @@ export default function RoadmapQuestionsScreen() {
     setStep((s) => Math.max(0, s - 1));
   }
 
+  // Tek dokunuş: seçince kısa bir an (seçimin görünmesi için) bekleyip sonraki soruya geç.
+  // Son soruda otomatik ilerleme yok: "Haritamı hazırla" onayı kullanıcıda kalır.
+  // Yanlış seçim olursa üstteki geri ile önceki soruya dönülür, seçim korunur.
+  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (advanceTimer.current) clearTimeout(advanceTimer.current);
+  }, []);
   function choose(optionId: string) {
     setAnswers((prev) => ({ ...prev, [question.key]: optionId }));
     setError(null);
+    if (step < QUESTIONS.length - 1) {
+      if (advanceTimer.current) clearTimeout(advanceTimer.current);
+      advanceTimer.current = setTimeout(() => {
+        advanceTimer.current = null;
+        goForward();
+      }, 280);
+    }
   }
 
   function goForward() {

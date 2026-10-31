@@ -38,7 +38,7 @@ export const DATA_SCIENTIST: DevRoadmap = {
       topics: [
         t('pandas', 'pandas', 'Veri okuma, temizleme, birleştirme, gruplama.', 1, 8, [book('Python for Data Analysis (ücretsiz web sürümü)')]),
         t('numpy', 'NumPy', 'Diziler ve vektörel hesap.', 1, 3, [doc('NumPy: Absolute Beginners')]),
-        t('cleaning', 'Eksik ve hatalı veri', 'Eksik değer, aykırı değer, tip dönüşümleri.', 2, 3, []),
+        t('cleaning', 'Eksik ve hatalı veri', 'Eksik değer, aykırı değer, tip dönüşümleri.', 2, 3, [doc('pandas Docs: Working with missing data'), prac('Kaggle Learn: Data Cleaning')]),
         opt('polars', 'Polars', 'Büyük veride hızlı DataFrame alternatifi.', 2, 3, [doc('Polars User Guide')]),
       ],
     },
@@ -60,10 +60,10 @@ export const DATA_SCIENTIST: DevRoadmap = {
       topics: [
         t('ml-basics', 'Temel kavramlar', 'Denetimli/denetimsiz öğrenme, eğitim/test ayrımı, aşırı öğrenme.', 2, 4, [course('Google: Machine Learning Crash Course')]),
         t('regression', 'Regresyon', 'Doğrusal regresyon, değerlendirme ölçütleri (MAE, RMSE).', 2, 4, [doc('scikit-learn User Guide')]),
-        t('classification', 'Sınıflandırma', 'Lojistik regresyon, karar ağaçları, precision/recall.', 2, 5, []),
-        t('ensembles', 'Topluluk yöntemleri', 'Random Forest, gradient boosting (XGBoost, LightGBM).', 3, 5, []),
-        t('validation', 'Model değerlendirme', 'Çapraz doğrulama, hiperparametre ayarı, veri sızıntısı.', 3, 4, []),
-        opt('clustering', 'Kümeleme ve boyut indirgeme', 'K-means, PCA.', 2, 3, []),
+        t('classification', 'Sınıflandırma', 'Lojistik regresyon, karar ağaçları, precision/recall.', 2, 5, [doc('scikit-learn Docs: Supervised learning'), course('Machine Learning Specialization (Andrew Ng)')]),
+        t('ensembles', 'Topluluk yöntemleri', 'Random Forest, gradient boosting (XGBoost, LightGBM).', 3, 5, [doc('scikit-learn Docs: Ensemble methods'), doc('XGBoost Docs: Introduction')]),
+        t('validation', 'Model değerlendirme', 'Çapraz doğrulama, hiperparametre ayarı, veri sızıntısı.', 3, 4, [doc('scikit-learn Docs: Cross-validation'), doc('scikit-learn Docs: Metrics and scoring')]),
+        opt('clustering', 'Kümeleme ve boyut indirgeme', 'K-means, PCA.', 2, 3, [doc('scikit-learn Docs: Clustering'), doc('scikit-learn Docs: Decomposition (PCA)')]),
         opt('deep-learning', 'Derin öğrenme', 'Sinir ağları ve PyTorch’a giriş.', 3, 15, [course('fast.ai: Practical Deep Learning')]),
       ],
     },

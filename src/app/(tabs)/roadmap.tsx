@@ -33,6 +33,7 @@ import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questio
 import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useActivity, type Activity } from '@/hooks/use-activity';
+import { useFirstMapRedirect } from '@/hooks/use-first-map-redirect';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useShadow, useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
@@ -49,7 +50,9 @@ function openTopic(roadmap: Roadmap, topicId: string) {
 
 export default function RoadmapScreen() {
   // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda
-  const { roadmap, roadmaps, loading, failed, retry, activate } = useLatestRoadmap();
+  const { roadmap, roadmaps, leftovers, status, loading, failed, retry, activate } = useLatestRoadmap();
+  // Yeni kullanıcı (hiç haritası yok): harita seçimi bir kez kendiliğinden açılır (UX-02)
+  useFirstMapRedirect(status, roadmaps.length + leftovers.length);
   const activity = useActivity();
   // Hook erken return'lerden ÖNCE çağrılır (hook kuralı)
   const progress = useTopicProgress(roadmap?.id);
