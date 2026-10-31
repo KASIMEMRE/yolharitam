@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { AppErrorScreen } from '@/components/app-error';
 import { XpToast } from '@/components/xp-toast';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -9,6 +10,9 @@ import { useTheme } from '@/hooks/use-theme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 
 SplashScreen.preventAutoHideAsync();
+
+// Ekranlardan birinde yakalanmamış hata olursa Türkçe hata ekranı göster (Expo Router bu adı tanır)
+export { AppErrorScreen as ErrorBoundary };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();

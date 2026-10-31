@@ -31,10 +31,9 @@ export function classifyError(error: DbError): DbErrorKind {
 // Kullanıcıya gösterilen sabit Türkçe metinler (hata mesajı ASLA doğrudan gösterilmez).
 export const ERROR_TEXT = {
   // Kayıt sırasında
-  saveSchema:
-    'Adımları kaydetmek için uygulamanın veritabanı güncellemesi bekleniyor. Bu senin hatan değil; biraz sonra tekrar dene.',
+  saveSchema: 'Şu an kaydedilemiyor. Biraz sonra tekrar dene.',
   // Liste okunurken
-  loadSchema: 'Adımlar şu an yüklenemiyor. Veritabanı güncellemesi bekleniyor olabilir.',
+  loadSchema: 'Şu an yüklenemiyor. Biraz sonra tekrar dene.',
   network: 'Bağlantı sorunu var. İnternetini kontrol edip tekrar dene.',
   other: 'Bir şeyler ters gitti. Biraz sonra tekrar dene.',
   // Profil'de başarımlar okunurken
@@ -50,6 +49,7 @@ export const ERROR_TEXT = {
   usernameLoadFailed: 'Kullanıcı adın yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   usernameSaveFailed: 'Kullanıcı adı kaydedilemedi. Biraz sonra tekrar dene.',
   usernameTaken: 'Bu kullanıcı adı alınmış.',
+  inappropriate: 'Bu metin uygunsuz ifade içeriyor gibi görünüyor. Lütfen değiştir.',
   usernameCheckFailed: 'Uygunluk şu an denetlenemedi. Yine de kaydetmeyi deneyebilirsin.',
   leagueLoadFailed: 'Lig sıralaması yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   // Topluluk: arkadaşlar ve proje vitrini
@@ -64,6 +64,6 @@ export const ERROR_TEXT = {
   roadmapLimit: "En fazla 30 harita ekleyebilirsin. Eskilerden birini Ayarlar'dan kaldır.",
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
-  markSchema: 'İşaret kaydedilemedi. Veritabanı güncellemesi bekleniyor olabilir.',
+  markSchema: 'İşaret kaydedilemedi. Biraz sonra tekrar dene.',
   session: 'Oturumun kapanmış. Lütfen yeniden giriş yap.',
 } as const;

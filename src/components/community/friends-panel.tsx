@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
+import { BlockUserButton } from '@/components/block-user-button';
 import { Glyph } from '@/components/icon';
 import { IconTile } from '@/components/icon-tile';
 import { Banner } from '@/components/banner';
@@ -36,7 +37,7 @@ const RESULT_TEXT: Record<RequestResult, { tone: 'success' | 'info' | 'warning';
 
 // Topluluk › Arkadaşlar. Kullanıcı adı zorunluluğunu üstteki ekran (UsernameGate) sağlar.
 export function FriendsPanel() {
-  const { status, friends, incoming, outgoing, retry, sendRequest, respond, remove } = useFriends();
+  const { status, friends, incoming, outgoing, retry, sendRequest, respond, remove, refresh } = useFriends();
 
   if (status === 'loading') return <PanelSkeleton />;
 
@@ -55,7 +56,7 @@ export function FriendsPanel() {
             Gelen istekler
           </ThemedText>
           {incoming.map((r) => (
-            <IncomingCard key={r.friendship_id} row={r} onRespond={respond} />
+            <IncomingCard key={r.friendship_id} row={r} onRespond={respond} onBlocked={refresh} />
           ))}
         </View>
       )}
@@ -88,7 +89,7 @@ export function FriendsPanel() {
           </View>
         )}
         {friends.map((r) => (
-          <FriendCard key={r.friendship_id} row={r} onRemove={remove} />
+          <FriendCard key={r.friendship_id} row={r} onRemove={remove} onBlocked={refresh} />
         ))}
       </View>
     </View>
@@ -163,9 +164,11 @@ function Card({ children }: { children: ReactNode }) {
 function IncomingCard({
   row,
   onRespond,
+  onBlocked,
 }: {
   row: FriendRow;
   onRespond: (id: number, accept: boolean) => Promise<'ok' | 'gone' | 'error'>;
+  onBlocked: () => void;
 }) {
   const { width } = useWindowDimensions();
   const [busy, setBusy] = useState<'accept' | 'reject' | null>(null);
@@ -209,6 +212,8 @@ function IncomingCard({
           />
         </View>
       </View>
+      {/* İstemediğin kişiden gelen istek: tek dokunuşla engelle (bir daha istek gönderemez) */}
+      <BlockUserButton userId={row.user_id} name={name} onBlocked={onBlocked} />
     </Card>
   );
 }
@@ -242,7 +247,15 @@ function OutgoingCard({ row, onWithdraw }: { row: FriendRow; onWithdraw: (id: nu
   );
 }
 
-function FriendCard({ row, onRemove }: { row: FriendRow; onRemove: (id: number) => Promise<boolean> }) {
+function FriendCard({
+  row,
+  onRemove,
+  onBlocked,
+}: {
+  row: FriendRow;
+  onRemove: (id: number) => Promise<boolean>;
+  onBlocked: () => void;
+}) {
   const theme = useTheme();
   // Seri istemcide hesaplanır; uygulamadaki kendi serimizle aynı kural (koruyucu dahil)
   const { streak } = computeStreak(new Set(row.active_days));
@@ -310,6 +323,7 @@ function FriendCard({ row, onRemove }: { row: FriendRow; onRemove: (id: number) 
           </View>
         </View>
       )}
+      {!confirming && <BlockUserButton userId={row.user_id} name={nameOf(row)} onBlocked={onBlocked} />}
     </Card>
   );
 }

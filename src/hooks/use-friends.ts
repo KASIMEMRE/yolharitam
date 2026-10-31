@@ -122,5 +122,6 @@ export function useFriends(enabled: boolean = true) {
     sendRequest,
     respond,
     remove,
+    refresh: reload, // engelleme gibi dış işlemlerden sonra listeyi sessizce yenile
   };
 }

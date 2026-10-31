@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { router, Stack, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 
@@ -19,6 +19,9 @@ import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/
 import { HUES } from '@/constants/visuals';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
+import { type BlockedUser, listBlocked, unblockUser } from '@/lib/blocking';
+import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/lib/config';
+import { openExternalUrl } from '@/lib/open-url';
 import { useAuth } from '@/lib/auth-context';
 import { MIN_PASSWORD } from '@/lib/auth-rules';
 import { setPreferences, usePreferences, type MapViewPref, type ThemePref } from '@/lib/preferences';
@@ -269,7 +272,7 @@ function MapRow({
           <ThemedText type="smallBold" themeColor="warningInk">
             {done > 0
               ? `${map.title} haritası ve bitirdiğin ${done} konunun kaydı silinecek. Bu geri alınamaz.`
-              : `${map.title} haritası listenden kaldırılacak.`}
+              : `${map.title} haritası listenden kaldırılacak; bu haritada işaretlediğin konular varsa onlar da silinir. Bu geri alınamaz.`}
           </ThemedText>
           {error && <Banner tone="warning">{error}</Banner>}
           <View style={styles.rowActions}>
@@ -354,10 +357,68 @@ function AccountSection() {
         <UsernameForm />
       </Card>
       <PasswordCard email={session?.user.email ?? null} />
+      <BlockedUsersCard />
       <Card>
         <Button variant="secondary" icon="🚪" label="Çıkış yap" onPress={() => supabase.auth.signOut()} />
       </Card>
     </View>
+  );
+}
+
+// Engellenen kullanıcılar: listeyi gör, istersen engeli kaldır
+function BlockedUsersCard() {
+  const [list, setList] = useState<BlockedUser[] | null | 'loading'>('loading');
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+      listBlocked().then((r) => {
+        if (!cancelled) setList(r);
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [])
+  );
+
+  async function unblock(id: string) {
+    setBusyId(id);
+    const ok = await unblockUser(id);
+    setBusyId(null);
+    if (ok && Array.isArray(list)) setList(list.filter((b) => b.user_id !== id));
+  }
+
+  return (
+    <Card>
+      <ThemedText type="smallBold">Engellenen kullanıcılar</ThemedText>
+      {list === 'loading' ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Yükleniyor…
+        </ThemedText>
+      ) : list === null ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Liste yüklenemedi. Sayfaya yeniden girince tekrar denenir.
+        </ThemedText>
+      ) : list.length === 0 ? (
+        <ThemedText type="small" themeColor="textSecondary">
+          Kimseyi engellemedin. Toplulukta rahatsız eden birini kartındaki “Engelle” ile engelleyebilirsin.
+        </ThemedText>
+      ) : (
+        list.map((b) => (
+          <View key={b.user_id} style={styles.blockedRow}>
+            <ThemedText style={styles.flex}>{b.username ? `@${b.username}` : 'Gezgin'}</ThemedText>
+            <Button
+              variant="text"
+              label="Engeli kaldır"
+              accessibilityLabel={`${b.username ?? 'Kullanıcının'} engelini kaldır`}
+              loading={busyId === b.user_id}
+              onPress={() => unblock(b.user_id)}
+            />
+          </View>
+        ))
+      )}
+    </Card>
   );
 }
 
@@ -388,25 +449,39 @@ function PasswordCard({ email }: { email: string | null }) {
     setBusy(true);
     setState(null);
     setCurrentWrong(false);
-    // 1) Önce MEVCUT şifreyi doğrula: telefonu açık bırakılmış biri şifreni değiştiremesin.
-    //    Doğrulama için mevcut şifreyle yeniden giriş yapılır (oturum aynı kullanıcıyla tazelenir).
-    const check = await supabase.auth.signInWithPassword({ email, password: current });
-    if (check.error) {
+    // try/finally: beklenmedik bir istisnada bile düğme "yükleniyor"da takılı kalmasın
+    try {
+      // 1) Önce MEVCUT şifreyi doğrula: telefonu açık bırakılmış biri şifreni değiştiremesin.
+      //    Doğrulama için mevcut şifreyle yeniden giriş yapılır (oturum aynı kullanıcıyla tazelenir).
+      const check = await supabase.auth.signInWithPassword({ email, password: current });
+      if (check.error) {
+        // Ağ hatasını "şifren yanlış" diye göstermeyelim (hesap silme akışıyla aynı ayrım)
+        if (isAuthRetryableFetchError(check.error)) {
+          setState({ tone: 'warning', text: ERROR_TEXT.network });
+        } else {
+          setCurrentWrong(true);
+          setState({ tone: 'warning', text: 'Mevcut şifren yanlış.' });
+        }
+        return;
+      }
+      // 2) Doğrulandıysa yeni şifreyi kaydet
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        setState({
+          tone: 'warning',
+          text: isAuthRetryableFetchError(error)
+            ? ERROR_TEXT.network
+            : 'Şifre değiştirilemedi. Daha güçlü bir şifre deneyip tekrar dene.',
+        });
+        return;
+      }
+      reset();
+      setState({ tone: 'success', text: 'Şifren değiştirildi.' });
+    } catch {
+      setState({ tone: 'warning', text: ERROR_TEXT.network });
+    } finally {
       setBusy(false);
-      setCurrentWrong(true);
-      setState({ tone: 'warning', text: 'Mevcut şifren yanlış.' });
-      return;
     }
-    // 2) Doğrulandıysa yeni şifreyi kaydet
-    const { error } = await supabase.auth.updateUser({ password });
-    setBusy(false);
-    if (error) {
-      // Supabase zayıf şifreyi reddedebilir; mesajı sade tut
-      setState({ tone: 'warning', text: 'Şifre değiştirilemedi. Daha güçlü bir şifre deneyip tekrar dene.' });
-      return;
-    }
-    reset();
-    setState({ tone: 'success', text: 'Şifren değiştirildi.' });
   }
 
   return (
@@ -611,6 +686,20 @@ function AboutSection() {
           Yapay zekâ önerileri ve açıklamaları hata içerebilir; önemli bilgileri önerilen kaynaklardan doğrula.
         </ThemedText>
       </Card>
+      {/* Yasal sayfalar ve destek: mağazalar bu bağlantıların uygulama içinden erişilebilir olmasını ister */}
+      <Card>
+        <Button variant="secondary" icon="🛡️" label="Gizlilik politikası" onPress={() => openExternalUrl(PRIVACY_URL)} />
+        <Button variant="secondary" icon="📄" label="Kullanım koşulları" onPress={() => openExternalUrl(TERMS_URL)} />
+        <Button
+          variant="secondary"
+          icon="✉️"
+          label="Destek ve geri bildirim"
+          onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Yol Haritam destek')}`).catch(() => {})}
+        />
+        <ThemedText type="small" themeColor="textSecondary">
+          Soru, öneri ya da uygunsuz içerik bildirimi için: {SUPPORT_EMAIL}
+        </ThemedText>
+      </Card>
     </View>
   );
 }
@@ -628,6 +717,7 @@ const styles = StyleSheet.create({
   deleteLink: { alignSelf: 'center', minHeight: MinTouch, justifyContent: 'center', paddingHorizontal: Spacing.three },
   underline: { textDecorationLine: 'underline' },
   choiceBlock: { gap: Spacing.two },
+  blockedRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   choice: { flexDirection: 'row', borderRadius: Radius.pill, borderWidth: Border.thin, padding: 2 },
   choiceItem: {
     flex: 1,

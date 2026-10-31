@@ -7,7 +7,13 @@
     "icon": "./assets/images/icon.png",
     "scheme": "yolharitam",
     "userInterfaceStyle": "automatic",
-    "ios": {},
+    "ios": {
+      "bundleIdentifier": "com.kasimemre.yolharitam",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#1E7B6A",
@@ -15,7 +21,9 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.kasimemre.yolharitam",
+      "permissions": []
     },
     "web": {
       "output": "single",
