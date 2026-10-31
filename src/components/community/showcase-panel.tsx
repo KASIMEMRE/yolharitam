@@ -1,7 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { IconTile } from '@/components/icon-tile';
+import { Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Skeleton } from '@/components/skeleton';
@@ -52,7 +54,8 @@ export function ShowcasePanel() {
           {maps.map((m) => (
             <FilterChip
               key={m.id}
-              label={`${m.emoji} ${m.title}`}
+              label={m.title}
+                icon={m.emoji}
               a11yLabel={m.title}
               selected={active === m.id}
               onPress={() => setSelected(m.id)}
@@ -84,9 +87,7 @@ export function ShowcasePanel() {
 
       {status === 'ready' && items.length === 0 && (
         <View style={styles.empty}>
-          <Text accessibilityElementsHidden importantForAccessibility="no" allowFontScaling={false} style={styles.emptyEmoji}>
-            🧩
-          </Text>
+          <IconTile emoji="🧩" tone="violet" size={64} />
           <ThemedText type="cardTitle" accessibilityRole="header">
             Henüz proje yok
           </ThemedText>
@@ -161,9 +162,7 @@ function ProjectCard({
         </ThemedText>
         {showMap && map && (
           <View style={[styles.tag, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-            <Text allowFontScaling={false} style={styles.tagEmoji}>
-              {map.emoji}
-            </Text>
+            <Glyph emoji={map.emoji} size={13} color={theme.textSecondary} strokeWidth={2.25} />
             <ThemedText type="chip" maxFontSizeMultiplier={1.3} numberOfLines={1}>
               {map.title}
             </ThemedText>
@@ -243,12 +242,14 @@ function LinkButton({ label, onPress }: { label: string; onPress: () => void }) 
 // Gelişmeler ekranındaki çip kalıbıyla aynı
 function FilterChip({
   label,
+  icon,
   a11yLabel,
   selected,
   onPress,
 }: {
   label: string;
-  a11yLabel: string; // emojisiz, ekran okuyucu için
+  icon?: string; // simge (emoji adıyla)
+  a11yLabel: string; // ekran okuyucu için
   selected: boolean;
   onPress: () => void;
 }) {
@@ -267,6 +268,7 @@ function FilterChip({
           opacity: pressed ? 0.85 : 1,
         },
       ]}>
+      {icon && <Glyph emoji={icon} size={14} color={selected ? theme.accentInk : theme.textSecondary} strokeWidth={2.25} />}
       <ThemedText type="chip" themeColor={selected ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
         {label}
       </ThemedText>
@@ -279,6 +281,9 @@ const styles = StyleSheet.create({
   chipScroll: { flexGrow: 0 },
   chips: { gap: Spacing.two, paddingRight: Spacing.three },
   chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     minHeight: MinTouch,
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
@@ -305,7 +310,6 @@ const styles = StyleSheet.create({
     borderWidth: Border.thin,
     flexShrink: 1,
   },
-  tagEmoji: { fontSize: 14, lineHeight: 18 },
   links: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   pushRight: { marginLeft: 'auto' },
   link: {
@@ -318,6 +322,5 @@ const styles = StyleSheet.create({
   confirm: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md },
   actions: { gap: Spacing.two },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
-  emptyEmoji: { fontSize: 40, lineHeight: 48 },
   center: { textAlign: 'center' },
 });

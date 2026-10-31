@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { Glyph } from '@/components/icon';
 
 import { ThemedText } from '@/components/themed-text';
 import { Border, Radius, Spacing } from '@/constants/theme';
@@ -27,14 +29,15 @@ export function Banner({ tone, children }: BannerProps) {
           borderColor: warning ? theme.markerEdge : theme.accent,
         },
       ]}>
-      {/* Emoji süs: ekran okuyucu "uyarı işareti" diye okumasın */}
-      <Text
-        accessibilityElementsHidden
-        importantForAccessibility="no"
-        allowFontScaling={false}
-        style={styles.emoji}>
-        {warning ? '⚠️' : success ? '✅' : '✉️'}
-      </Text>
+      {/* Simge süs: ekran okuyucu "uyarı işareti" diye okumasın (Glyph kendini gizler) */}
+      <View style={styles.icon}>
+        <Glyph
+          emoji={warning ? '⚠️' : success ? '✅' : 'ℹ️'}
+          size={18}
+          color={warning ? theme.markerInk : theme.accentInk}
+          strokeWidth={2.25}
+        />
+      </View>
       <ThemedText type="small" style={styles.text}>
         {children}
       </ThemedText>
@@ -51,6 +54,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     borderWidth: Border.thick,
   },
-  emoji: { fontSize: 18, lineHeight: 20 },
+  icon: { paddingTop: 1 },
   text: { flex: 1, minWidth: 0 },
 });

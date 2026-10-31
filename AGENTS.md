@@ -63,11 +63,13 @@ Proje sahibi (Emre) yazılımı bu projeyi geliştirerek ÖĞRENİYOR. Kod okuna
 - Oturum: `src/lib/auth-context.tsx` + `_layout.tsx` içinde `Stack.Protected`
 - Tema: `src/constants/theme.ts` (`accent` = harita yeşili, `marker` = patika sarısı). Renk sabit kodlama; temadan al.
 - Ortak bileşenler: `OptionCard`, `TextField`, `RouteSteps`, `ThemedText`, `ThemedView`, `ProgressSummary`
+- Simgeler: tek çizgi simge seti (Lucide, `src/components/icon.tsx`: `Glyph`, `IconLabel`, `IconTile`). Arayüz metnine
+  doğrudan emoji YAZMA. İçerik dosyaları simgeyi emoji adıyla seçer; yeni emoji kullanırsan `icon.tsx` tablosuna eşlemesini ekle.
 
 ## Çalışma kuralları
 1. Görevleri `BACKLOG.md` dosyasından al: "Sıradaki" bölümündeki EN ÜSTTEKİ, başlamamış görevi seç. Sırayı değiştirme.
 2. `main` dalına ASLA doğrudan push etme. Her görev için `agent/<görev-id>-<kısa-ad>` dalı aç ve Pull Request oluştur.
-3. Aynı anda en fazla 2 açık ajan PR'ı olabilir. 2 açık PR varsa yeni görev başlatma; bunun yerine
+3. Aynı anda en fazla 2 açık ajan PR'ı olabilir (BACKLOG'da "Beklemede" bölümündeki PR'lar sayılmaz). 2 açık PR varsa yeni görev başlatma; bunun yerine
    açık PR'lardaki inceleme yorumlarını ele al ya da hiçbir şey yapmadan raporla.
 4. Bir PR = bir görev. Küçük ve incelenebilir tut.
 5. Bitirmeden önce: `npx tsc --noEmit` ve `npx expo lint` hatasız geçmeli.

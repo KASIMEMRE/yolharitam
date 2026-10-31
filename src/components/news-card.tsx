@@ -1,5 +1,6 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Edge, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -45,9 +46,7 @@ export function NewsCard({ item, tags }: NewsCardProps) {
           {tags.slice(0, 2).map((t) => (
             // Hafif etiket: kartın üstünde yumuşak zemin + ince kenar (çok dikkat çekmesin)
             <View key={t.id} style={[styles.tag, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-              <Text allowFontScaling={false} style={styles.tagEmoji}>
-                {t.emoji}
-              </Text>
+              <Glyph emoji={t.emoji} size={13} color={theme.textSecondary} strokeWidth={2.25} />
               <ThemedText type="chip" maxFontSizeMultiplier={1.3} numberOfLines={1}>
                 {t.title}
               </ThemedText>
@@ -82,6 +81,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: Border.thin,
   },
-  tagEmoji: { fontSize: 14, lineHeight: 18 },
   link: { flexShrink: 0, marginLeft: 'auto' },
 });

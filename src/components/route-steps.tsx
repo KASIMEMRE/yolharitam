@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   FadeIn,
   ZoomIn,
@@ -12,6 +12,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { MapPin } from '@/components/map-pin';
+import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -176,15 +178,12 @@ function VerticalTrail({ stops, current, showDone }: { stops: TrailStop[]; curre
                       isDone && { backgroundColor: theme.accent, borderColor: theme.accentEdge },
                       !isCurrent && !isDone && { backgroundColor: theme.card, borderColor: theme.borderStrong },
                     ]}>
-                    <Text
-                      allowFontScaling={false}
-                      style={
-                        isDone
-                          ? { fontSize: 24, fontWeight: 900, color: theme.onAccent }
-                          : { fontSize: emojiSize, lineHeight: emojiSize + 6 }
-                      }>
-                      {isDone ? '✓' : stop.emoji}
-                    </Text>
+                    <Glyph
+                      emoji={isDone ? '✓' : stop.emoji}
+                      size={emojiSize}
+                      color={isDone ? theme.onAccent : isCurrent ? theme.markerInk : theme.textSecondary}
+                      strokeWidth={isDone ? 3 : 2}
+                    />
                   </View>
                 </Animated.View>
 
@@ -205,15 +204,14 @@ function VerticalTrail({ stops, current, showDone }: { stops: TrailStop[]; curre
           })}
 
         {W > 0 && centers[current] && (
-          <Animated.Text
-            allowFontScaling={false}
+          <Animated.View
             style={[
               styles.pin,
               { left: centers[current].x + STOP / 2 - 14, top: centers[current].y - STOP / 2 - 30 },
               pinStyle,
             ]}>
-            📍
-          </Animated.Text>
+            <MapPin size={28} />
+          </Animated.View>
         )}
       </View>
     </View>
@@ -319,11 +317,12 @@ function HorizontalTrail({
                       isDone && { backgroundColor: theme.accent, borderColor: theme.accentEdge },
                       !isCurrent && !isDone && { backgroundColor: theme.card, borderColor: theme.borderStrong },
                     ]}>
-                    <Text
-                      allowFontScaling={false}
-                      style={isDone ? { fontSize: 18, fontWeight: 900, color: theme.onAccent } : { fontSize: 18, lineHeight: 22 }}>
-                      {isDone ? '✓' : stop.emoji}
-                    </Text>
+                    <Glyph
+                      emoji={isDone ? '✓' : stop.emoji}
+                      size={18}
+                      color={isDone ? theme.onAccent : isCurrent ? theme.markerInk : theme.textSecondary}
+                      strokeWidth={isDone ? 3 : 2}
+                    />
                   </Animated.View>
                 );
               })}
@@ -348,7 +347,7 @@ const styles = StyleSheet.create({
   halo: { position: 'absolute', borderRadius: Radius.pill },
   dot8: { position: 'absolute', width: 8, height: 8, borderRadius: 4 },
   vLabel: { position: 'absolute', minHeight: 44, justifyContent: 'center' },
-  pin: { position: 'absolute', fontSize: 28, lineHeight: 34 },
+  pin: { position: 'absolute' },
   horizontal: { alignSelf: 'stretch', height: 48 },
   marker: { position: 'absolute', left: 0, top: 0, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
   stopSmall: {

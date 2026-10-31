@@ -1,4 +1,6 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+
+import { Glyph } from '@/components/icon';
 
 import { ThemedText } from '@/components/themed-text';
 import { LEVELS } from '@/constants/onboarding';
@@ -35,9 +37,7 @@ export function LevelBadge({ levelId, size = 'sm' }: LevelBadgeProps) {
           paddingHorizontal: md ? Spacing.three : Spacing.two,
         },
       ]}>
-      <Text allowFontScaling={false} style={{ fontSize: md ? 18 : 14, lineHeight: md ? 22 : 18 }}>
-        {style.emoji}
-      </Text>
+      <Glyph emoji={style.emoji} size={md ? 18 : 14} color={theme.textSecondary} strokeWidth={2.25} />
       <ThemedText type="chip" maxFontSizeMultiplier={1.3}>
         {title}
       </ThemedText>
@@ -70,9 +70,12 @@ export function StatusChip({ label, emoji, tone, align = 'start' }: StatusChipPr
         },
       ]}>
       {emoji && (
-        <Text allowFontScaling={false} style={styles.emoji}>
-          {emoji}
-        </Text>
+        <Glyph
+          emoji={emoji}
+          size={14}
+          color={marker ? theme.markerInk : accent ? theme.accentInk : theme.text}
+          strokeWidth={2.25}
+        />
       )}
       <ThemedText type="chip" themeColor={marker ? 'markerInk' : accent ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
         {label}
@@ -90,5 +93,4 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: Border.thick,
   },
-  emoji: { fontSize: 14, lineHeight: 18 },
 });

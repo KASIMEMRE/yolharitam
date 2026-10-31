@@ -5,30 +5,40 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-### Y-03 · Onboarding'i yeni tasarım diline uyarla + konu araması
-- ✅ "Tasarım diline uyarla" kısmı tasarım yenileme PR'ı ile karşılandı (seçili kartlar ve buton `accent`). Kalan: arama.
-- Üstte bir arama kutusu (`TextField`): yazınca tüm ağaçtaki YAPRAK konular arasında başlığa göre arasın,
-  sonuçta tam yolu göstersin (örn. "Teknoloji › Yapay Zeka › RAG"); sonuca basınca doğrudan seviye seçimine geçsin.
-- Türkçe karakterlere duyarsız arama (ı/i, ş/s vb.) için küçük bir yardımcı fonksiyon.
-- Kabul: Arama boşken mevcut gezinme aynen çalışır.
-
-### Y-06 · AI ile yol haritası üretimi (Edge Function, deploy yok)
-- `supabase/functions/generate-roadmap/index.ts`: girdi { topic_path, level }, çıktı 6-10 adımlık JSON.
-- LLM API anahtarı ortam değişkeninden okunur (`Deno.env.get(...)`), koda yazılmaz.
-- Çıktı şeması doğrulanır; hatalı çıktıda şablona (Y-04) geri düşülür.
-- Uygulama tarafı: fonksiyon varsa onu çağır, yoksa/hata verirse şablonu kullan.
-  (Y-04'te hazırlandı: `generateRoadmapSteps` asenkron tek giriş noktasıdır; Edge Function çağrısı oraya eklenir.)
-- Kabul: PR açıklamasında deploy ve secret kurulum adımları yazılı.
+### UX-01 · Kullanılabilirlik denetimi ve en etkili iyileştirmeler (proje sahibinin isteği)
+Amaç: uygulama daha kolay ve kullanışlı olsun. Önce DENETLE, sonra en çok fark yaratanları uygula.
+- Ürün sorumlusu + tasarımcı ana akışları kullanıcı gözüyle gezer ve sürtünme noktalarını listeler:
+  1) İlk açılış → kayıt → harita seçimi → ilk konuya ulaşma (kaç dokunuş? nerede takılır?)
+  2) Yol Haritam ekranı: önemli bilgi (sıradaki konu, günün görevi) hemen görünüyor mu, ekran gereksiz uzun mu?
+  3) Konu detayı: durum işaretleme, kaynak açma, quiz/soru sorma ne kadar kolay?
+  4) Topluluk ve Ayarlar: aranan şey bulunuyor mu, gereksiz adım var mı?
+- Bulguları etki/çaba ile sırala; en etkili 3-5 iyileştirmeyi TEK PR'da uygula (büyük yeniden tasarım yok).
+- Mevcut tasarım dili ve simge seti korunur (simgeler: `src/components/icon.tsx`, emoji yazma).
+- Kabul: PR açıklamasında bulgu listesi (uygulananlar + sonraya bırakılanlar), önce/sonra ekran görüntüleri,
+  tsc + lint temiz. Sonraya bırakılanlar bu dosyaya yeni görev olarak eklenir.
 
 ### Y-07 · Boş, yükleniyor ve hata durumları
 - Tüm ekranlarda ağ hatasında Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
 - Yükleniyor durumlarında yerleşimi zıplatmayan iskelet görünümler.
 
-### Y-08 · Uygulama kimliği
-- `app.json`: görünen ad "Yol Haritam", splash arka planı ve Android ikon zemini tema `accent` ile uyumlu.
-- ✅ Sekme ikonları tasarım yenileme PR'ı ile karşılandı (`sf` + `md` ikonlar). Kalan: yukarıdaki `app.json` maddesi.
+### Y-03 · Harita seçiminde arama
+- Onboarding'deki harita listesinin üstünde arama kutusu: harita ve konu başlıklarında arasın
+  (Türkçe karakterlere duyarsız: ı/i, ş/s…); sonuca basınca o harita seçilsin.
+- Kabul: Arama boşken mevcut seçim akışı aynen çalışır.
+
+## Beklemede (sırada değil)
+
+### OTP-01 · E-postaya gelen kodla doğrulama (PR #4)
+- Özel SMTP (ör. Brevo) bağlanıp "Confirm signup" şablonuna `{{ .Token }}` eklenene kadar bekliyor.
+- Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### Y-08 · Uygulama kimliği
+- Görünen ad "Yol Haritam", yeni uygulama simgesi, açılış ekranı ve favicon (modern simgeler PR'ı, #39).
+
+### Y-06 · AI ile yol haritası
+- Yerine `personalize-roadmap` geldi (yapay zekâ haritayı kişiye göre işaretler).
 
 ### Y-01 · Karşılama ekranını yeni tasarım diline uyarla
 - `src/app/index.tsx`: giriş ekranındaki tasarım dili (accent buton, `RouteSteps` ile 3 adımlı rota) kullanılsın.

@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
+import { Glyph , IconLabel } from '@/components/icon';
+import { MapPin } from '@/components/map-pin';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { FriendsTodayCard } from '@/components/community/friends-today-card';
@@ -233,12 +235,11 @@ function JourneyCard({
           <Animated.View entering={reduceMotion ? FadeIn.duration(150) : ZoomIn.springify().damping(10)}>
             <IconTile emoji={map.emoji} tone={map.hue} size={64} />
           </Animated.View>
-          <Animated.Text
-            allowFontScaling={false}
+          <Animated.View
             entering={reduceMotion ? FadeIn.duration(150) : FadeInDown.delay(250).springify().damping(8).stiffness(200)}
             style={styles.pin}>
-            📍
-          </Animated.Text>
+            <MapPin size={26} />
+          </Animated.View>
         </View>
         <View style={styles.bandTexts}>
           <ThemedText type="eyebrow" themeColor={hue.ink}>
@@ -341,9 +342,7 @@ function MapSwitcher({
                 borderColor: active ? theme[hue.line] : theme.border,
               },
             ]}>
-            <Text allowFontScaling={false} style={styles.mapChipEmoji}>
-              {m.emoji}
-            </Text>
+            <Glyph emoji={m.emoji} size={16} color={active ? theme[hue.ink] : theme.textSecondary} />
             <ThemedText type="smallBold" themeColor={active ? hue.ink : 'textSecondary'}>
               {m.title}
             </ThemedText>
@@ -387,12 +386,12 @@ function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roa
       {/* Seviye ve XP */}
       <View style={styles.weekBlock}>
         <View style={styles.weekRow}>
-          <ThemedText type="smallBold">
-            {level.emoji} {level.title}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            ⭐ {xp.total} XP{level.next ? ` · ${level.next.title} için ${level.next.remaining}` : ''}
-          </ThemedText>
+          <IconLabel emoji={level.emoji} type="smallBold">
+            {level.title}
+          </IconLabel>
+          <IconLabel emoji="⭐" themeColor="textSecondary">
+            {`${xp.total} XP${level.next ? ` · ${level.next.title} için ${level.next.remaining}` : ''}`}
+          </IconLabel>
         </View>
         <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
           <View style={[styles.weekFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
@@ -402,9 +401,12 @@ function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roa
       {/* Seri + koruyucu */}
       <View style={styles.momentumRow}>
         <View style={[styles.streakBadge, { backgroundColor: streak > 0 ? theme.coralSoft : theme.backgroundSelected }]}>
-          <Text allowFontScaling={false} style={styles.streakEmoji}>
-            {streak > 0 ? '🔥' : '🌱'}
-          </Text>
+          <Glyph
+            emoji={streak > 0 ? '🔥' : '🌱'}
+            size={26}
+            color={streak > 0 ? theme.coralInk : theme.accentInk}
+            fill={streak > 0 ? theme.coralSoft : undefined}
+          />
           <ThemedText type="cardTitle" themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}>
             {streak}
           </ThemedText>
@@ -414,11 +416,11 @@ function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roa
           <ThemedText type="small" themeColor="textSecondary">
             {hint}
           </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
+          <IconLabel emoji="🧊" themeColor="skyInk">
             {freezeUsedThisWeek
-              ? '🧊 Bu haftaki seri koruyucun kullanıldı.'
-              : '🧊 Seri koruyucu hazır: bu hafta bir gün kaçırsan da serin bozulmaz.'}
-          </ThemedText>
+              ? 'Bu haftaki seri koruyucun kullanıldı.'
+              : 'Seri koruyucu hazır: bu hafta bir gün kaçırsan da serin bozulmaz.'}
+          </IconLabel>
         </View>
       </View>
 
@@ -487,9 +489,7 @@ function DailyTaskCard({
         },
         pressed && { transform: [{ translateY: 2 }] },
       ]}>
-      <Text allowFontScaling={false} style={styles.taskEmoji}>
-        {done ? '✅' : '🎯'}
-      </Text>
+      <IconTile emoji={done ? '✅' : '🎯'} tone={done ? 'accent' : 'marker'} size={48} />
       <View style={styles.bandTexts}>
         <ThemedText type="eyebrow" themeColor={done ? 'accentInk' : 'markerInk'}>
           {done ? 'Günün görevi tamam · +30 XP' : 'Günün görevi · yaklaşık 5 dk · +30 XP'}
@@ -534,9 +534,15 @@ function NextCard({
       ]}>
       <IconTile emoji="🥾" tone="accent" size={48} />
       <View style={styles.bandTexts}>
-        <ThemedText type="eyebrow" themeColor="accentInk">
-          {focusIndex >= 0 && personalization.source === 'ai' ? '✨ Sıradaki konu · senin için seçildi' : 'Sıradaki konu'}
-        </ThemedText>
+        {focusIndex >= 0 && personalization.source === 'ai' ? (
+          <IconLabel emoji="✨" type="eyebrow" themeColor="accentInk" iconSize={12}>
+            Sıradaki konu · senin için seçildi
+          </IconLabel>
+        ) : (
+          <ThemedText type="eyebrow" themeColor="accentInk">
+            Sıradaki konu
+          </ThemedText>
+        )}
         <ThemedText type="cardTitle">{topic.title}</ThemedText>
         <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
           {topic.summary}
@@ -630,8 +636,8 @@ function Sections({
 function ViewSwitch({ value, onChange }: { value: 'tree' | 'list'; onChange: (v: 'tree' | 'list') => void }) {
   const theme = useTheme();
   const options = [
-    { id: 'tree' as const, label: '🗺️ Harita' },
-    { id: 'list' as const, label: '☰ Liste' },
+    { id: 'tree' as const, label: 'Harita', icon: '🗺️' },
+    { id: 'list' as const, label: 'Liste', icon: '☰' },
   ];
   return (
     <View
@@ -647,9 +653,9 @@ function ViewSwitch({ value, onChange }: { value: 'tree' | 'list'; onChange: (v:
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             style={[styles.switchItem, selected && { backgroundColor: theme.card, borderColor: theme.accent }]}>
-            <ThemedText type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
+            <IconLabel emoji={o.icon} type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
               {o.label}
-            </ThemedText>
+            </IconLabel>
           </Pressable>
         );
       })}
@@ -712,9 +718,7 @@ function SectionCard({
           accessibilityState={{ expanded: open }}
           accessibilityLabel={`${section.title}. ${inPlan.length} konunun ${done} tanesi bitti. ${open ? 'Kapatmak' : 'Açmak'} için dokun.`}
           style={styles.sectionHead}>
-          <Text allowFontScaling={false} style={styles.sectionEmoji}>
-            {section.emoji}
-          </Text>
+          <Glyph emoji={section.emoji} size={20} color={theme.textSecondary} />
           <View style={styles.bandTexts}>
             <ThemedText type="cardTitle">{section.title}</ThemedText>
             <ThemedText type="small" themeColor="textSecondary">
@@ -730,9 +734,9 @@ function SectionCard({
           <Animated.View entering={FadeIn.duration(150)} style={styles.topics}>
             {note && (
               <View style={[styles.note, { backgroundColor: theme.markerSoft }]}>
-                <ThemedText type="small" themeColor="markerInk">
-                  ✨ {note}
-                </ThemedText>
+                <IconLabel emoji="✨" themeColor="markerInk">
+                  {note}
+                </IconLabel>
               </View>
             )}
             {section.topics.map((topic) => (
@@ -774,7 +778,7 @@ function TopicRow({
   // Etiketler: harita işareti (önerilen konularda gösterilmez, varsayılan odur) + kişisel işaretler
   const tags: string[] = [];
   if (topic.marker !== 'core') tags.push(MARKER_STYLE[topic.marker].label);
-  if (focus && !status) tags.push('✨ Önce bununla başla');
+  if (focus && !status) tags.push('Önce bununla başla');
   if (skipHint && !status) tags.push('Biliyorsan atlayabilirsin');
   if (status) tags.push(STATUS_STYLE[status].label);
 
@@ -879,7 +883,7 @@ const styles = StyleSheet.create({
   },
   band: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three },
   bandTexts: { flex: 1, minWidth: 0, gap: Spacing.half },
-  pin: { position: 'absolute', top: -10, right: -8, fontSize: 28, lineHeight: 34 },
+  pin: { position: 'absolute', top: -12, right: -10 },
   body: { padding: Spacing.three, gap: Spacing.three },
   meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   planText: { flex: 1, minWidth: 120 },
@@ -895,7 +899,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: Border.thick,
   },
-  mapChipEmoji: { fontSize: 16, lineHeight: 20 },
   momentum: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
   momentumRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   streakBadge: {
@@ -906,8 +909,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
   },
-  streakEmoji: { fontSize: 20, lineHeight: 26 },
-  taskEmoji: { fontSize: 32, lineHeight: 40 },
   weekBlock: { gap: Spacing.one },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   weekTrack: { height: 10, borderRadius: Radius.pill, overflow: 'hidden' },
@@ -955,7 +956,6 @@ const styles = StyleSheet.create({
     padding: Spacing.three,
     minHeight: MinTouch,
   },
-  sectionEmoji: { fontSize: 22, lineHeight: 28 },
   topics: { gap: Spacing.two, paddingHorizontal: Spacing.two, paddingBottom: Spacing.two },
   note: { borderRadius: Radius.sm, padding: Spacing.two },
   topic: {

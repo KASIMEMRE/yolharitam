@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
+import { IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { AchievementsSection } from '@/components/achievements-section';
 import { Avatar } from '@/components/avatar';
@@ -130,12 +131,12 @@ function LevelCard() {
       accessibilityLabel={`Seviye ${level.title}, ${xp.total} XP${level.next ? `, ${level.next.title} seviyesine ${level.next.remaining} XP kaldı` : ''}`}
       style={[styles.topicCard, styles.levelCard, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge, borderBottomColor: theme.markerEdge }]}>
       <View style={styles.levelRow}>
-        <ThemedText type="cardTitle" themeColor="markerInk">
-          {level.emoji} {level.title}
-        </ThemedText>
-        <ThemedText type="smallBold" themeColor="markerInk">
-          ⭐ {xp.total} XP
-        </ThemedText>
+        <IconLabel emoji={level.emoji} type="cardTitle" themeColor="markerInk" iconSize={20}>
+          {level.title}
+        </IconLabel>
+        <IconLabel emoji="⭐" type="smallBold" themeColor="markerInk">
+          {`${xp.total} XP`}
+        </IconLabel>
       </View>
       <View style={[styles.levelTrack, { backgroundColor: theme.card }]}>
         <View style={[styles.levelFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Skeleton } from '@/components/skeleton';
@@ -132,9 +133,9 @@ export default function ShowcaseNewScreen() {
                             borderColor: selected ? theme.accent : theme.border,
                           },
                         ]}>
-                        <ThemedText type="chip" themeColor={selected ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
-                          {`${m.emoji} ${m.title}`}
-                        </ThemedText>
+                        <IconLabel emoji={m.emoji} type="chip" themeColor={selected ? 'accentInk' : 'text'}>
+                          {m.title}
+                        </IconLabel>
                       </Pressable>
                     );
                   })}

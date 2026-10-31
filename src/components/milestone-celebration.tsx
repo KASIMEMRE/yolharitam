@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, Platform, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Modal, Platform, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -11,10 +11,11 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 
+import { IconLabel , Glyph } from '@/components/icon';
 import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
 import type { DevRoadmap } from '@/constants/dev-roadmaps';
-import { Border, Radius, Spacing } from '@/constants/theme';
+import { Border, Radius, Spacing, type ThemeColor } from '@/constants/theme';
 import { HUES } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -78,12 +79,15 @@ export function MilestoneCelebration({
           style={[styles.sheet, { backgroundColor: theme.background, borderColor: theme[hue.line] }]}>
           {/* Paylaşılabilir kart */}
           <View style={[styles.card, { backgroundColor: theme[hue.soft], borderColor: theme[hue.line] }]}>
-            <Text allowFontScaling={false} style={styles.bigEmoji}>
-              {isRoadmap ? '🏆' : milestone.emoji}
-            </Text>
-            <ThemedText type="eyebrow" themeColor={hue.ink}>
-              {map.emoji} {map.title}
-            </ThemedText>
+            <View style={[styles.bigIcon, { backgroundColor: theme.card, borderColor: theme[hue.line] }]}>
+              <Glyph emoji={isRoadmap ? '🏆' : milestone.emoji} size={44} color={theme[hue.ink]} strokeWidth={1.75} />
+            </View>
+            <View style={styles.eyebrowRow}>
+              <Glyph emoji={map.emoji} size={14} color={theme[hue.ink]} strokeWidth={2.25} />
+              <ThemedText type="eyebrow" themeColor={hue.ink}>
+                {map.title}
+              </ThemedText>
+            </View>
             <ThemedText type="heading" style={styles.center} accessibilityRole="header">
               {headline}
             </ThemedText>
@@ -96,9 +100,9 @@ export function MilestoneCelebration({
             </ThemedText>
             {milestone.xp > 0 && (
               <View style={[styles.xpPill, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge }]}>
-                <ThemedText type="smallBold" themeColor="markerInk">
-                  ⭐ +{milestone.xp} XP
-                </ThemedText>
+                <IconLabel emoji="⭐" type="smallBold" themeColor="markerInk">
+                  {`+${milestone.xp} XP`}
+                </IconLabel>
               </View>
             )}
             <ThemedText type="small" themeColor="textSecondary">
@@ -139,8 +143,11 @@ function ProgressRing({ percent }: { percent: number }) {
 }
 
 // Konfeti: sabit tablolu parçalar (her seferinde aynı, tahmin edilebilir), yukarıdan düşer.
-// "Hareketi azalt" açıksa hiç gösterilmez.
-const PIECES = ['🎉', '✨', '⭐', '🟩', '🟨', '🎊', '✨', '🟦', '⭐', '🎉', '🟥', '✨', '🎊', '🟩'];
+// Parçalar emoji değil, temanın renklerinde küçük şeritler ve noktalar. "Hareketi azalt" açıksa gösterilmez.
+type PieceSpec = { color: ThemeColor; round: boolean };
+const PIECES: PieceSpec[] = (
+  ['accent', 'marker', 'sky', 'coral', 'violet', 'leaf', 'berry', 'accent', 'marker', 'sky', 'coral', 'violet', 'leaf', 'marker'] as const
+).map((color, i) => ({ color, round: i % 3 === 0 }));
 const OFFSETS = [0.05, 0.14, 0.22, 0.3, 0.38, 0.46, 0.54, 0.6, 0.68, 0.75, 0.82, 0.9, 0.95, 0.42];
 const DELAYS = [0, 120, 60, 200, 40, 160, 90, 240, 10, 180, 70, 130, 220, 100];
 
@@ -151,13 +158,14 @@ function Confetti() {
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       {PIECES.map((p, i) => (
-        <Piece key={i} emoji={p} x={OFFSETS[i] * width} delay={DELAYS[i]} fall={height * 0.9} spin={i % 2 ? 1 : -1} />
+        <Piece key={i} spec={p} x={OFFSETS[i] * width} delay={DELAYS[i]} fall={height * 0.9} spin={i % 2 ? 1 : -1} />
       ))}
     </View>
   );
 }
 
-function Piece({ emoji, x, delay, fall, spin }: { emoji: string; x: number; delay: number; fall: number; spin: number }) {
+function Piece({ spec, x, delay, fall, spin }: { spec: PieceSpec; x: number; delay: number; fall: number; spin: number }) {
+  const theme = useTheme();
   const t = useSharedValue(0);
   useEffect(() => {
     t.set(withDelay(delay, withTiming(1, { duration: 1800, easing: Easing.out(Easing.quad) })));
@@ -167,9 +175,10 @@ function Piece({ emoji, x, delay, fall, spin }: { emoji: string; x: number; dela
     opacity: 1 - Math.max(0, t.value - 0.75) * 4,
   }));
   return (
-    <Animated.Text entering={FadeIn} allowFontScaling={false} style={[styles.piece, { left: x }, style]}>
-      {emoji}
-    </Animated.Text>
+    <Animated.View
+      entering={FadeIn}
+      style={[styles.piece, spec.round ? styles.pieceDot : styles.pieceStrip, { left: x, backgroundColor: theme[spec.color] }, style]}
+    />
   );
 }
 
@@ -190,10 +199,20 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     borderWidth: Border.thick,
   },
-  bigEmoji: { fontSize: 56, lineHeight: 66 },
+  bigIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    borderWidth: Border.thick,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  pieceStrip: { width: 8, height: 16, borderRadius: 2 },
+  pieceDot: { width: 10, height: 10, borderRadius: 5 },
   center: { textAlign: 'center' },
   track: { width: '100%', height: 14, borderRadius: Radius.pill, borderWidth: Border.thin, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: Radius.pill },
   xpPill: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.three, borderRadius: Radius.pill, borderWidth: Border.thick },
-  piece: { position: 'absolute', top: 0, fontSize: 24 },
+  piece: { position: 'absolute', top: 0 },
 });

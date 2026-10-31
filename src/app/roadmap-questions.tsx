@@ -7,7 +7,6 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Text,
   useWindowDimensions,
   View,
 } from 'react-native';
@@ -23,6 +22,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Celebration } from '@/components/celebration';
@@ -292,7 +292,7 @@ export default function RoadmapQuestionsScreen() {
       return {
         summary:
           `${sum.total} konu · yaklaşık ${sum.totalHours} saat · yaklaşık ${sum.weeks} hafta` +
-          (personalization.source === 'ai' ? '\n✨ Yapay zekâ haritanı sana göre işaretledi' : ''),
+          (personalization.source === 'ai' ? '\nYapay zekâ haritanı sana göre işaretledi.' : ''),
       };
     } catch {
       return { message: ERROR_TEXT.other };
@@ -537,9 +537,7 @@ export default function RoadmapQuestionsScreen() {
                     styles.topicChip,
                     { backgroundColor: theme[info.hue.soft], borderColor: theme[info.hue.line] },
                   ]}>
-                  <Text allowFontScaling={false} style={styles.topicChipEmoji}>
-                    {info.category.emoji}
-                  </Text>
+                  <Glyph emoji={info.category.emoji} size={16} color={theme[info.hue.ink]} />
                   <ThemedText type="smallBold" themeColor={info.hue.ink} style={styles.topicChipText}>
                     {info.title}
                   </ThemedText>
@@ -650,7 +648,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.pill,
     borderWidth: Border.thick,
   },
-  topicChipEmoji: { fontSize: 14, lineHeight: 18 },
   topicChipText: { flexShrink: 1 },
   questionBlock: { gap: Spacing.three },
   titles: { gap: Spacing.one },
