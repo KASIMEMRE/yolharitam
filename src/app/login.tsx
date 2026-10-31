@@ -1,3 +1,4 @@
+import { useLocalSearchParams } from 'expo-router';
 import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -74,7 +75,11 @@ export default function LoginScreen() {
   // Kısa ekranda (örn. 320x568) sahne daha az boşluk bıraksın ki şifre alanı ilk ekranda görünsün
   const short = height < 700;
   const stagePad = short ? Spacing.two : undefined;
-  const [mode, setMode] = useState<Mode>('login');
+  // Karşılama ekranı ?mode=signup ile gelirse kayıt sekmesi açık başlar. Yalnız BAŞLANGIÇ değeri:
+  // sonradan sekmeyi elle değiştirmek parametreyle çakışmasın diye useEffect ile senkronlamıyoruz.
+  const params = useLocalSearchParams<{ mode?: string | string[] }>();
+  const initialMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+  const [mode, setMode] = useState<Mode>(initialMode === 'signup' ? 'signup' : 'login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -83,11 +88,12 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   // Hata kutusu formun en altında; küçük ekranlarda görünür alanın dışında kalabiliyor.
   // Hata çıkınca sayfayı en alta kaydırıyoruz ki kullanıcı mesajı mutlaka görsün.
-  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  useEffect(() => {
-    if (error) scrollRef.current?.scrollToEnd({ animated: true });
-  }, [error]);
   const [notice, setNotice] = useState<string | null>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  // Kayıttan sonra gelen bilgi kutusu (notice) da aynı yerde; o da görünür alana kaydırılsın
+  useEffect(() => {
+    if (error || notice) scrollRef.current?.scrollToEnd({ animated: true });
+  }, [error, notice]);
   // Kullanıcı adı müsait mi? Son sonucu hangi ad için aldığımızı da tutarız (yazı değişince eski sonuç geçersiz)
   const [nameCheck, setNameCheck] = useState<{ name: string; available: boolean | null } | null>(null);
 

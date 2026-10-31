@@ -146,7 +146,7 @@ function MapView({
     : '3-5';
   const goal: GoalId = isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
   // Kayıtlı kişisel işaretler; yoksa (eski kayıt) seviyeye göre kurallar
-  // useMemo: her render'da yeni nesne üretilirse DailyTaskCard'ın efekti her seferinde yeniden çalışır
+  // useMemo: her render'da yeni nesne üretilirse günün görevi efekti her seferinde yeniden çalışır
   const personalization = useMemo(
     () => personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal),
     [map, roadmap.personalization, roadmap.level, goal]
@@ -162,8 +162,62 @@ function MapView({
   const sum = computeProgress(map, statuses, personalization, weekly);
   const next = ready ? nextTopic(map, statuses, personalization) : undefined;
 
+  // Günün görevi burada (MapView'da) yüklenir: "Şimdi yap" bölgesinde görevle sıradaki konuyu
+  // birlikte yönetebilmek için durum üst bileşende durmalı (lifting state up).
+  // Görev o gün ilk açılışta belirlenir ve gün boyu sabit kalır (bkz. daily-task.ts).
+  const xp = useXp();
+  const [task, setTask] = useState<DailyTask | null>(null);
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    getTodayTask(roadmap.id, map, statuses, personalization).then((t) => {
+      if (!cancelled) setTask(t);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, roadmap.id, map, statuses, personalization]);
+  const taskDone = !!task && xp.dailyDoneDays.has(task.day);
+
+  // Sıra kuralı: yapılacak bir "başla" görevi varsa en üstte o; görev bitmişse ya da quiz/bitir türündeyse
+  // asıl devam noktası "Sıradaki konu" olur. Görev aynı konuya götürüyorsa ikinci kart gereksiz.
+  const dailyFirst = !!task && !taskDone && task.kind === 'start';
+  const sameTopic = dailyFirst && !!next && task.topicId === next.id;
+  const showNext = !!next && !sameTopic;
+  const showDaily = ready && !!task;
+  const dailyCard = showDaily && (
+    // Üstteki kart 3D kenarını korur, alttaki düz olur; tamamlanmış görev her zaman sade
+    <DailyTaskCard
+      task={task}
+      done={taskDone}
+      flat={taskDone || (!dailyFirst && showNext)}
+      onPress={() => openTopic(roadmap, task.topicId)}
+    />
+  );
+  const nextCard = ready && showNext && (
+    <NextCard
+      topic={next}
+      personalization={personalization}
+      flat={dailyFirst && showDaily}
+      onPress={() => openTopic(roadmap, next.id)}
+    />
+  );
+
   return (
     <>
+      {/* "Şimdi yap" bölgesi: kaydırmadan ilk ekranda, ne yapacağını söyleyen kartlar */}
+      {dailyFirst ? (
+        <>
+          {dailyCard}
+          {nextCard}
+        </>
+      ) : (
+        <>
+          {nextCard}
+          {dailyCard}
+        </>
+      )}
+
       <JourneyCard roadmap={roadmap} map={map} plan={plan} sum={ready ? sum : null} />
 
       {(progress.status === 'schema' || progress.status === 'network' || progress.status === 'error') && (
@@ -181,11 +235,9 @@ function MapView({
 
       {ready && (
         <>
-          <DailyTaskCard roadmap={roadmap} map={map} statuses={statuses} personalization={personalization} />
+          <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} />
           {activity && <MomentumCard activity={activity} roadmapId={roadmap.id} weekly={weekly} />}
           <FriendsTodayCard />
-          {next && <NextCard topic={next} personalization={personalization} onPress={() => openTopic(roadmap, next.id)} />}
-          <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} />
           <Sections
             roadmap={roadmap}
             map={map}
@@ -291,7 +343,9 @@ function NamePrompt({ onSaved }: { onSaved: () => void }) {
   if (hidden || status !== 'ready' || username) return null;
   return (
     <View style={[styles.momentum, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
-      <ThemedText type="cardTitle">🏷️ Kullanıcı adını seç</ThemedText>
+      <IconLabel emoji="🏷" type="cardTitle" iconSize={18}>
+        Kullanıcı adını seç
+      </IconLabel>
       <ThemedText type="small" themeColor="textSecondary">
         Uygulamada seni bu ad temsil eder; arkadaşların seni bununla bulur.
       </ThemedText>
@@ -355,8 +409,9 @@ function MapSwitcher({
         accessibilityRole="button"
         accessibilityLabel="Yeni harita ekle"
         style={[styles.mapChip, { backgroundColor: theme.card, borderColor: theme.border, borderStyle: 'dashed' }]}>
+        <Glyph emoji="➕" size={16} color={theme.textSecondary} />
         <ThemedText type="smallBold" themeColor="textSecondary">
-          ＋ Harita ekle
+          Harita ekle
         </ThemedText>
       </Pressable>
     </ScrollView>
@@ -430,9 +485,16 @@ function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roa
           <ThemedText type="small" themeColor="textSecondary">
             Bu haftanın hedefi
           </ThemedText>
-          <ThemedText type="smallBold">
-            {week.hours} / {week.target} saat {week.ratio >= 1 ? '🎉' : ''}
-          </ThemedText>
+          {/* Hedef tamamsa kutlama simgesi; simge yazının içinde değil, IconLabel ile ayrı çizilir */}
+          {week.ratio >= 1 ? (
+            <IconLabel emoji="🎉" type="smallBold" themeColor="accentInk">
+              {`${week.hours} / ${week.target} saat`}
+            </IconLabel>
+          ) : (
+            <ThemedText type="smallBold">
+              {week.hours} / {week.target} saat
+            </ThemedText>
+          )}
         </View>
         <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
           <View
@@ -448,65 +510,56 @@ function MomentumCard({ activity, roadmapId, weekly }: { activity: Activity; roa
 }
 
 // Günün görevi: tek, küçük bir iş (≈5 dk). Tamamlanınca +30 XP ve seri devam eder.
+// Yalnız sunum yapar; görevi MapView yükler. flat: alttaki/tamamlanmış kart düz alt kenarlı (3D yok).
 function DailyTaskCard({
-  roadmap,
-  map,
-  statuses,
-  personalization,
+  task,
+  done,
+  flat,
+  onPress,
 }: {
-  roadmap: Roadmap;
-  map: DevRoadmap;
-  statuses: ReadonlyMap<string, TopicStatus>;
-  personalization: Personalization;
+  task: DailyTask;
+  done: boolean;
+  flat: boolean;
+  onPress: () => void;
 }) {
   const theme = useTheme();
-  const xp = useXp();
-  const [task, setTask] = useState<DailyTask | null>(null);
-  // Görev o gün ilk açılışta belirlenir ve gün boyu sabit kalır (bkz. daily-task.ts)
-  useEffect(() => {
-    let cancelled = false;
-    getTodayTask(roadmap.id, map, statuses, personalization).then((t) => {
-      if (!cancelled) setTask(t);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [roadmap.id, map, statuses, personalization]);
-
-  if (!task) return null;
-  const done = xp.dailyDoneDays.has(task.day);
+  const reduceMotion = useReducedMotion();
   return (
-    <Pressable
-      onPress={() => openTopic(roadmap, task.topicId)}
-      accessibilityRole="button"
-      accessibilityLabel={`Günün görevi: ${taskTitle(task)}. ${done ? 'Tamamlandı.' : 'Açmak için dokun.'}`}
-      style={({ pressed }) => [
-        styles.next,
-        {
-          backgroundColor: done ? theme.accentSoft : theme.markerSoft,
-          borderColor: done ? theme.accent : theme.markerEdge,
-          borderBottomColor: done ? theme.accentEdge : theme.markerEdge,
-        },
-        pressed && { transform: [{ translateY: 2 }] },
-      ]}>
-      <IconTile emoji={done ? '✅' : '🎯'} tone={done ? 'accent' : 'marker'} size={48} />
-      <View style={styles.bandTexts}>
-        <ThemedText type="eyebrow" themeColor={done ? 'accentInk' : 'markerInk'}>
-          {done ? 'Günün görevi tamam · +30 XP' : 'Günün görevi · yaklaşık 5 dk · +30 XP'}
-        </ThemedText>
-        <ThemedText type="cardTitle">{taskTitle(task)}</ThemedText>
-        {done && (
-          <ThemedText type="small" themeColor="textSecondary">
-            Yarın yeni görev seni bekliyor.
+    // Görev sonradan (async) geldiği için yumuşakça belirir; hareketi azalt açıksa animasyon yok
+    <Animated.View entering={reduceMotion ? undefined : FadeIn.duration(150)}>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Günün görevi: ${taskTitle(task)}. ${done ? 'Tamamlandı.' : 'Açmak için dokun.'}`}
+        style={({ pressed }) => [
+          styles.next,
+          flat && styles.nextFlat,
+          {
+            backgroundColor: done ? theme.accentSoft : theme.markerSoft,
+            borderColor: done ? theme.accent : theme.markerEdge,
+            borderBottomColor: done ? theme.accentEdge : theme.markerEdge,
+          },
+          pressed && { transform: [{ translateY: 2 }] },
+        ]}>
+        <IconTile emoji={done ? '✅' : '🎯'} tone={done ? 'accent' : 'marker'} size={48} />
+        <View style={styles.bandTexts}>
+          <ThemedText type="eyebrow" themeColor={done ? 'accentInk' : 'markerInk'}>
+            {done ? 'Günün görevi tamam · +30 XP' : 'Günün görevi · yaklaşık 5 dk · +30 XP'}
+          </ThemedText>
+          <ThemedText type="cardTitle">{taskTitle(task)}</ThemedText>
+          {done && (
+            <ThemedText type="small" themeColor="textSecondary">
+              Yarın yeni görev seni bekliyor.
+            </ThemedText>
+          )}
+        </View>
+        {!done && (
+          <ThemedText type="cardTitle" themeColor="markerInk">
+            ›
           </ThemedText>
         )}
-      </View>
-      {!done && (
-        <ThemedText type="cardTitle" themeColor="markerInk">
-          ›
-        </ThemedText>
-      )}
-    </Pressable>
+      </Pressable>
+    </Animated.View>
   );
 }
 
@@ -514,10 +567,12 @@ function DailyTaskCard({
 function NextCard({
   topic,
   personalization,
+  flat,
   onPress,
 }: {
   topic: Topic;
   personalization: Personalization;
+  flat: boolean; // günün görevi üstteyse bu kart düz alt kenarlı olur
   onPress: () => void;
 }) {
   const theme = useTheme();
@@ -529,6 +584,7 @@ function NextCard({
       accessibilityLabel={`Sıradaki konu: ${topic.title}. Açmak için dokun.`}
       style={({ pressed }) => [
         styles.next,
+        flat && styles.nextFlat,
         { backgroundColor: theme.accentSoft, borderColor: theme.accent, borderBottomColor: theme.accentEdge },
         pressed && { transform: [{ translateY: 2 }] },
       ]}>
@@ -652,6 +708,7 @@ function ViewSwitch({ value, onChange }: { value: 'tree' | 'list'; onChange: (v:
             onPress={() => onChange(o.id)}
             accessibilityRole="radio"
             accessibilityState={{ selected }}
+            accessibilityLabel={o.id === 'tree' ? 'Harita görünümü' : 'Liste görünümü'}
             style={[styles.switchItem, selected && { backgroundColor: theme.card, borderColor: theme.accent }]}>
             <IconLabel emoji={o.icon} type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
               {o.label}
@@ -894,7 +951,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.one,
-    minHeight: 40,
+    minHeight: MinTouch,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
     borderWidth: Border.thick,
@@ -922,13 +979,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: Border.thick + Edge,
     borderRadius: Radius.lg,
   },
+  nextFlat: { borderBottomWidth: Border.thick },
   sections: { gap: Spacing.two },
   sectionsHead: { gap: Spacing.two, marginBottom: Spacing.one },
-  headRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  headRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   flex1: { flex: 1 },
   switch: { flexDirection: 'row', borderRadius: Radius.pill, borderWidth: Border.thin, padding: 2 },
   switchItem: {
-    minHeight: 36,
+    minHeight: MinTouch,
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,

@@ -63,8 +63,13 @@ export default function WelcomeScreen() {
           entering={enter(450)}
           style={[styles.footer, { paddingHorizontal: gutter }]}>
           {/* Link: başka bir ekrana geçiş. asChild = Link'in davranışını Button'a ver */}
-          <Link href="/login" asChild>
+          {/* Yeni kullanıcı doğrudan kayıt formuna gider; mode parametresini login.tsx okur */}
+          <Link href={{ pathname: '/login', params: { mode: 'signup' } }} asChild>
             <Button label="Yolculuğa başla" />
+          </Link>
+          {/* Hesabı olan geri dönen kullanıcı için ayrı, ikincil yol */}
+          <Link href={{ pathname: '/login', params: { mode: 'signin' } }} asChild>
+            <Button variant="secondary" label="Hesabım var, giriş yap" />
           </Link>
         </Animated.View>
       </SafeAreaView>
@@ -80,5 +85,5 @@ const styles = StyleSheet.create({
   lead: { alignSelf: 'center', maxWidth: 320, marginTop: Spacing.two },
   // Kalan alanda dikey ortala: uzun ekranda patika üstte yapışık kalmasın
   trail: { flex: 1, justifyContent: 'center', marginTop: Spacing.four },
-  footer: { paddingTop: Spacing.two, paddingBottom: Spacing.three },
+  footer: { gap: Spacing.two, paddingTop: Spacing.two, paddingBottom: Spacing.three },
 });

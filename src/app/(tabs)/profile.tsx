@@ -1,7 +1,7 @@
-import { Link } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Link, router } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { IconLabel } from '@/components/icon';
+import { Glyph, IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { AchievementsSection } from '@/components/achievements-section';
 import { Avatar } from '@/components/avatar';
@@ -12,7 +12,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
-import { Border, Edge, Radius, Spacing } from '@/constants/theme';
+import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
 import { useUsername } from '@/hooks/use-username';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
@@ -35,7 +35,26 @@ export default function ProfileScreen() {
 
   return (
     <TabScreen>
-      <ScreenHeader title="Profil" />
+      {/* Ayarlar sayfa sonunda gömülü kalmasın: başlıkta her zaman görünen dişli düğmesi.
+          Link asChild yerine router.push: stil fonksiyonu/dizisi Link'te web'de hata verebiliyor. */}
+      <ScreenHeader
+        title="Profil"
+        right={
+          <Pressable
+            onPress={() => router.push('/settings')}
+            accessibilityRole="button"
+            accessibilityLabel="Ayarlar"
+            style={({ pressed }) => [
+              styles.gear,
+              {
+                backgroundColor: pressed ? theme.backgroundSelected : theme.card,
+                borderColor: theme.borderStrong,
+              },
+            ]}>
+            {({ pressed }) => <Glyph emoji="⚙️" size={22} color={pressed ? theme.text : theme.textSecondary} />}
+          </Pressable>
+        }
+      />
 
       {/* Kimlik: kullanıcı adı + e-posta. Ad ve hesap işlemleri Ayarlar'da (burada tekrar edilmez). */}
       <View style={styles.identity}>
@@ -151,6 +170,14 @@ function LevelCard() {
 }
 
 const styles = StyleSheet.create({
+  gear: {
+    width: MinTouch,
+    height: MinTouch,
+    borderRadius: Radius.pill,
+    borderWidth: Border.thick,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   levelCard: { flexDirection: 'column', alignItems: 'stretch', gap: Spacing.two },
   levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   levelTrack: { height: 10, borderRadius: Radius.pill, overflow: 'hidden' },
