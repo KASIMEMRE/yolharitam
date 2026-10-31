@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -10,9 +10,8 @@ import { Button } from '@/components/button';
 import { HeaderBackButton } from '@/components/header-back-button';
 import { StatusChip } from '@/components/level-badge';
 import { type Milestone, MilestoneCelebration } from '@/components/milestone-celebration';
-import { OptionCard } from '@/components/option-card';
 import { Skeleton } from '@/components/skeleton';
-import { TopicAssist } from '@/components/topic-assist';
+import { type AssistBlockId, TopicAssist } from '@/components/topic-assist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { allTopics, findTopic, getRoadmap } from '@/constants/dev-roadmaps';
@@ -30,11 +29,19 @@ import { awardXp } from '@/lib/xp';
 
 const LEVEL_LABEL = { 1: 'Başlangıç konusu', 2: 'Orta seviye konu', 3: 'İleri seviye konu' } as const;
 
-// Durum seçenekleri: seçili olana tekrar dokunmak durumu sıfırlar ("başlanmadı")
+// Durum seçenekleri: seçili olana tekrar dokunmak durumu sıfırlar ("başlanmadı").
+// Açıklama, 3'lü seçicinin altında yalnız seçili olan için tek satır olarak görünür.
 const STATUS_OPTIONS: { id: TopicStatus; description: string }[] = [
-  { id: 'in_progress', description: 'Şu an bu konuyu çalışıyorum' },
-  { id: 'done', description: 'Bu konuyu öğrendim' },
-  { id: 'skipped', description: 'Zaten biliyorum ya da gerek yok; planımdan çıkar' },
+  { id: 'in_progress', description: 'Şu an bu konuyu çalışıyorum.' },
+  { id: 'done', description: 'Bu konuyu öğrendim.' },
+  { id: 'skipped', description: 'Zaten biliyorum ya da gerek yok; planımdan çıkar.' },
+];
+
+// Yapay zekâ kısayolları: dokununca ilgili bloğa kaydırır
+const ASSIST_SHORTCUTS: { id: AssistBlockId; label: string; icon: string }[] = [
+  { id: 'explain', label: 'Alt konular', icon: '🧩' },
+  { id: 'quiz', label: 'Quiz çöz', icon: '📝' },
+  { id: 'ask', label: 'Yapay zekâya sor', icon: '💬' },
 ];
 
 function first(param: string | string[] | undefined): string | undefined {
@@ -56,6 +63,18 @@ export default function TopicScreen() {
   // Kaynak bağlantısı açılamadıysa true; opening çift dokunuşta tarayıcının iki kez açılmasını önler
   const [linkError, setLinkError] = useState(false);
   const [opening, setOpening] = useState(false);
+
+  // Kısayolla kaydırma: blokların y konumu onLayout ile toplanır (TopicAssist içinde), ScrollView ref ile kaydırılır
+  const scrollRef = useRef<{ scrollTo: (options: { y: number; animated?: boolean }) => void } | null>(null);
+  const assistOffset = useRef({ inner: 0, assist: 0 });
+  const blockY = useRef<Partial<Record<AssistBlockId, number>>>({});
+  function scrollToBlock(id: AssistBlockId) {
+    const y = blockY.current[id];
+    if (y === undefined) return;
+    // Blok konumu = içerik kabının dolgusu + yapay zekâ alanının konumu + bloğun alan içindeki konumu
+    const total = assistOffset.current.inner + assistOffset.current.assist + y;
+    scrollRef.current?.scrollTo({ y: Math.max(0, total - Spacing.two), animated: true });
+  }
 
   const theme = useTheme();
   const { width } = useWindowDimensions();
@@ -168,8 +187,8 @@ export default function TopicScreen() {
     <ThemedView style={styles.container}>
       {screenOptions}
       <SafeAreaView style={styles.flex} edges={['bottom']}>
-        <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { padding: gutter }]}>
-          <View style={styles.inner}>
+        <ScrollView ref={(r) => { scrollRef.current = r; }} style={styles.flex} contentContainerStyle={[styles.content, { padding: gutter }]}>
+          <View style={styles.inner} onLayout={(e) => (assistOffset.current.inner = e.nativeEvent.layout.y)}>
             {/* Başlık bloğu: harita rengiyle */}
             <View style={[styles.hero, { backgroundColor: theme[hue.soft], borderColor: theme[hue.line] }]}>
               <ThemedText type="eyebrow" themeColor={hue.ink}>
@@ -271,28 +290,61 @@ export default function TopicScreen() {
                   <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={progress.retry} />
                 </View>
               ) : !ready ? (
-                <View style={styles.block}>
-                  <Skeleton width="100%" height={72} radius={Radius.lg} />
-                  <Skeleton width="100%" height={72} radius={Radius.lg} />
-                </View>
+                <Skeleton width="100%" height={52} radius={Radius.lg} />
               ) : (
-                <View accessibilityRole="radiogroup" accessibilityLabel="Konu durumu" style={styles.block}>
-                  {STATUS_OPTIONS.map((o, index) => (
-                    <OptionCard
-                      key={o.id}
-                      role="radio"
-                      title={STATUS_STYLE[o.id].label}
-                      description={o.description}
-                      icon={STATUS_STYLE[o.id].emoji}
-                      trailing="check"
-                      selected={current === o.id}
-                      index={index}
-                      hint={current === o.id ? 'Seçimi kaldırmak için tekrar dokun' : undefined}
-                      onPress={() => choose(o.id)}
-                    />
-                  ))}
+                <View style={styles.block}>
+                  {/* Kompakt 3'lü seçici: tek satır, her parça en az 44pt yüksekliğinde */}
+                  <View
+                    accessibilityRole="radiogroup"
+                    accessibilityLabel="Konu durumu"
+                    style={[styles.segment, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
+                    {STATUS_OPTIONS.map((o) => {
+                      const selected = current === o.id;
+                      return (
+                        <Pressable
+                          key={o.id}
+                          onPress={() => choose(o.id)}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected }}
+                          accessibilityLabel={`${STATUS_STYLE[o.id].label}. ${o.description}`}
+                          accessibilityHint={selected ? 'Seçimi kaldırmak için tekrar dokun' : undefined}
+                          style={[
+                            styles.segmentItem,
+                            selected && { backgroundColor: theme.accentSoft, borderColor: theme.accent },
+                          ]}>
+                          <IconLabel emoji={STATUS_STYLE[o.id].emoji} type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
+                            {STATUS_STYLE[o.id].label}
+                          </IconLabel>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  {/* Seçili durumun kısa açıklaması; seçim yoksa nasıl işaretleneceği */}
+                  <ThemedText type="small" themeColor="textSecondary">
+                    {STATUS_OPTIONS.find((o) => o.id === current)?.description ?? 'Bu konuda neredesin? Birini seç.'}
+                  </ThemedText>
                 </View>
               )}
+            </View>
+
+            {/* Yapay zekâ kısayolları: araçlar sayfanın altında kaldığı için durumun yanında hızlı erişim */}
+            <View style={styles.shortcuts} accessibilityRole="toolbar" accessibilityLabel="Yapay zekâ araçları">
+              {ASSIST_SHORTCUTS.map((a) => (
+                <Pressable
+                  key={a.id}
+                  onPress={() => scrollToBlock(a.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={a.label}
+                  accessibilityHint="Sayfada ilgili bölüme kaydırır"
+                  style={({ pressed }) => [
+                    styles.shortcut,
+                    { borderColor: theme.border, backgroundColor: pressed ? theme.backgroundSelected : theme.card },
+                  ]}>
+                  <IconLabel emoji={a.icon} type="smallBold" themeColor="accentInk" iconSize={16}>
+                    {a.label}
+                  </IconLabel>
+                </Pressable>
+              ))}
             </View>
 
             {/* Sonraki konu durumun hemen altında: işaretledikten sonra ilerlemek için sayfayı kaydırmak gerekmesin.
@@ -308,13 +360,16 @@ export default function TopicScreen() {
             )}
 
             {/* Yapay zekâ araçları. key: "Sonraki konu"ya geçince önceki konunun cevapları kalmasın */}
-            <TopicAssist
-              key={topic.id}
-              map={map}
-              section={section}
-              topic={topic}
-              level={roadmap?.id === roadmapId ? toLevelId(roadmap.level) : undefined}
-            />
+            <View onLayout={(e) => (assistOffset.current.assist = e.nativeEvent.layout.y)}>
+              <TopicAssist
+                key={topic.id}
+                map={map}
+                section={section}
+                topic={topic}
+                level={roadmap?.id === roadmapId ? toLevelId(roadmap.level) : undefined}
+                onBlockLayout={(id, y) => (blockY.current[id] = y)}
+              />
+            </View>
 
             {/* Proje konularında: bitirdiğin projeyi Topluluk vitrinine ekleme bağlantısı */}
             {(topic.id.startsWith('project') || topic.id.startsWith('portfolio')) && (
@@ -342,6 +397,25 @@ const styles = StyleSheet.create({
   inner: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   hero: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  segment: { flexDirection: 'row', gap: 2, padding: 2, borderRadius: Radius.pill, borderWidth: Border.thin },
+  segmentItem: {
+    flex: 1,
+    minHeight: MinTouch,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.one,
+    borderRadius: Radius.pill,
+    borderWidth: Border.thick,
+    borderColor: 'transparent',
+  },
+  shortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  shortcut: {
+    minHeight: MinTouch,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.pill,
+    borderWidth: Border.thick,
+  },
   personal: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thick },
   block: { gap: Spacing.two },
   resource: {

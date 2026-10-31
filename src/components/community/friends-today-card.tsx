@@ -1,5 +1,6 @@
 import { StyleSheet, View } from 'react-native';
 
+import { IconLabel } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { computeStreak } from '@/constants/activity';
 import { Border, Radius, Spacing } from '@/constants/theme';
@@ -7,8 +8,9 @@ import { useFriends } from '@/hooks/use-friends';
 import { useTheme } from '@/hooks/use-theme';
 
 // Yol Haritam'da "Arkadaşların bugün" kartı: bugün çalışan en çok 3 arkadaşı gösterir.
+// compact: başka bir kartın içine gömülürken kendi çerçevesi olmaz.
 // Arkadaş yoksa, kimse çalışmadıysa ya da veri okunamadıysa kart HİÇ görünmez (ana ekranı hata ile kirletmeyiz).
-export function FriendsTodayCard() {
+export function FriendsTodayCard({ compact = false }: { compact?: boolean }) {
   const theme = useTheme();
   const { friends, status } = useFriends();
   if (status !== 'ready') return null;
@@ -20,10 +22,10 @@ export function FriendsTodayCard() {
   if (active.length === 0) return null;
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <ThemedText type="smallBold" accessibilityRole="header">
-        🤝 Arkadaşların bugün
-      </ThemedText>
+    <View style={compact ? styles.compact : [styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <IconLabel emoji="🤝" type="smallBold" iconSize={16}>
+        Arkadaşların bugün
+      </IconLabel>
       {active.map((f) => {
         const name = f.username ? `@${f.username}` : 'Bir arkadaşın';
         const { streak } = computeStreak(new Set(f.active_days));
@@ -31,7 +33,7 @@ export function FriendsTodayCard() {
         return (
           <ThemedText key={f.friendship_id} type="small">
             {name} {what}
-            {streak > 0 ? ` 🔥${streak}` : ''}
+            {streak > 0 ? ` · ${streak} günlük seri` : ''}
           </ThemedText>
         );
       })}
@@ -40,5 +42,6 @@ export function FriendsTodayCard() {
 }
 
 const styles = StyleSheet.create({
+  compact: { gap: Spacing.one },
   card: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
 });
