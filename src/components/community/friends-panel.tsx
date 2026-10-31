@@ -75,10 +75,12 @@ export function FriendsPanel() {
         </View>
       )}
 
-      <View style={styles.group}>
-        <ThemedText type="cardTitle" accessibilityRole="header">
-          Çalışma arkadaşların
-        </ThemedText>
+      {/* Liste okunamadıysa boş başlık göstermeyelim (üstte hata kutusu var) */}
+      {!(status === 'error' && friends.length === 0) && (
+        <View style={styles.group}>
+          <ThemedText type="cardTitle" accessibilityRole="header">
+            Çalışma arkadaşların
+          </ThemedText>
         {status === 'ready' && friends.length === 0 && (
           <View style={styles.empty}>
             <IconTile emoji="🤝" tone="sky" size={64} />
@@ -88,10 +90,11 @@ export function FriendsPanel() {
             </ThemedText>
           </View>
         )}
-        {friends.map((r) => (
-          <FriendCard key={r.friendship_id} row={r} onRemove={remove} onBlocked={refresh} />
-        ))}
-      </View>
+          {friends.map((r) => (
+            <FriendCard key={r.friendship_id} row={r} onRemove={remove} onBlocked={refresh} />
+          ))}
+        </View>
+      )}
     </View>
   );
 }

@@ -144,7 +144,8 @@ function Choice<T extends string>({
 function MapsSection() {
   const { roadmap: active, roadmaps, leftovers, loading, failed, retry, activate, remove } = useLatestRoadmap();
   // Haritalardaki biten konu sayıları (her odakta tazelenir)
-  const [doneCounts, setDoneCounts] = useState<Record<string, number>>({});
+  // null = okunamadı (0 diye gösterip kullanıcıyı yanıltmayalım)
+  const [doneCounts, setDoneCounts] = useState<Record<string, number> | null>({});
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -152,8 +153,12 @@ function MapsSection() {
         .from('topic_progress')
         .select('roadmap_id, status')
         .eq('status', 'done')
-        .then(({ data }) => {
-          if (cancelled || !data) return;
+        .then(({ data, error }) => {
+          if (cancelled) return;
+          if (error || !data) {
+            setDoneCounts(null);
+            return;
+          }
           const counts: Record<string, number> = {};
           for (const r of data) counts[r.roadmap_id] = (counts[r.roadmap_id] ?? 0) + 1;
           setDoneCounts(counts);
@@ -190,7 +195,7 @@ function MapsSection() {
             key={r.id}
             roadmap={r}
             active={r.id === active?.id}
-            done={doneCounts[r.id] ?? 0}
+            done={doneCounts ? (doneCounts[r.id] ?? 0) : null}
             onOpen={async () => {
               await activate(r.id);
               router.replace('/roadmap');
@@ -228,7 +233,7 @@ function MapRow({
 }: {
   roadmap: Roadmap;
   active: boolean;
-  done: number;
+  done: number | null;
   onOpen: () => void;
   onRemove: () => Promise<boolean>;
 }) {
@@ -257,7 +262,9 @@ function MapRow({
         <View style={styles.flexText}>
           <ThemedText type="cardTitle">{map.title}</ThemedText>
           <ThemedText type="small" themeColor="textSecondary">
-            {KIND_LABEL[map.kind]} · {done} / {countTopics(map).total} konu bitti{active ? ' · şu an açık' : ''}
+            {KIND_LABEL[map.kind]}
+            {done !== null ? ` · ${done} / ${countTopics(map).total} konu bitti` : ''}
+            {active ? ' · şu an açık' : ''}
           </ThemedText>
         </View>
       </View>
@@ -270,7 +277,7 @@ function MapRow({
       ) : (
         <View style={[styles.confirm, { backgroundColor: theme.warningBackground }]}>
           <ThemedText type="smallBold" themeColor="warningInk">
-            {done > 0
+            {done !== null && done > 0
               ? `${map.title} haritası ve bitirdiğin ${done} konunun kaydı silinecek. Bu geri alınamaz.`
               : `${map.title} haritası listenden kaldırılacak; bu haritada işaretlediğin konular varsa onlar da silinir. Bu geri alınamaz.`}
           </ThemedText>
@@ -476,6 +483,7 @@ function PasswordCard({ email }: { email: string | null }) {
         return;
       }
       reset();
+      setOpen(false); // başarı kutusu kapalı formun üstünde gösterilir
       setState({ tone: 'success', text: 'Şifren değiştirildi.' });
     } catch {
       setState({ tone: 'warning', text: ERROR_TEXT.network });
