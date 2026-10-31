@@ -20,13 +20,15 @@ import { ThemedView } from '@/components/themed-view';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { normalizeUsername, USERNAME_PATTERN } from '@/hooks/use-username';
+import { MIN_PASSWORD } from '@/lib/auth-rules';
 import { supabase } from '@/lib/supabase';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 import { isAuthRetryableFetchError, type AuthError } from '@supabase/supabase-js';
 
 type Mode = 'login' | 'signup';
 
-const MIN_NEW_PASSWORD = 8;
+// Yeni şifre kuralı tek yerde (auth-rules): Ayarlar'daki şifre değiştirme de aynı sayıyı kullanır
+const MIN_NEW_PASSWORD = MIN_PASSWORD;
 
 const STEPS = [
   { emoji: '🔑', label: 'Hesabını oluştur' },

@@ -108,12 +108,16 @@ export function useShowcase(map: string | null, enabled: boolean = true) {
   }
 
   // Başkasının projesini bildir. Aynı kişi aynı projeyi ikinci kez bildirirse (23505) zaten kayıtlıdır: başarı sayılır.
-  async function reportProject(id: number): Promise<boolean> {
+  // Sunucu kötüye kullanımı P0001 ile reddeder: 'report_too_soon' (hesap 24 saatten yeni) ve 'report_limit' (günde 10).
+  async function reportProject(id: number): Promise<ReportResult> {
     try {
       const { error } = await supabase.from('showcase_reports').insert({ project_id: id, reason: 'Uygunsuz içerik' });
-      return !error || error.code === '23505';
+      if (!error || error.code === '23505') return 'ok';
+      if (error.message?.includes('report_too_soon')) return 'too_soon';
+      if (error.message?.includes('report_limit')) return 'limit';
+      return 'error';
     } catch {
-      return false;
+      return 'error';
     }
   }
 
@@ -130,6 +134,8 @@ export function useShowcase(map: string | null, enabled: boolean = true) {
   };
 }
 
+export type ReportResult = 'ok' | 'too_soon' | 'limit' | 'error';
+
 export type NewProject = {
   map_id: string;
   title: string;
@@ -139,7 +145,7 @@ export type NewProject = {
 };
 
 // Yeni proje ekler (paylaşma formu kullanır). Dönüş: null = başarılı, değilse hata türü.
-// Sunucu "en çok 5 proje" kuralını tetikleyiciyle uygular (P0001); user_id veritabanında auth.uid() olur.
+// Sunucu "harita başına 5, toplam 20 proje" kuralını tetikleyiciyle uygular (P0001); user_id veritabanında auth.uid() olur.
 export async function createProject(p: NewProject): Promise<null | 'limit' | 'invalid' | 'network' | 'other'> {
   try {
     const { error } = await supabase.from('showcase_projects').insert(p);

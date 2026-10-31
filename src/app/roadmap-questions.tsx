@@ -282,6 +282,8 @@ export default function RoadmapQuestionsScreen() {
             .insert({ ...fields, user_id: session.user.id, topic_path: map.id })
             .select('id')
             .abortSignal(controller.signal);
+      // Sunucu kullanıcı başına 30 haritayı aşan eklemeyi 'roadmap_limit' (P0001) ile reddeder
+      if (saveError?.message?.includes('roadmap_limit')) return { message: ERROR_TEXT.roadmapLimit };
       if (saveError) return { message: errorText(saveError) };
       if (!saved || saved.length === 0) return { message: ERROR_TEXT.other };
 

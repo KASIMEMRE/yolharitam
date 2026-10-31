@@ -58,7 +58,10 @@ export const ERROR_TEXT = {
   showcaseLoadFailed: 'Projeler yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   showcaseActionFailed: 'İşlem tamamlanamadı. İnternet bağlantını kontrol edip tekrar dene.',
   showcaseSaveFailed: 'Projen paylaşılamadı. İnternet bağlantını kontrol edip tekrar dene.',
-  showcaseLimit: 'Bir haritada en çok 5 proje paylaşabilirsin. Önce eskilerinden birini sil.',
+  showcaseLimit: 'Proje sınırına ulaştın (harita başına 5, toplam 20). Önce eskilerinden birini sil.',
+  reportTooSoon: 'Yeni hesaplar bildirim yapmadan önce 1 gün beklemeli.',
+  reportLimit: 'Bugün çok fazla bildirim yaptın. Yarın tekrar dene.',
+  roadmapLimit: "En fazla 30 harita ekleyebilirsin. Eskilerden birini Ayarlar'dan kaldır.",
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   markSchema: 'İşaret kaydedilemedi. Veritabanı güncellemesi bekleniyor olabilir.',

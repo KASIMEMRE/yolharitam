@@ -15,6 +15,7 @@ const MODELS = [Deno.env.get('GROQ_MODEL'), 'openai/gpt-oss-120b', 'openai/gpt-o
 );
 const TIMEOUT_MS = 12000;
 const MAX_FOCUS = 8;
+const DAILY_LIMIT = 10; // kullanıcı başına son 24 saatte en çok 10 kişiselleştirme
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -86,6 +87,32 @@ Deno.serve(async (req) => {
   }
   if (!isValidBody(body)) return json({ error: 'bad_input' }, 400);
 
+  // Günlük kota: her çağrı Groq kotası harcar. Geçersiz istekler yukarıda elendiği için hak harcamaz.
+  const userId = userData.user.id;
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count } = await service
+    .from('personalize_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', since);
+  if ((count ?? 0) >= DAILY_LIMIT) return json({ error: 'daily_limit', limit: DAILY_LIMIT }, 429);
+  // Hak model çağrısından ÖNCE ayrılır (topic-assist ile aynı kalıp): model beklerken gelen paralel
+  // istekler de sayıma girer. Üretim başarısız olursa satır silinip hak iade edilir.
+  const { data: reserved, error: reserveError } = await service
+    .from('personalize_requests')
+    .insert({ user_id: userId })
+    .select('id')
+    .single();
+  if (reserveError || !reserved) {
+    console.error('personalize_requests reserve failed', reserveError?.message);
+    return json({ error: 'quota_error' }, 500);
+  }
+  // Her hata dönüşü bunu kullanır: önce hakkı iade et, sonra hatayı döndür
+  const fail = async (data: unknown, status: number) => {
+    await service.from('personalize_requests').delete().eq('id', reserved.id);
+    return json(data, status);
+  };
+
   const system = [
     'Sen deneyimli bir yazılım mentorusun. Sana bir yazılımcı yol haritası (bölümler ve konular) ve bir öğrencinin bilgileri veriliyor.',
     'Haritayı DEĞİŞTİRME; yalnız bu öğrenci için işaretle. Her konunun "zorluk" değeri var: 1 temel, 2 orta, 3 ileri.',
@@ -139,22 +166,22 @@ Deno.serve(async (req) => {
         signal: AbortSignal.timeout(left),
       });
       if (res.status === 404 || res.status === 400) continue; // model yok/desteklenmiyor → sonraki
-      if (!res.ok) return json({ error: 'provider_error', status: res.status }, res.status === 429 ? 429 : 502);
+      if (!res.ok) return fail({ error: 'provider_error', status: res.status }, res.status === 429 ? 429 : 502);
       const data = await res.json();
       content = data?.choices?.[0]?.message?.content ?? '';
       model = m;
       break;
     } catch {
-      return json({ error: 'provider_unreachable' }, 504);
+      return fail({ error: 'provider_unreachable' }, 504);
     }
   }
-  if (!model) return json({ error: 'no_model' }, 502);
+  if (!model) return fail({ error: 'no_model' }, 502);
 
   let parsed: { focus?: unknown; skip?: unknown; notes?: unknown };
   try {
     parsed = JSON.parse(content);
   } catch {
-    return json({ error: 'bad_output' }, 502);
+    return fail({ error: 'bad_output' }, 502);
   }
 
   // Sıkı doğrulama: yalnız gönderilen kimlikler, tekrarsız
@@ -175,6 +202,6 @@ Deno.serve(async (req) => {
       }
     }
   }
-  if (focus.length < 3) return json({ error: 'bad_output' }, 502);
+  if (focus.length < 3) return fail({ error: 'bad_output' }, 502);
   return json({ focus, skip, notes, model });
 });

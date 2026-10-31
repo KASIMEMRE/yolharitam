@@ -25,7 +25,11 @@ const RESULT_TEXT: Record<RequestResult, { tone: 'success' | 'info' | 'warning';
   not_found: { tone: 'warning', text: 'Bu kullanıcı adında kimseyi bulamadık. Yazımı kontrol et.' },
   self: { tone: 'info', text: 'Kendi kullanıcı adını yazdın. Bir arkadaşının adını yaz.' },
   exists: { tone: 'info', text: 'Bu kişiyle zaten arkadaşsınız ya da bekleyen bir istek var.' },
-  limit: { tone: 'warning', text: 'En çok 50 arkadaş ve istek olabilir. Önce birkaçını kaldır.' },
+  // 'limit' sunucuda üç nedenle dönebilir: günlük 30 istek, bizde 50 kişi sınırı, karşı tarafta 100 sınırı
+  limit: {
+    tone: 'warning',
+    text: 'Bugünlük istek sınırına ulaştın ya da kişi çok fazla istek almış. Daha sonra tekrar dene.',
+  },
   username_required: { tone: 'info', text: 'İstek göndermek için önce kendi kullanıcı adını seçmelisin.' },
   error: { tone: 'warning', text: ERROR_TEXT.friendActionFailed },
 };

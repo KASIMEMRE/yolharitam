@@ -15,6 +15,7 @@ const MODELS = [Deno.env.get('GROQ_MODEL'), 'openai/gpt-oss-120b', 'openai/gpt-o
 const TIMEOUT_MS = 15000;
 const GEN_LIMIT = 40;
 const ASK_LIMIT = 20;
+const CACHE_REFRESH_MS = 7 * 24 * 60 * 60 * 1000; // uyuşmayan önbellek satırı en erken 7 günde yenilenir
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -42,15 +43,19 @@ function json(data: unknown, status = 200) {
 }
 
 const ID = /^[a-z0-9-]{1,80}$/;
+// map_id sütunu en çok 60 karakter: daha uzunu önbellek yazımını sessizce bozardı
+const MAP_ID = /^[a-z0-9-]{1,60}$/;
 function isValidBody(b: Body): boolean {
   const str = (x: unknown, max: number) => typeof x === 'string' && x.trim().length > 0 && x.length <= max;
+  // JSON "null" ya da dizi gelirse alanlara erişmeden önce ele
+  if (typeof b !== 'object' || b === null || Array.isArray(b)) return false;
   return (
-    ['explain', 'quiz', 'ask'].includes(b?.kind) &&
-    typeof b.mapId === 'string' && ID.test(b.mapId) &&
+    typeof b.kind === 'string' && ['explain', 'quiz', 'ask'].includes(b.kind) &&
+    typeof b.mapId === 'string' && MAP_ID.test(b.mapId) &&
     typeof b.topicId === 'string' && ID.test(b.topicId) &&
     str(b.mapTitle, 80) && str(b.sectionTitle, 80) && str(b.topicTitle, 120) && str(b.topicSummary, 400) &&
-    (b.level === undefined || b.level in LEVEL_TR) &&
-    (b.kind !== 'ask' || str(b.question, 300))
+    (b.level === undefined || (typeof b.level === 'string' && Object.hasOwn(LEVEL_TR, b.level))) &&
+    (b.kind === 'ask' ? str(b.question, 300) : b.question === undefined || typeof b.question === 'string')
   );
 }
 
@@ -166,10 +171,15 @@ Deno.serve(async (req) => {
   if (!isValidBody(body)) return json({ error: 'bad_input' }, 400);
 
   // 1) Önbellek (explain/quiz)
+  // canWriteCache: satır yoksa, _src'siz eski bir satırsa ya da 7 günden eskiyse önbelleğe yazılır.
+  // Satır yeni ama girdi uyuşmuyorsa içerik yine üretilip bu kullanıcıya döner, kayıt EZİLMEZ: biri uydurma
+  // metinle sürekli üzerine yazıp herkesi yeniden üretime zorlayamaz. 7 gün kuralı da bizim konu metnimiz
+  // değiştiğinde önbelleğin sonsuza dek eskide kalmamasını sağlar.
+  let canWriteCache = true;
   if (body.kind !== 'ask') {
     const { data: cached } = await service
       .from('topic_ai_cache')
-      .select('content')
+      .select('content, created_at')
       .eq('map_id', body.mapId)
       .eq('topic_id', body.topicId)
       .eq('topic_title', body.topicTitle)
@@ -177,21 +187,16 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const hit = cached?.content as Record<string, unknown> | undefined;
     if (hit && sameSrc(hit._src, body)) return json({ content: stripSrc(hit), cached: true });
+    const stale = !!cached && Date.now() - new Date(cached.created_at).getTime() > CACHE_REFRESH_MS;
+    canWriteCache = !hit || !hit._src || stale;
   }
 
   // 2) Kota: son 24 saatte bu kullanıcının istekleri
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const isAsk = body.kind === 'ask';
-  const { count } = await service
-    .from('ai_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', since)
-    .in('kind', isAsk ? ['ask'] : ['explain', 'quiz']);
   const limit = isAsk ? ASK_LIMIT : GEN_LIMIT;
-  if ((count ?? 0) >= limit) return json({ error: 'daily_limit', limit }, 429);
-  // Hak, model çağrısından ÖNCE ayrılır: sayım ile insert arasında model beklenirse paralel isteklerin
-  // hepsi "count < limit" görüp sınırı aşardı (maliyet). Üretim başarısız olursa satır silinip iade edilir.
+  // Önce hak AYRILIR, sonra sayılır. (Önce sayıp sonra eklemek yarışa açıktı: paralel isteklerin hepsi
+  // "count < limit" görüp sınırı aşabilirdi.) Üretim başarısız olursa satır silinip iade edilir.
   const { data: reserved, error: reserveError } = await service
     .from('ai_requests')
     .insert({ user_id: userId, kind: body.kind })
@@ -202,6 +207,17 @@ Deno.serve(async (req) => {
     return json({ error: 'quota_error' }, 500);
   }
   const refund = () => service.from('ai_requests').delete().eq('id', reserved.id);
+  // Kendi satırımız da sayıma girer; sayı sınırı aşıyorsa satırı geri silip reddederiz
+  const { count } = await service
+    .from('ai_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', since)
+    .in('kind', isAsk ? ['ask'] : ['explain', 'quiz']);
+  if ((count ?? 0) > limit) {
+    await refund();
+    return json({ error: 'daily_limit', limit }, 429);
+  }
   // Her hata dalı bunu kullanır: önce hakkı iade et, sonra hatayı döndür
   const fail = async (error: string) => {
     await refund();
@@ -233,10 +249,13 @@ Deno.serve(async (req) => {
     }
     const content = cleanExplain(parsed);
     if (!content) return fail('bad_output');
-    await service.from('topic_ai_cache').upsert({
-      map_id: body.mapId, topic_id: body.topicId, topic_title: body.topicTitle, kind: 'explain',
-      content: { ...content, _src: srcOf(body) }, model: out.model,
-    });
+    if (canWriteCache) {
+      await service.from('topic_ai_cache').upsert({
+        map_id: body.mapId, topic_id: body.topicId, topic_title: body.topicTitle, kind: 'explain',
+        content: { ...content, _src: srcOf(body) }, model: out.model,
+        created_at: new Date().toISOString(), // yenilenince 7 günlük süre baştan başlar
+      });
+    }
     return json({ content, cached: false });
   }
 
@@ -258,10 +277,13 @@ Deno.serve(async (req) => {
     }
     const content = cleanQuiz(parsed);
     if (!content) return fail('bad_output');
-    await service.from('topic_ai_cache').upsert({
-      map_id: body.mapId, topic_id: body.topicId, topic_title: body.topicTitle, kind: 'quiz',
-      content: { ...content, _src: srcOf(body) }, model: out.model,
-    });
+    if (canWriteCache) {
+      await service.from('topic_ai_cache').upsert({
+        map_id: body.mapId, topic_id: body.topicId, topic_title: body.topicTitle, kind: 'quiz',
+        content: { ...content, _src: srcOf(body) }, model: out.model,
+        created_at: new Date().toISOString(), // yenilenince 7 günlük süre baştan başlar
+      });
+    }
     return json({ content, cached: false });
   }
 
@@ -275,5 +297,5 @@ Deno.serve(async (req) => {
   const out = await callModel(system, `${context}\n\nÖğrencinin sorusu: ${body.question!.trim()}`, false);
   if (!out || !out.content.trim()) return fail('provider_error');
   const answer = out.content.trim().slice(0, 2000).replace(/https?:\/\/\S+/gi, '');
-  return json({ content: { answer }, remaining: Math.max(0, ASK_LIMIT - (count ?? 0) - 1) });
+  return json({ content: { answer }, remaining: Math.max(0, ASK_LIMIT - (count ?? 0)) }); // count kendi satırımızı da içerir
 });

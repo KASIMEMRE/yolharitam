@@ -104,6 +104,11 @@ Amaç: uygulama daha kolay ve kullanışlı olsun. Önce DENETLE, sonra en çok 
 - Proje vitrini: GitHub linkiyle proje paylaşma, haritaya göre süzme, bildir/sil; konu ekranında "Projeni vitrine ekle".
 - XP bütünlüğü: `xp_events_guard` tetikleyicisi (sabit tutarlar, sahiplik, sıra, günlük tavanlar) — lig adil olsun.
 
+### SEC-01 · Güvenlik denetimi ve sıkılaştırma 🗄️
+- Veritabanı: zaman damgalarını sunucu basar, harita/vitrin/bildirim/arkadaş isteği sınırları, `personalize_requests` kota tablosu (migration canlıya uygulandı).
+- Edge Function'lar: `personalize-roadmap` günlük kota (10), `topic-assist` kota yarışı ve önbellek ezme düzeltmesi, `fetch-news` çeviri yalnız cron'da + ham hata mesajı saklanmaz, `generate-roadmap` kapatıldı (410).
+- Uygulama: `https` dışı linkler açılmaz (`open-url.ts`), şifre alt sınırı her yerde 8, hesap silmede şifre doğrulaması, yeni sunucu sınırları için Türkçe mesajlar.
+
 ## Öneriler (ekipten)
 
 Sıraya konmadı; önceliği proje sahibi verir.
@@ -113,18 +118,20 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Ortak `TopicCard` bileşeni**: Yol Haritam ve Profil'deki konu kartları benzer stil taşıyor.
 - **Şablon kalıntılarını temizle**: kullanılmayan `external-link.tsx`, `hint-row.tsx`, `AnimatedIcon`, `assets/images/tabIcons/*`; açılış ekranı (`AnimatedSplashOverlay`) hâlâ Expo logosu.
 - **Alt kategori ikonları**: alt kategori listesinde tüm kartlar kategorinin emojisini taşıyor; alt kategoriye özel emoji eklenebilir.
-- **Görünen ad için veritabanı kısıtı** (Y-02'den): `check (char_length(display_name) <= 40)` migration'ı; şu an sınır yalnız uygulamada.
 - **Okuma hatasında "Tekrar dene" ve kısa zaman aşımı** (Y-02'den): supabase-js GET isteklerini birkaç kez yeniden denediği için "Adın yüklenemedi" uyarısı ~7 sn sonra çıkıyor (Y-07 ile birlikte ele alınabilir).
 - **Pasif buton kontrastı** (Y-02'den): `Button` pasifken etiket koyu modda zor seçiliyor; disabled etiket rengi `textSecondary`'ye yaklaştırılabilir.
 - **Selamlamayı belirginleştirme** (Y-02'den): "Merhaba, <ad>" eyebrow'u küçük ve silik; tema renkleriyle bir kademe daha belirgin yapılabilir.
 - **XP'yi sunucuda hesaplamak** (QA-01'den): XP satırları istemciden yazılıyor (300'e kadar); lig/sıralama gelmeden önce RPC ile sunucuya taşınmalı. Toplam da RPC ile hesaplanabilir.
-- **personalize-roadmap için günlük kota** (QA-01'den): `ai_requests.kind` kısıtına 'personalize' ekleyen migration gerekir.
 - **Aynı haritanın iki kez eklenmesini engelleme** (QA-01'den): `roadmaps(user_id, topic_path)` benzersiz kısıtı + upsert (önce kopyaları temizleyen migration).
 - **topic-assist önbellek anahtarına özet (hash)** (QA-01'den): şimdilik içerik `_src` ile doğrulanıyor; kalıcı çözüm anahtara hash eklemek (migration).
 - **pg_net/cron kayıt temizliği** (Y-09'dan): `net._http_response` ve `cron.job_run_details` zamanla büyür; haftalık temizlik işi eklenebilir.
 - **Push bildirimi** (Y-12'den): "Ahmet bugün 2 konu bitirdi" şimdilik uygulama içi kart; gerçek bildirim için development build + expo-notifications gerekir (Expo Go'da yok).
 - **Kullanıcı adı denetimi ve hız sınırı** (Y-12'den): küfür filtresi, `username_available`/`friend_request` için hız sınırı.
 - **XP'yi tamamen sunucuya taşımak** (Y-12'den): tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
+- **Kullanıcı adı taraması için hız sınırı / CAPTCHA** (SEC-01'den): `username_available` anon çağrılabiliyor; kullanıcı adları toplu taranabilir.
+- **Web için Content-Security-Policy** (SEC-01'den): web yayınında başlık olarak eklenmeli.
+- **XP'yi tamamen sunucuya taşımak (quiz/ask kanıtı)** (SEC-01'den): quiz ve soru-cevap XP'si için sunucu tarafında yapıldığının kanıtı (Edge Function sonucu) aranmalı.
+- **pg_net uzantısını `extensions` şemasına taşımak** (SEC-01'den): Supabase uyarısı; silip yeniden kurmayı gerektirdiği için ertelendi.
 
 ## Yayından sonra
 - [ ] **Yapay zekâ katmanı ücretli abonelik (freemium):** kişisel işaretleme (`src/lib/personalize-roadmap.ts` → `personalize-roadmap` Edge Function) abonelere açık olsun; ücretsiz kullanıcılar kural tabanlı işaretlemeyi görür. Mağaza içi satın alma (RevenueCat vb.) + sunucu tarafında abonelik kontrolü.

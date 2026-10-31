@@ -1,22 +1,12 @@
-import { openBrowserAsync } from 'expo-web-browser';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Edge, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { NewsItem } from '@/hooks/use-news';
+import { openExternalUrl } from '@/lib/open-url';
 import { relativeTime } from '@/lib/relative-time';
-
-// Haberi kaynağın sitesinde açar. Telif gereği haberin tamamını biz göstermeyiz.
-async function openSource(url: string) {
-  try {
-    // Uygulama içi tarayıcı; web'de çalışmazsa sistemin linkine düşeriz
-    await openBrowserAsync(url);
-  } catch {
-    Linking.openURL(url).catch(() => {});
-  }
-}
 
 type NewsCardProps = {
   item: NewsItem;
@@ -31,7 +21,8 @@ export function NewsCard({ item, tags }: NewsCardProps) {
 
   return (
     <Pressable
-      onPress={() => openSource(item.url)}
+      // Haberi kaynağın sitesinde açar. Telif gereği haberin tamamını biz göstermeyiz.
+      onPress={() => openExternalUrl(item.url)}
       accessibilityRole="link"
       accessibilityLabel={[item.title, item.source_name, when].filter(Boolean).join(', ')}
       accessibilityHint="Kaynağın sitesinde açar"
