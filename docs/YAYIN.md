@@ -25,6 +25,9 @@ hesap açmak, ödeme yapmak, mağaza formlarını doldurmak.
 
 > Destek adresini değiştirmek istersen: `src/lib/config.ts` (`SUPPORT_EMAIL`) ve `docs/yasal/*.md`.
 
+> ⚠️ Yasal sayfa adresleri GitHub'daki `main` dalını ve reponun **herkese açık** olmasını gerektirir. Repoyu özel yaparsan
+> bu bağlantılar çalışmaz; o zaman sayfaları başka bir yerde (ör. GitHub Pages, Notion) yayınlayıp `src/lib/config.ts`'i güncelle.
+
 ## 1. Hesaplar (bir kere)
 
 - [ ] **Expo hesabı** (ücretsiz): https://expo.dev/signup

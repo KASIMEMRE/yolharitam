@@ -376,6 +376,7 @@ function AccountSection() {
 function BlockedUsersCard() {
   const [list, setList] = useState<BlockedUser[] | null | 'loading'>('loading');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -391,14 +392,18 @@ function BlockedUsersCard() {
 
   async function unblock(id: string) {
     setBusyId(id);
+    setFailed(false);
     const ok = await unblockUser(id);
     setBusyId(null);
-    if (ok && Array.isArray(list)) setList(list.filter((b) => b.user_id !== id));
+    // Fonksiyonel güncelleme: art arda iki kaldırmada eski liste diğerini geri getirmesin
+    if (ok) setList((l) => (Array.isArray(l) ? l.filter((b) => b.user_id !== id) : l));
+    else setFailed(true);
   }
 
   return (
     <Card>
       <ThemedText type="smallBold">Engellenen kullanıcılar</ThemedText>
+      {failed && <Banner tone="warning">Engel kaldırılamadı. İnternet bağlantını kontrol edip tekrar dene.</Banner>}
       {list === 'loading' ? (
         <ThemedText type="small" themeColor="textSecondary">
           Yükleniyor…
@@ -602,7 +607,10 @@ function DeleteAccountLink({ email }: { email: string | null }) {
       return;
     }
     try {
-      const { error: fnError } = await supabase.functions.invoke('delete-account', { body: { confirm: 'SIL' } });
+      const { error: fnError } = await supabase.functions.invoke('delete-account', {
+        body: { confirm: 'SIL' },
+        timeout: 30000, // silme birkaç saniye sürebilir; genel 15 sn sınırına takılmasın
+      });
       if (fnError) throw fnError;
     } catch {
       setBusy(false);

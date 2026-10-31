@@ -20,6 +20,8 @@ Bu metin, Yol Haritam mobil uygulamasının ("Uygulama") hangi kişisel verileri
 | Engellediğin kullanıcılar ve yaptığın içerik bildirimleri | Topluluğu güvenli tutmak | Yalnızca sen (ve inceleme için geliştirici) |
 | Yapay zekâ kullanım sayısı | Günlük kullanım sınırı | Yalnızca sistem |
 
+**Teknik kayıtlar:** Hizmeti güvenle çalıştırmak için altyapı sağlayıcımız istek zamanı ve IP adresi gibi teknik günlükleri kısa süreliğine tutar; bunlar profil oluşturmak için kullanılmaz.
+
 **Toplamadıklarımız:** Konum, rehber, fotoğraf, mikrofon, cihaz ya da reklam kimliği toplamıyoruz. Uygulamada reklam, analitik veya takip aracı yoktur; seni başka uygulama ve sitelerde izlemeyiz.
 
 ## 2. Yapay zekâ (Groq)

@@ -5,16 +5,18 @@ import { supabase } from '@/lib/supabase';
 
 export type BlockedUser = { user_id: string; username: string | null; created_at: string };
 
-// true = engellendi (zaten engelliyse de başarı sayılır)
-export async function blockUser(userId: string): Promise<boolean> {
+// 'ok' = engellendi (zaten engelliyse de başarı sayılır) · 'limit' = engel sınırı doldu · 'error' = kaydedilemedi
+export async function blockUser(userId: string): Promise<'ok' | 'limit' | 'error'> {
   try {
     const { data } = await supabase.auth.getSession(); // yerel okuma
     const me = data.session?.user.id;
-    if (!me || me === userId) return false;
+    if (!me || me === userId) return 'error';
     const { error } = await supabase.from('blocked_users').insert({ blocker: me, blocked: userId });
-    return !error || error.code === '23505';
+    if (!error || error.code === '23505') return 'ok';
+    if (error.message?.includes('block_limit')) return 'limit';
+    return 'error';
   } catch {
-    return false;
+    return 'error';
   }
 }
 
