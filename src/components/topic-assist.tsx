@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View, Linking } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
+import { SUPPORT_EMAIL } from '@/lib/config';
 import { IconLabel , Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
@@ -152,7 +153,12 @@ function Block({
           Yapay zekâ hazırlıyor, ilk açılışta birkaç saniye sürebilir…
         </ThemedText>
       )}
-      {load.state === 'ready' && <Animated.View entering={FadeIn.duration(200)}>{children}</Animated.View>}
+      {load.state === 'ready' && (
+        <Animated.View entering={FadeIn.duration(200)} style={styles.readyBlock}>
+          {children}
+          <AiFootnote topic={title} />
+        </Animated.View>
+      )}
     </View>
   );
 }
@@ -199,9 +205,9 @@ function ExplainView({ data }: { data: Explain }) {
       )}
       {data.exercise !== '' && (
         <View style={[styles.exercise, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge }]}>
-          <ThemedText type="smallBold" themeColor="markerInk">
-            🛠️ Mini alıştırma
-          </ThemedText>
+          <IconLabel emoji="🛠️" type="smallBold" themeColor="markerInk">
+            Mini alıştırma
+          </IconLabel>
           <ThemedText type="small" themeColor="markerInk">
             {data.exercise}
           </ThemedText>
@@ -342,6 +348,8 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
         multiline
         returnKeyType={Platform.OS === 'ios' ? 'default' : 'send'}
         onSubmitEditing={ask}
+        // Soru metni yapay zekâ sağlayıcısına gider (bkz. gizlilik politikası)
+        hint="Kişisel bilgi (ad, e-posta, şifre vb.) yazma; soru yapay zekâ hizmetine gönderilir."
       />
       <Button
         label="Sor"
@@ -364,6 +372,7 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
               Bugün {state.remaining} soru hakkın kaldı.
             </ThemedText>
           )}
+          <AiFootnote topic={state.asked ?? ''} />
         </Animated.View>
       )}
     </View>
@@ -371,6 +380,8 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
 }
 
 const styles = StyleSheet.create({
+  footnote: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  readyBlock: { gap: Spacing.three },
   wrap: { gap: Spacing.three },
   block: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
   blockHead: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
@@ -394,3 +405,20 @@ const styles = StyleSheet.create({
   option: { minHeight: MinTouch, justifyContent: 'center', padding: Spacing.two, borderRadius: Radius.sm, borderWidth: Border.thick },
   answer: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thick },
 });
+
+// Yapay zekâ yanıtlarının altındaki not: hata payı uyarısı + hatalı yanıtı bildirme yolu (mağaza politikası)
+function AiFootnote({ topic }: { topic: string }) {
+  function report() {
+    const subject = encodeURIComponent('Hatalı yapay zekâ yanıtı');
+    const body = encodeURIComponent(`Konu / soru: ${topic}\n\nNe hatalıydı?\n`);
+    Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`).catch(() => {});
+  }
+  return (
+    <View style={styles.footnote}>
+      <ThemedText type="small" themeColor="textSecondary" style={styles.flex}>
+        Yapay zekâ yanıtı hata içerebilir; önerilen kaynaklarla doğrula.
+      </ThemedText>
+      <Button variant="text" icon="🚩" label="Bildir" accessibilityLabel="Hatalı yanıtı bildir" onPress={report} />
+    </View>
+  );
+}

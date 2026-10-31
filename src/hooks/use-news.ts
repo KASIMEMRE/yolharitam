@@ -91,7 +91,7 @@ export function useNews(topicPaths: string[], enabled: boolean = true) {
         if (force || Date.now() - lastInvokeAt > REFRESH_EVERY_MS) {
           const { error } = await supabase.functions.invoke('fetch-news', { body: {}, timeout: 30000 });
           if (isCancelled()) return;
-          if (error) console.warn('Haber kaynakları tazelenemedi:', error.message);
+          if (error && __DEV__) console.warn('Haber kaynakları tazelenemedi:', error.message);
           else lastInvokeAt = Date.now();
           await read();
         }

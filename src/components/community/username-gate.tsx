@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Skeleton } from '@/components/skeleton';
@@ -147,9 +148,9 @@ export function UsernameGate({ children }: { children: ReactNode }) {
   if (!username) {
     return (
       <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <ThemedText type="cardTitle" accessibilityRole="header">
-          🏷️ Bir kullanıcı adı seç
-        </ThemedText>
+        <IconLabel emoji="🏷️" type="cardTitle" iconSize={18}>
+          Bir kullanıcı adı seç
+        </IconLabel>
         <ThemedText themeColor="textSecondary">
           Diğer kullanıcılar seni bu adla görür, arkadaşların seni bu adla bulur. Sonradan Ayarlar&apos;dan değiştirebilirsin.
         </ThemedText>

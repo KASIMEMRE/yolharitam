@@ -1,56 +1,38 @@
-# Welcome to your Expo app 👋
+# Yol Haritam
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Yazılım öğrenenler için Türkçe yol haritası uygulaması (iOS / Android, Expo + Supabase).
 
-## Get started
+- **Rol ve beceri haritaları:** Frontend, Backend, DevOps, Yapay Zekâ, Python, SQL, Git ve daha fazlası (bölüm → konu ağacı)
+- **İlerleme:** konuları bitti / çalışıyorum / atladım olarak işaretle; günün görevi, seri, XP ve rozetler
+- **Yapay zekâ:** harita kişiye göre işaretlenir; konu başına alt başlıklar, mini quiz ve soru sorma (Groq, Supabase Edge Functions üzerinden)
+- **Gelişmeler:** seçtiğin konulara bağlı yazılım haberleri (başlık + kısa özet + kaynağa bağlantı)
+- **Topluluk:** haftalık lig, çalışma arkadaşları, proje vitrini (bildir / engelle / kelime filtresi)
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Geliştirme
 
 ```bash
-npm run reset-project
+npm install
+npx expo start -c      # Expo Go ile QR kodu okut, ya da web için "w"
+npx tsc --noEmit       # tip kontrolü
+npx expo lint          # lint
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Supabase adresi ve yayınlanabilir anahtar `src/lib/config.ts` içinde varsayılan olarak tanımlıdır
+(istersen `.env.local` ile `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` geçersiz kılabilirsin).
+Gizli anahtarlar (service_role, `GROQ_API_KEY`) yalnızca Supabase sırlarında durur, repoya girmez.
 
-### Other setup steps
+## Yapı
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+- `src/app/` — ekranlar (Expo Router)
+- `src/components/` — ortak bileşenler (simgeler: `icon.tsx`)
+- `src/constants/dev-roadmaps/` — harita içerikleri (konu `id`'leri ilerleme anahtarıdır, değiştirilmez)
+- `supabase/migrations/` — veritabanı şeması ve RLS kuralları
+- `supabase/functions/` — Edge Functions (yapay zekâ, haberler, hesap silme)
+- `docs/yasal/` — gizlilik politikası, kullanım koşulları, hesap silme sayfası
+- `docs/YAYIN.md` — mağazaya çıkış kontrol listesi
 
-## Learn more
+## Yayın
 
-To learn more about developing your project with Expo, look at the following resources:
+Mağaza derlemesi EAS ile alınır (`eas.json`). Adımlar için `docs/YAYIN.md` dosyasına bak.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Harita kurgusu [roadmap.sh](https://roadmap.sh) projesinden ilham alır; içerikler Yol Haritam için Türkçe yazılmıştır ve roadmap.sh ile bağlantılı değildir.

@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { BlockUserButton } from '@/components/block-user-button';
 import { IconTile } from '@/components/icon-tile';
 import { Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
@@ -31,7 +32,7 @@ export function ShowcasePanel() {
   // Seçili harita artık listede yoksa "Tümü"ne düş
   const active = selected && maps.some((m) => m.id === selected) ? selected : null;
 
-  const { items, status, hasMore, loadingMore, retry, loadMore, removeProject, reportProject } = useShowcase(active);
+  const { items, status, hasMore, loadingMore, retry, loadMore, removeProject, reportProject, hideUser } = useShowcase(active);
 
   return (
     <View style={styles.panel}>
@@ -105,6 +106,7 @@ export function ShowcasePanel() {
               project={p}
               onDelete={removeProject}
               onReport={reportProject}
+              onBlocked={hideUser}
               // Belirli bir harita seçiliyken etiket zaten belli: tekrarlamayız
               showMap={active === null}
             />
@@ -120,11 +122,13 @@ function ProjectCard({
   project: p,
   onDelete,
   onReport,
+  onBlocked,
   showMap,
 }: {
   project: ShowcaseProject;
   onDelete: (id: number) => Promise<boolean>;
   onReport: (id: number) => Promise<ReportResult>;
+  onBlocked: (userId: string) => void;
   showMap: boolean;
 }) {
   const theme = useTheme();
@@ -216,6 +220,11 @@ function ProjectCard({
           </View>
         </View>
       ) : null}
+
+      {/* Başkasının projesinde: kişiyi engelle (bildir'den ayrı; rahatsız eden kişinin hiçbir içeriğini görme) */}
+      {!p.is_me && mode === 'idle' && (
+        <BlockUserButton userId={p.user_id} name={owner} onBlocked={() => onBlocked(p.user_id)} />
+      )}
     </View>
   );
 }

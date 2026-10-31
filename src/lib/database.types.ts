@@ -17,6 +17,24 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_users: {
+        Row: {
+          blocked: string
+          blocker: string
+          created_at: string
+        }
+        Insert: {
+          blocked: string
+          blocker: string
+          created_at?: string
+        }
+        Update: {
+          blocked?: string
+          blocker?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee: string
@@ -428,6 +446,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      blocked_list: {
+        Args: never
+        Returns: {
+          created_at: string
+          user_id: string
+          username: string
+        }[]
+      }
       add_steps_to_roadmap: {
         Args: {
           p_goal: string

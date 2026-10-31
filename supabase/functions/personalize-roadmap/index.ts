@@ -58,7 +58,11 @@ function isValidBody(b: Body): boolean {
     b.sections.every(
       (s) =>
         okStr(s?.id, 60) && okStr(s.title, 80) && Array.isArray(s.topics) && s.topics.length <= 12 &&
-        s.topics.every((t) => okStr(t?.id, 80) && okStr(t.title, 100)),
+        s.topics.every(
+          (t) =>
+            okStr(t?.id, 80) && okStr(t.title, 100) &&
+            [1, 2, 3].includes(t.level) && ['core', 'optional', 'alt'].includes(t.marker),
+        ),
     )
   );
 }
@@ -88,16 +92,10 @@ Deno.serve(async (req) => {
   if (!isValidBody(body)) return json({ error: 'bad_input' }, 400);
 
   // Günlük kota: her çağrı Groq kotası harcar. Geçersiz istekler yukarıda elendiği için hak harcamaz.
+  // ÖNCE AYIR, SONRA SAY (topic-assist ile aynı kalıp): "önce say, sonra ekle" yapılsaydı aynı anda gelen
+  // 20 istek hepsi "0 kullanılmış" görüp sınırı aşabilirdi. Kendi satırımız da sayıma girer; sınırı aşıyorsa
+  // satır silinir (iade) ve 429 döner. Üretim başarısız olursa da hak iade edilir.
   const userId = userData.user.id;
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count } = await service
-    .from('personalize_requests')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .gte('created_at', since);
-  if ((count ?? 0) >= DAILY_LIMIT) return json({ error: 'daily_limit', limit: DAILY_LIMIT }, 429);
-  // Hak model çağrısından ÖNCE ayrılır (topic-assist ile aynı kalıp): model beklerken gelen paralel
-  // istekler de sayıma girer. Üretim başarısız olursa satır silinip hak iade edilir.
   const { data: reserved, error: reserveError } = await service
     .from('personalize_requests')
     .insert({ user_id: userId })
@@ -112,6 +110,13 @@ Deno.serve(async (req) => {
     await service.from('personalize_requests').delete().eq('id', reserved.id);
     return json(data, status);
   };
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count } = await service
+    .from('personalize_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .gte('created_at', since);
+  if ((count ?? 0) > DAILY_LIMIT) return fail({ error: 'daily_limit', limit: DAILY_LIMIT }, 429);
 
   const system = [
     'Sen deneyimli bir yazılım mentorusun. Sana bir yazılımcı yol haritası (bölümler ve konular) ve bir öğrencinin bilgileri veriliyor.',

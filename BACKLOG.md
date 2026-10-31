@@ -5,6 +5,15 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
+### MAĞAZA-01 · Şifremi unuttum akışı
+- Giriş ekranında "Şifremi unuttum": e-postaya sıfırlama kodu/bağlantısı. Özel SMTP bağlandıktan sonra
+  (OTP-01 ile birlikte) e-posta şablonuna kod eklenerek uygulama içinde tamamlanmalı.
+
+### MAĞAZA-02 · Vitrin bildirimlerine operasyon yolu
+- Yeni bildirim gelince geliştiriciye e-posta/uyarı (ör. Supabase webhook + e-posta servisi) ve bildirim sebebi seçimi
+  (spam / zararlı / telif). Şimdilik 3 bildirimde otomatik gizleme var.
+
+
 ### Y-07 · Boş, yükleniyor ve hata durumları
 - Tüm ekranlarda ağ hatasında Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
 - Yükleniyor durumlarında yerleşimi zıplatmayan iskelet görünümler.

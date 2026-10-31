@@ -21,6 +21,8 @@ import { ThemedView } from '@/components/themed-view';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { normalizeUsername, USERNAME_PATTERN } from '@/hooks/use-username';
+import { PRIVACY_URL, TERMS_URL } from '@/lib/config';
+import { openExternalUrl } from '@/lib/open-url';
 import { MIN_PASSWORD } from '@/lib/auth-rules';
 import { supabase } from '@/lib/supabase';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
@@ -64,7 +66,7 @@ function toTurkish(error: AuthError): string {
   )
     return NETWORK_TEXT;
   // Tanımadığımız hatayı ham İngilizce göstermeyiz; ayrıntı yalnız geliştirici konsoluna gider.
-  console.warn('Tanınmayan giriş hatası:', error.message);
+  if (__DEV__) console.warn('Tanınmayan giriş hatası:', error.message);
   return 'Bir sorun oluştu. Biraz sonra tekrar dene.';
 }
 
@@ -131,7 +133,7 @@ export default function LoginScreen() {
     };
   }, [mode, handle, handleFormatOk]);
 
-  let usernameHint = 'Küçük harf (a-z), rakam ve _ · 3-20 karakter · Türkçe karakter yok';
+  let usernameHint = 'Diğer kullanıcılar seni bu adla görür · küçük harf (a-z), rakam ve _ · 3-20 karakter';
   let usernameHintTone: 'neutral' | 'good' = 'neutral';
   if (username.length > 0 && !handleFormatOk) {
     usernameHint = 'Yalnız küçük harf (a-z), rakam ve _ kullan; 3 ile 20 karakter arası olmalı.';
@@ -314,6 +316,21 @@ export default function LoginScreen() {
               {/* Hata ve bilgi kutuları */}
               {error && <Banner tone="warning">{error}</Banner>}
               {notice && <Banner tone="info">{notice}</Banner>}
+
+              {/* Kayıtta yasal onay: mağazalar kullanıcı içeriği olan uygulamalarda koşulların kabulünü ister */}
+              {mode === 'signup' && (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.legal}>
+                  Hesap oluşturarak{' '}
+                  <ThemedText type="small" themeColor="accentInk" style={styles.link} onPress={() => openExternalUrl(TERMS_URL)} accessibilityRole="link">
+                    Kullanım Koşulları
+                  </ThemedText>
+                  {"'nı ve "}
+                  <ThemedText type="small" themeColor="accentInk" style={styles.link} onPress={() => openExternalUrl(PRIVACY_URL)} accessibilityRole="link">
+                    Gizlilik Politikası
+                  </ThemedText>
+                  {"'nı kabul etmiş olursun."}
+                </ThemedText>
+              )}
             </View>
           </ScrollView>
 
@@ -357,5 +374,7 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md - Spacing.one,
   },
   showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
+  legal: { textAlign: 'center' },
+  link: { textDecorationLine: 'underline', fontWeight: '700' },
   footer: { paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });

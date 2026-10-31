@@ -76,8 +76,10 @@ export default function ShowcaseNewScreen() {
     setError(
       result === 'limit'
         ? ERROR_TEXT.showcaseLimit
-        : result === 'invalid'
-          ? 'Bilgilerden biri geçersiz görünüyor. Alanları kontrol edip tekrar dene.'
+        : result === 'inappropriate'
+          ? ERROR_TEXT.inappropriate
+          : result === 'invalid'
+            ? 'Bilgilerden biri geçersiz görünüyor. Alanları kontrol edip tekrar dene.'
           : result === 'network'
             ? ERROR_TEXT.network
             : ERROR_TEXT.showcaseSaveFailed

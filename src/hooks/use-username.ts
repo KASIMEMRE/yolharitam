@@ -99,6 +99,7 @@ export function useUsername() {
       if (error) {
         // 23505: benzersizlik ihlali (başkası aynı anda aldı). Yarış durumunda da doğru mesaj çıkar.
         if (error.code === '23505') return { ok: false, message: ERROR_TEXT.usernameTaken };
+        if (error.message?.includes('inappropriate_content')) return { ok: false, message: ERROR_TEXT.inappropriate };
         return { ok: false, message: classifyError(error) === 'network' ? ERROR_TEXT.network : ERROR_TEXT.usernameSaveFailed };
       }
       if (!data) return { ok: false, message: ERROR_TEXT.usernameSaveFailed };

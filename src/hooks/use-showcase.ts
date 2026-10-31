@@ -121,6 +121,11 @@ export function useShowcase(map: string | null, enabled: boolean = true) {
     }
   }
 
+  // Engellenen kişinin projeleri listeden hemen kalkar (sunucu da bundan sonra hiç göndermez)
+  function hideUser(userId: string) {
+    setState((s) => ({ ...s, items: s.items.filter((p) => p.user_id !== userId) }));
+  }
+
   const current = enabled && state.key === key;
   return {
     items: current ? state.items : [],
@@ -131,6 +136,7 @@ export function useShowcase(map: string | null, enabled: boolean = true) {
     loadMore,
     removeProject,
     reportProject,
+    hideUser,
   };
 }
 
@@ -146,10 +152,14 @@ export type NewProject = {
 
 // Yeni proje ekler (paylaşma formu kullanır). Dönüş: null = başarılı, değilse hata türü.
 // Sunucu "harita başına 5, toplam 20 proje" kuralını tetikleyiciyle uygular (P0001); user_id veritabanında auth.uid() olur.
-export async function createProject(p: NewProject): Promise<null | 'limit' | 'invalid' | 'network' | 'other'> {
+export async function createProject(
+  p: NewProject
+): Promise<null | 'limit' | 'invalid' | 'inappropriate' | 'network' | 'other'> {
   try {
     const { error } = await supabase.from('showcase_projects').insert(p);
     if (!error) return null;
+    // Sunucunun kelime filtresi (moderation_block migration'ı)
+    if (error.message?.includes('inappropriate_content')) return 'inappropriate';
     if (error.code === 'P0001') return 'limit';
     if (error.code === '23514' || error.code === '22001') return 'invalid';
     const kind = classifyError(error);
