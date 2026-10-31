@@ -41,7 +41,7 @@ const STATUS_OPTIONS: { id: TopicStatus; description: string }[] = [
 const ASSIST_SHORTCUTS: { id: AssistBlockId; label: string; icon: string }[] = [
   { id: 'explain', label: 'Alt konular', icon: '🧩' },
   { id: 'quiz', label: 'Quiz çöz', icon: '📝' },
-  { id: 'ask', label: 'Yapay zekâya sor', icon: '💬' },
+  { id: 'ask', label: 'Soru sor', icon: '💬' },
 ];
 
 function first(param: string | string[] | undefined): string | undefined {

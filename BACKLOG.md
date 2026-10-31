@@ -18,26 +18,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Tüm ekranlarda ağ hatasında Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
 - Yükleniyor durumlarında yerleşimi zıplatmayan iskelet görünümler.
 
-### Y-03 · Harita seçiminde arama
-- Onboarding'deki harita listesinin üstünde arama kutusu: harita ve konu başlıklarında arasın
-  (Türkçe karakterlere duyarsız: ı/i, ş/s…); sonuca basınca o harita seçilsin.
-- Kabul: Arama boşken mevcut seçim akışı aynen çalışır.
-
-### UX-02 · Kayıttan sonra doğrudan harita seçimi (UX-01'den)
-- Hiç haritası olmayan yeni kullanıcı Yol Haritam'a düşünce harita seçimi bir kez otomatik açılsın (boş durum ekranı atlanır).
-- Döngü olmasın: "bu oturumda bir kez" bayrağı; okuma hatasında (ağ) yönlendirme yapılmaz, yalnız "kayıt yok" durumunda.
-
-### UX-03 · Sorularda tek dokunuş (UX-01'den)
-- roadmap-questions'ta seçeneğe basınca kısa gecikmeyle sonraki soruya geç; son soruda "Haritamı hazırla" onayı kalsın.
-- Ekran okuyucu ve yanlış dokunmayı geri alma (üstteki geri) test edilmeli.
-
-### UX-04 · Giriş formunda klavye akışı (UX-01'den)
-- Alanlar arası `returnKeyType="next"` ile odak geçişi (`ref` zinciri), son alanda "go" formu gönderir.
-
-### UX-07 · Kurulum hatası ekranı ve isteğe bağlı kullanıcı adı (UX-01'den)
-- `.env.local` yokken beyaz ekran yerine anlamlı hata (`src/lib/supabase.ts`).
-- Kayıtta kullanıcı adını isteğe bağlı yapıp ilk girişte sormak (veritabanı `handle_new_user` etkilenir, 🗄️ olabilir).
-
 ## Beklemede (sırada değil)
 
 ### OTP-01 · E-postaya gelen kodla doğrulama (PR #4)
@@ -45,6 +25,31 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### Y-03 · Harita seçiminde arama
+- Onboarding'deki harita listesinin üstünde arama kutusu: harita ve konu başlıklarında arasın
+  (Türkçe karakterlere duyarsız: ı/i, ş/s…); sonuca basınca o harita seçilsin.
+- Kabul: Arama boşken mevcut seçim akışı aynen çalışır.
+- ✅ Harita seçiminde arama (ad, açıklama, konu başlıkları; Türkçe karakter duyarsız).
+
+### UX-07 · Kurulum hatası ekranı ve isteğe bağlı kullanıcı adı (UX-01'den)
+- `.env.local` yokken beyaz ekran yerine anlamlı hata (`src/lib/supabase.ts`).
+- Kayıtta kullanıcı adını isteğe bağlı yapıp ilk girişte sormak (veritabanı `handle_new_user` etkilenir, 🗄️ olabilir).
+- ✅ Supabase değerleri config.ts'te varsayılan (beyaz ekran yok); kullanıcı adı kayıtta kalıyor (tek ad kararı).
+
+### UX-04 · Giriş formunda klavye akışı (UX-01'den)
+- Alanlar arası `returnKeyType="next"` ile odak geçişi (`ref` zinciri), son alanda "go" formu gönderir.
+- ✅ İçerik genişletme PR'ında yapıldı.
+
+### UX-03 · Sorularda tek dokunuş (UX-01'den)
+- roadmap-questions'ta seçeneğe basınca kısa gecikmeyle sonraki soruya geç; son soruda "Haritamı hazırla" onayı kalsın.
+- Ekran okuyucu ve yanlış dokunmayı geri alma (üstteki geri) test edilmeli.
+- ✅ İçerik genişletme PR'ında yapıldı.
+
+### UX-02 · Kayıttan sonra doğrudan harita seçimi (UX-01'den)
+- Hiç haritası olmayan yeni kullanıcı Yol Haritam'a düşünce harita seçimi bir kez otomatik açılsın (boş durum ekranı atlanır).
+- Döngü olmasın: "bu oturumda bir kez" bayrağı; okuma hatasında (ağ) yönlendirme yapılmaz, yalnız "kayıt yok" durumunda.
+- ✅ İçerik genişletme PR'ında yapıldı.
 
 ### UX-05 · Yol Haritam ve konu ekranını sadeleştirme (UX-01'den)
 - Momentum + Arkadaşlar kartları tek şeritte (seri, seviye/XP, haftalık hedef; dokununca ayrıntı + arkadaşlar). JourneyCard ile ProgressSummary birleşti (konu sayısı/süre tek yerde).
