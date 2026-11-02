@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -22,6 +22,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { normalizeUsername, USERNAME_PATTERN } from '@/hooks/use-username';
+import { clearPendingIntent } from '@/lib/auth-gate';
 import { PRIVACY_URL, TERMS_URL } from '@/lib/config';
 import { openExternalUrl } from '@/lib/open-url';
 import { MIN_PASSWORD } from '@/lib/auth-rules';
@@ -80,8 +81,11 @@ export default function LoginScreen() {
   const stagePad = short ? Spacing.two : undefined;
   // Karşılama ekranı ?mode=signup ile gelirse kayıt sekmesi açık başlar. Yalnız BAŞLANGIÇ değeri:
   // sonradan sekmeyi elle değiştirmek parametreyle çakışmasın diye useEffect ile senkronlamıyoruz.
-  const params = useLocalSearchParams<{ mode?: string | string[] }>();
+  const params = useLocalSearchParams<{ mode?: string | string[]; reason?: string | string[] }>();
   const initialMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+  // Kayıt kapısından gelindiyse neden hesap istediğimizi söyleyen tek satır (örn. "Frontend haritasını kaydetmek için…")
+  // Adres çubuğundan gelen metin olduğu için kısaltılır (web'de uzun, yanıltıcı bir mesaj gösterilmesin)
+  const reason = (Array.isArray(params.reason) ? params.reason[0] : params.reason)?.trim().slice(0, 120) || null;
   const [mode, setMode] = useState<Mode>(initialMode === 'signup' ? 'signup' : 'login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -231,6 +235,11 @@ export default function LoginScreen() {
             </View>
 
             <View style={[styles.form, { padding: gutter }]}>
+              {reason && (
+                <ThemedText type="smallBold" themeColor="accentInk" accessibilityRole="text">
+                  {reason}
+                </ThemedText>
+              )}
               {/* Giriş / Kayıt seçici */}
               <View
                 style={[
@@ -357,6 +366,17 @@ export default function LoginScreen() {
               disabled={!canSubmit}
               loading={busy}
             />
+            {/* Misafir gezintisine dönüş: yığında geri gidilecek ekran yoksa (doğrudan açılış) sekmelere git */}
+            <Button
+              variant="text"
+              label="Şimdilik gez"
+              onPress={() => {
+                // Vazgeçti: bekleyen niyet sonraki bir girişte habersiz uygulanmasın
+                void clearPendingIntent();
+                if (router.canGoBack()) router.back();
+                else router.replace('/roadmap');
+              }}
+            />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -387,5 +407,5 @@ const styles = StyleSheet.create({
   showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   legal: { textAlign: 'center' },
   link: { textDecorationLine: 'underline', fontWeight: '700' },
-  footer: { paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
+  footer: { gap: Spacing.one, paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });
