@@ -17,11 +17,12 @@ export type SegmentedOption<T extends string> = {
 
 type SegmentedProps<T extends string> = {
   options: SegmentedOption<T>[];
-  value: T;
-  onChange: (id: T) => void;
+  value: T | null; // null: hiçbiri seçili değil (allowDeselect ile kullanılır)
+  onChange: (id: T) => void; // seçili olana tekrar dokununca da çağrılır; kaldırma kararı üstte
   size?: 'md' | 'sm';
   fill?: boolean; // true: tüm genişliği eşit paylaş; false: içeriği kadar yer kapla
   label?: string; // radiogroup'un ekran okuyucu adı
+  allowDeselect?: boolean; // seçili olana tekrar dokunmak seçimi kaldırır (ekran okuyucuya ipucu verir)
 };
 
 export function Segmented<T extends string>({
@@ -31,6 +32,7 @@ export function Segmented<T extends string>({
   size = 'md',
   fill = true,
   label,
+  allowDeselect = false,
 }: SegmentedProps<T>) {
   const theme = useTheme();
   const { width } = useWindowDimensions();
@@ -56,6 +58,7 @@ export function Segmented<T extends string>({
             accessibilityRole="radio"
             accessibilityState={{ selected }}
             accessibilityLabel={o.accessibilityLabel ?? o.label}
+            accessibilityHint={allowDeselect && selected ? 'Seçimi kaldırmak için tekrar dokun' : undefined}
             style={[
               styles.item,
               fill && styles.itemFill,

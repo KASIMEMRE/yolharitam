@@ -3,9 +3,11 @@ import { Platform, Pressable, StyleSheet, Text, View, Linking } from 'react-nati
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { SUPPORT_EMAIL } from '@/lib/config';
-import { IconLabel , Glyph } from '@/components/icon';
+import { IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { SectionHeader } from '@/components/section-header';
+import { Segmented } from '@/components/segmented';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import type { DevRoadmap, Section, Topic } from '@/constants/dev-roadmaps';
@@ -28,16 +30,20 @@ type Explain = {
 };
 type Quiz = { questions: { question: string; options: string[]; answer: number; why: string }[] };
 
-// Bloklar: konu ekranındaki kısayollar (Alt konular / Quiz çöz / Yapay zekâya sor) bunlara kaydırır.
-export type AssistBlockId = 'explain' | 'quiz' | 'ask';
+// Sekmeler: tek alanda Alt konular / Quiz / Soru sor; seçili sekmenin içeriği görünür.
+type AssistTab = 'explain' | 'quiz' | 'ask';
+
+const TABS: { id: AssistTab; label: string; icon: string }[] = [
+  { id: 'explain', label: 'Alt konular', icon: '🧩' },
+  { id: 'quiz', label: 'Quiz', icon: '📝' },
+  { id: 'ask', label: 'Soru sor', icon: '💬' },
+];
 
 type Props = {
   map: DevRoadmap;
   section: Section;
   topic: Topic;
   level?: LevelId;
-  // Her blok yerleşince üst y konumunu (bu bileşenin içindeki) bildirir; kaydırma için kullanılır
-  onBlockLayout?: (id: AssistBlockId, y: number) => void;
 };
 
 type Load<T> = { state: 'idle' | 'loading' | 'ready' | 'error'; data?: T; error?: string };
@@ -61,7 +67,7 @@ async function callAssist<T>(body: Record<string, unknown>): Promise<{ data?: T;
   }
 }
 
-export function TopicAssist({ map, section, topic, level, onBlockLayout }: Props) {
+export function TopicAssist({ map, section, topic, level }: Props) {
   const base = {
     mapId: map.id,
     mapTitle: map.title,
@@ -74,6 +80,7 @@ export function TopicAssist({ map, section, topic, level, onBlockLayout }: Props
   // Konu değişince (Sonraki konu) eski içerik kalmasın diye bileşen topic.id ile anahtarlanır (bkz. topic/[id].tsx)
   const [explain, setExplain] = useState<Load<Explain>>({ state: 'idle' });
   const [quiz, setQuiz] = useState<Load<Quiz>>({ state: 'idle' });
+  const [tab, setTab] = useState<AssistTab>('explain');
 
   async function loadExplain() {
     setExplain({ state: 'loading' });
@@ -86,75 +93,67 @@ export function TopicAssist({ map, section, topic, level, onBlockLayout }: Props
     setQuiz(res.data ? { state: 'ready', data: res.data } : { state: 'error', error: res.error });
   }
 
+  // Üç panel de bağlı kalır, yalnız seçili olan görünür (display none): sekme değişince quiz cevapları
+  // ve yazılmakta olan soru kaybolmasın. Kutu yok: içerik başlığın altında düz akar.
+  const show = (id: AssistTab) => (tab === id ? styles.visible : styles.hidden);
+
   return (
     <View style={styles.wrap}>
-      {/* 1) Alt konular */}
-      <Block
-        emoji="🧩"
-        title="Konuyu derinleştir"
-        subtitle="Alt konular, kısa bir örnek, sık yapılan hatalar ve bir mini alıştırma."
-        load={explain}
-        actionLabel="Alt konuları göster"
-        onLoad={loadExplain}
-        onLayout={(y) => onBlockLayout?.('explain', y)}>
-        {explain.data && <ExplainView data={explain.data} />}
-      </Block>
+      <SectionHeader title="Yapay zekâ ile çalış" />
+      <Segmented label="Yapay zekâ aracı" options={TABS} value={tab} onChange={setTab} />
 
-      {/* 2) Quiz */}
-      <Block
-        emoji="📝"
-        title="Kendini test et"
-        subtitle="Kısa quiz: konuyu gerçekten anladın mı?"
-        load={quiz}
-        actionLabel="Quiz'i başlat"
-        onLoad={loadQuiz}
-        onLayout={(y) => onBlockLayout?.('quiz', y)}>
-        {quiz.data && <QuizView data={quiz.data} xpRef={`${map.id}:${topic.id}`} topicId={topic.id} />}
-      </Block>
+      <View style={show('explain')}>
+        <Panel
+          reportTopic={`${topic.title} - alt konular`}
+          subtitle="Alt konular, kısa bir örnek, sık yapılan hatalar ve bir mini alıştırma."
+          load={explain}
+          actionLabel="Alt konuları göster"
+          onLoad={loadExplain}>
+          {explain.data && <ExplainView data={explain.data} />}
+        </Panel>
+      </View>
 
-      {/* 3) Soru sor */}
-      <AskBox base={base} onLayout={(y) => onBlockLayout?.('ask', y)} />
+      <View style={show('quiz')}>
+        <Panel
+          reportTopic={`${topic.title} - quiz`}
+          subtitle="Kısa quiz: konuyu gerçekten anladın mı?"
+          load={quiz}
+          actionLabel="Quiz'i başlat"
+          onLoad={loadQuiz}>
+          {quiz.data && <QuizView data={quiz.data} xpRef={`${map.id}:${topic.id}`} topicId={topic.id} />}
+        </Panel>
+      </View>
+
+      <View style={show('ask')}>
+        <AskBox base={base} />
+      </View>
     </View>
   );
 }
 
-function Block({
-  emoji,
-  title,
+// Sekme paneli: kısa açıklama, yükle düğmesi, hata ve hazır içerik. Kendi kutusu yok (üst alan düz).
+function Panel({
   subtitle,
+  reportTopic,
   load,
   actionLabel,
   onLoad,
-  onLayout,
   children,
 }: {
-  emoji: string;
-  title: string;
   subtitle: string;
+  reportTopic: string; // "Bildir" e-postasına giden konu adı
   load: Load<unknown>;
   actionLabel: string;
   onLoad: () => void;
-  onLayout?: (y: number) => void;
   children: React.ReactNode;
 }) {
-  const theme = useTheme();
   return (
-    <View
-      onLayout={(e) => onLayout?.(e.nativeEvent.layout.y)}
-      style={[styles.block, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <View style={styles.blockHead}>
-        <View style={[styles.headIcon, { backgroundColor: theme.accentSoft }]}>
-          <Glyph emoji={emoji} size={20} color={theme.accentInk} />
-        </View>
-        <View style={styles.flex}>
-          <ThemedText type="cardTitle" accessibilityRole="header">
-            {title}
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            {subtitle}
-          </ThemedText>
-        </View>
-      </View>
+    <View style={styles.panel}>
+      {load.state !== 'ready' && (
+        <ThemedText type="small" themeColor="textSecondary">
+          {subtitle}
+        </ThemedText>
+      )}
       {load.state === 'error' && <Banner tone="warning">{load.error ?? ERRORS.default}</Banner>}
       {load.state !== 'ready' && (
         <Button
@@ -172,7 +171,7 @@ function Block({
       {load.state === 'ready' && (
         <Animated.View entering={FadeIn.duration(200)} style={styles.readyBlock}>
           {children}
-          <AiFootnote topic={title} />
+          <AiFootnote topic={reportTopic} />
         </Animated.View>
       )}
     </View>
@@ -317,7 +316,7 @@ function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId
   );
 }
 
-function AskBox({ base, onLayout }: { base: Record<string, unknown>; onLayout?: (y: number) => void }) {
+function AskBox({ base }: { base: Record<string, unknown> }) {
   const theme = useTheme();
   const [question, setQuestion] = useState('');
   const [state, setState] = useState<Load<{ answer: string }> & { asked?: string; remaining?: number }>({
@@ -341,22 +340,10 @@ function AskBox({ base, onLayout }: { base: Record<string, unknown>; onLayout?: 
   }
 
   return (
-    <View
-      onLayout={(e) => onLayout?.(e.nativeEvent.layout.y)}
-      style={[styles.block, { backgroundColor: theme.card, borderColor: theme.border }]}>
-      <View style={styles.blockHead}>
-        <View style={[styles.headIcon, { backgroundColor: theme.accentSoft }]}>
-          <Glyph emoji="💬" size={20} color={theme.accentInk} />
-        </View>
-        <View style={styles.flex}>
-          <ThemedText type="cardTitle" accessibilityRole="header">
-            Yapay zekâya sor
-          </ThemedText>
-          <ThemedText type="small" themeColor="textSecondary">
-            Bu konuda takıldığın yeri sor; cevap bu konuya göre verilir.
-          </ThemedText>
-        </View>
-      </View>
+    <View style={styles.panel}>
+      <ThemedText type="small" themeColor="textSecondary">
+        Bu konuda takıldığın yeri sor; cevap bu konuya göre verilir.
+      </ThemedText>
       <TextField
         label="Sorun"
         value={question}
@@ -369,7 +356,9 @@ function AskBox({ base, onLayout }: { base: Record<string, unknown>; onLayout?: 
         // Soru metni yapay zekâ sağlayıcısına gider (bkz. gizlilik politikası)
         hint="Kişisel bilgi (ad, e-posta, şifre vb.) yazma; soru yapay zekâ hizmetine gönderilir."
       />
+      {/* İkincil: ekranda tek birincil öğe kuralı (birincil olan durum seçici / "Sonraki konu") */}
       <Button
+        variant="secondary"
         label="Sor"
         icon="✨"
         loading={state.state === 'loading'}
@@ -401,9 +390,9 @@ const styles = StyleSheet.create({
   footnote: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   readyBlock: { gap: Spacing.three },
   wrap: { gap: Spacing.three },
-  block: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
-  blockHead: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
-  headIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  panel: { gap: Spacing.three },
+  visible: { display: 'flex' },
+  hidden: { display: 'none' },
   flex: { flex: 1, minWidth: 0, gap: Spacing.half },
   center: { textAlign: 'center' },
   inner: { gap: Spacing.two },

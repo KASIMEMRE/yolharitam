@@ -22,15 +22,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Kabul: ilk ekranda en fazla 1 birincil (3D) öğe; iç içe kenarlıklı kutu yok; envanterdeki Haritalar ve
   İlerleme maddelerinin hepsine hâlâ ulaşılıyor; önce/sonra görüntüler.
 
-### SM-05 · Konu ekranı sadeleştirme
-- Düzen: başlık alanı (harita · bölüm, konu adı, tek satır meta: seviye · süre · işaret; çerçevesiz) → durum
-  `Segmented` (birincil) → "Sonraki konu" → **Kaynaklar** (ListRow listesi) → **Yapay zekâ** bölümü: üç sekmeli
-  tek alan (Alt konular / Quiz / Soru sor) — üç ayrı kutu yerine tek kutu, sekmeyle içerik değişir.
-- Kişisel odak/atla bilgisi başlığın altında tek satır rozet; ayrı kutu değil.
-- Kısayol çipleri kaldırılabilir (yapay zekâ alanı artık tek ve görünür), ama "aşağı kaydırmadan bulunabilir"
-  şartı korunur.
-- Kabul: kart içinde kart yok; XP/kutlama/ilerleme davranışı aynı; misafir sürümü (SM-03) bozulmadı.
-
 ### SM-06 · Profil ve Ayarlar sadeleştirme
 - **Profil:** kimlik (avatar, @kullanıcı adı) → düz seviye/XP satırı → rozetler (yatay şerit, "Tümü" ile tam liste)
   → ListRow'lar: Haritalarım, Ayarlar. Ayrı kartlar azaltılır.
@@ -73,6 +64,17 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### SM-05 · Konu ekranı sadeleştirme
+- Düzen: başlık alanı (harita · bölüm, konu adı, tek satır meta: seviye · süre · işaret; çerçevesiz) → durum
+  `Segmented` (birincil) → "Sonraki konu" → **Kaynaklar** (ListRow listesi) → **Yapay zekâ** bölümü: üç sekmeli
+  tek alan (Alt konular / Quiz / Soru sor) — üç ayrı kutu yerine tek kutu, sekmeyle içerik değişir.
+- Kişisel odak/atla bilgisi başlığın altında tek satır rozet; ayrı kutu değil.
+- Kısayol çipleri kaldırılabilir (yapay zekâ alanı artık tek ve görünür), ama "aşağı kaydırmadan bulunabilir"
+  şartı korunur.
+- Kabul: kart içinde kart yok; XP/kutlama/ilerleme davranışı aynı; misafir sürümü (SM-03) bozulmadı.
+- ✅ Konu ekranı: çerçevesiz başlık + tek satır meta, tek satır kişisel işaret, `Segmented` durum seçici (birincil), Kaynaklar `ListGroup`, tek alanlı 3 sekmeli "Yapay zekâ ile çalış" (kısayol çipleri kaldırıldı); `Segmented`'e `allowDeselect` eklendi; salt okunur görünüm korundu.
+
 
 ### SM-01 · Ortak sade bileşenler ve kurallar
 - Yeni bileşenler (`src/components/`):
