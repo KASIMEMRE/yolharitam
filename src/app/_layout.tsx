@@ -8,6 +8,7 @@ import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
+import { usePendingIntentRunner } from '@/lib/auth-gate';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -43,6 +44,8 @@ function navigationTheme(colorScheme: 'light' | 'dark' | 'unspecified' | null | 
 function RootStack() {
   const { session, loading } = useAuth();
   const theme = useTheme();
+  // Girişten sonra bekleyen niyeti (örn. "bu haritayı seç") bir kez uygular. Hook kuralı: erken return'den önce.
+  usePendingIntentRunner();
 
   // Telefondaki kayıtlı oturum okunurken hiçbir ekran gösterme (göz kırpmasın)
   if (loading) return null;
@@ -60,7 +63,15 @@ function RootStack() {
       {/* Karşılama ("/"): herkese açık. Giriş yapmışsa ekranın kendisi /roadmap'e yönlendirir. */}
       <Stack.Screen name="index" options={{ headerShown: false }} />
 
-      {/* GİRİŞ YAPMAMIŞ kullanıcının görebileceği ekranlar */}
+      {/* HERKESE AÇIK ekranlar (misafir gezintisi): oturum olmadan da açılır.
+          Hesap gerektiren işler ekranların içinde kayıt kapısına (useAuthGate) takılır. */}
+      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      {/* Katalog: misafir de haritalara bakabilir; seviye/devam adımında kayıt kapısına düşer */}
+      <Stack.Screen name="onboarding" options={{ title: 'Yol haritanı seç' }} />
+      {/* Konu detayı (kaynaklar + durum işaretleme). Başlığı ekran kendisi koyar (bölüm adı). */}
+      <Stack.Screen name="topic/[id]" options={{ title: 'Konu' }} />
+
+      {/* Yalnız GİRİŞ YAPMAMIŞ kullanıcının görebileceği ekran: oturum açılınca kapanır */}
       <Stack.Protected guard={!session}>
         {/* Giriş ekranının üst "sahnesi" accentSoft olduğu için başlık çubuğu da aynı renk (kesintisiz görünsün) */}
         <Stack.Screen
@@ -69,14 +80,10 @@ function RootStack() {
         />
       </Stack.Protected>
 
-      {/* GİRİŞ YAPMIŞ kullanıcının görebileceği ekranlar */}
+      {/* Yalnız GİRİŞ YAPMIŞ kullanıcının görebileceği ekranlar */}
       <Stack.Protected guard={!!session}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="onboarding" options={{ title: 'Yol haritanı seç' }} />
         {/* 3 soru + "haritan hazırlanıyor" anı. Başlık ve geri düğmesini ekranın kendisi ayarlar. */}
         <Stack.Screen name="roadmap-questions" options={{ title: 'Sana özel plan' }} />
-        {/* Konu detayı (kaynaklar + durum işaretleme). Başlığı ekran kendisi koyar (bölüm adı). */}
-        <Stack.Screen name="topic/[id]" options={{ title: 'Konu' }} />
         <Stack.Screen name="settings" options={{ title: 'Ayarlar' }} />
         {/* Topluluk › Vitrin için proje paylaşma formu */}
         <Stack.Screen name="showcase-new" options={{ title: 'Projeni paylaş' }} />

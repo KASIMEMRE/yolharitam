@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
@@ -80,8 +80,10 @@ export default function LoginScreen() {
   const stagePad = short ? Spacing.two : undefined;
   // Karşılama ekranı ?mode=signup ile gelirse kayıt sekmesi açık başlar. Yalnız BAŞLANGIÇ değeri:
   // sonradan sekmeyi elle değiştirmek parametreyle çakışmasın diye useEffect ile senkronlamıyoruz.
-  const params = useLocalSearchParams<{ mode?: string | string[] }>();
+  const params = useLocalSearchParams<{ mode?: string | string[]; reason?: string | string[] }>();
   const initialMode = Array.isArray(params.mode) ? params.mode[0] : params.mode;
+  // Kayıt kapısından gelindiyse neden hesap istediğimizi söyleyen tek satır (örn. "Frontend haritasını kaydetmek için…")
+  const reason = (Array.isArray(params.reason) ? params.reason[0] : params.reason)?.trim() || null;
   const [mode, setMode] = useState<Mode>(initialMode === 'signup' ? 'signup' : 'login');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -231,6 +233,11 @@ export default function LoginScreen() {
             </View>
 
             <View style={[styles.form, { padding: gutter }]}>
+              {reason && (
+                <ThemedText type="smallBold" themeColor="accentInk" accessibilityRole="text">
+                  {reason}
+                </ThemedText>
+              )}
               {/* Giriş / Kayıt seçici */}
               <View
                 style={[
@@ -357,6 +364,12 @@ export default function LoginScreen() {
               disabled={!canSubmit}
               loading={busy}
             />
+            {/* Misafir gezintisine dönüş: yığında geri gidilecek ekran yoksa (doğrudan açılış) sekmelere git */}
+            <Button
+              variant="text"
+              label="Şimdilik gez"
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/roadmap'))}
+            />
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -387,5 +400,5 @@ const styles = StyleSheet.create({
   showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   legal: { textAlign: 'center' },
   link: { textDecorationLine: 'underline', fontWeight: '700' },
-  footer: { paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
+  footer: { gap: Spacing.one, paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });

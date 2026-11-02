@@ -24,6 +24,7 @@ import { HUES, MARKER_STYLE, RESOURCE_KIND_STYLE, STATUS_STYLE } from '@/constan
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
+import { useAuthGate } from '@/lib/auth-gate';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 import { awardXp } from '@/lib/xp';
 
@@ -55,7 +56,9 @@ export default function TopicScreen() {
   const map = getRoadmap(first(params.map));
   const found = map && params.id ? findTopic(map, first(params.id) ?? '') : undefined;
   const roadmapId = first(params.roadmapId);
-  const progress = useTopicProgress(roadmapId);
+  // Misafir (oturum yok): durum/ilerleme sorgusu atılmaz; işaretleme ve yapay zekâ yerine kayıt daveti gösterilir
+  const { requireAuth, isGuest } = useAuthGate();
+  const progress = useTopicProgress(isGuest ? undefined : roadmapId);
   // Kişisel işaretler için kullanıcının yol haritası satırı (Yol Haritam ile aynı kaynak)
   const { roadmap } = useLatestRoadmap();
   // Bölüm/harita bitince açılan kutlama (hook erken return'lerden ÖNCE çağrılır)
@@ -95,7 +98,8 @@ export default function TopicScreen() {
     />
   );
 
-  if (!map || !found || !roadmapId) {
+  // Oturumluda roadmapId şart (ilerleme hangi haritaya yazılacak?); misafir onsuz da konuyu okuyabilir
+  if (!map || !found || (!roadmapId && !isGuest)) {
     return (
       <ThemedView style={styles.container}>
         {screenOptions}
@@ -112,7 +116,8 @@ export default function TopicScreen() {
   // Yol Haritam ekranıyla AYNI kural (kayıt yoksa seviye kuralları): "bölüm bitti" kararı iki ekranda tutarlı olsun
   const goal: GoalId = roadmap && isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
   const personalization =
-    roadmap?.id === roadmapId ? personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal) : null;
+    // roadmap && …: misafirde ikisi de undefined olup eşit sayılırdı (roadmapId yok, kayıt yok)
+    roadmap && roadmap.id === roadmapId ? personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal) : null;
   const focusIndex = personalization?.focus.indexOf(topic.id) ?? -1;
   const skipHint = personalization?.skip.includes(topic.id) ?? false;
   const note = personalization?.notes[section.id];
@@ -271,7 +276,26 @@ export default function TopicScreen() {
               </View>
             )}
 
-            {/* Durum */}
+            {/* MİSAFİR: durum seçici ve yapay zekâ yerine tek satır + kayıt kapısı (geçici; SM-03'te genişler) */}
+            {isGuest && (
+              <View style={styles.block}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  İlerlemeni kaydetmek ve yapay zekâyı kullanmak için ücretsiz hesap oluştur.
+                </ThemedText>
+                <Button
+                  label="Ücretsiz hesap oluştur"
+                  onPress={() =>
+                    requireAuth(
+                      { type: 'open-topic', mapId: map.id, topicId: topic.id },
+                      'İlerlemeni kaydetmek ve yapay zekâyı kullanmak için ücretsiz hesap oluştur'
+                    )
+                  }
+                />
+              </View>
+            )}
+
+            {/* Durum (yalnız oturumlu) */}
+            {!isGuest && (
             <View style={styles.block}>
               <ThemedText type="cardTitle" accessibilityRole="header">
                 Durumun
@@ -326,8 +350,10 @@ export default function TopicScreen() {
                 </View>
               )}
             </View>
+            )}
 
             {/* Yapay zekâ kısayolları: araçlar sayfanın altında kaldığı için durumun yanında hızlı erişim */}
+            {!isGuest && (
             <View style={styles.shortcuts} accessibilityRole="toolbar" accessibilityLabel="Yapay zekâ araçları">
               {ASSIST_SHORTCUTS.map((a) => (
                 <Pressable
@@ -346,6 +372,7 @@ export default function TopicScreen() {
                 </Pressable>
               ))}
             </View>
+            )}
 
             {/* Sonraki konu durumun hemen altında: işaretledikten sonra ilerlemek için sayfayı kaydırmak gerekmesin.
                 Konu bitince birincil (dolu) olur; aksi halde ikincil. Durum yüklenmese de görünür. */}
@@ -360,19 +387,21 @@ export default function TopicScreen() {
             )}
 
             {/* Yapay zekâ araçları. key: "Sonraki konu"ya geçince önceki konunun cevapları kalmasın */}
-            <View onLayout={(e) => (assistOffset.current.assist = e.nativeEvent.layout.y)}>
-              <TopicAssist
-                key={topic.id}
-                map={map}
-                section={section}
-                topic={topic}
-                level={roadmap?.id === roadmapId ? toLevelId(roadmap.level) : undefined}
-                onBlockLayout={(id, y) => (blockY.current[id] = y)}
-              />
-            </View>
+            {!isGuest && (
+              <View onLayout={(e) => (assistOffset.current.assist = e.nativeEvent.layout.y)}>
+                <TopicAssist
+                  key={topic.id}
+                  map={map}
+                  section={section}
+                  topic={topic}
+                  level={roadmap && roadmap.id === roadmapId ?toLevelId(roadmap.level) : undefined}
+                  onBlockLayout={(id, y) => (blockY.current[id] = y)}
+                />
+              </View>
+            )}
 
-            {/* Proje konularında: bitirdiğin projeyi Topluluk vitrinine ekleme bağlantısı */}
-            {(topic.id.startsWith('project') || topic.id.startsWith('portfolio')) && (
+            {/* Proje konularında: bitirdiğin projeyi Topluluk vitrinine ekleme bağlantısı (vitrin giriş ister) */}
+            {!isGuest && (topic.id.startsWith('project') || topic.id.startsWith('portfolio')) && (
               <Button
                 variant="text"
                 icon="🧩"

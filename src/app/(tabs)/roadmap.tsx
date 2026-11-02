@@ -8,6 +8,7 @@ import { Segmented } from '@/components/segmented';
 import { MapPin } from '@/components/map-pin';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { GuestPrompt } from '@/components/guest-prompt';
 import { FriendsTodayCard } from '@/components/community/friends-today-card';
 import { UsernameForm } from '@/components/community/username-gate';
 import { IconTile } from '@/components/icon-tile';
@@ -18,7 +19,7 @@ import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
-import { getRoadmap, KIND_LABEL, type DevRoadmap, type Section, type Topic } from '@/constants/dev-roadmaps';
+import { DEV_ROADMAPS, getRoadmap, KIND_LABEL, type DevRoadmap, type Section, type Topic } from '@/constants/dev-roadmaps';
 import {
   computeProgress,
   nextTopic,
@@ -42,6 +43,7 @@ import { useUsername } from '@/hooks/use-username';
 import { getTodayTask, taskTitle, type DailyTask } from '@/lib/daily-task';
 import { useXp } from '@/lib/xp';
 import { setPreferences, usePreferences, type MapViewPref } from '@/lib/preferences';
+import { useAuth } from '@/lib/auth-context';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 // Konu detayını açar. Harita kimliği de gönderilir: detay ekranı içeriği veritabanına gitmeden bulur.
@@ -49,7 +51,30 @@ function openTopic(roadmap: Roadmap, topicId: string) {
   router.push({ pathname: '/topic/[id]', params: { id: topicId, map: roadmap.topic_path, roadmapId: roadmap.id } });
 }
 
+// Oturum yoksa kişisel veri sorguları (haritalar, XP, ilerleme) hiç atılmaz: misafir ekranı ayrı bileşen.
+// Ayrı bileşen olmasının nedeni hook kuralı: hook'lar koşula bağlı çağrılamaz.
 export default function RoadmapScreen() {
+  const { session } = useAuth();
+  return session ? <MemberRoadmapScreen /> : <GuestRoadmapScreen />;
+}
+
+// GEÇİCİ misafir görünümü (asıl "Keşfet" ekranı SM-03'te): katalog onboarding ekranında.
+function GuestRoadmapScreen() {
+  return (
+    <TabScreen>
+      <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
+      <GuestPrompt
+        emoji="🧭"
+        title="Haritaları keşfet"
+        text={`${DEV_ROADMAPS.length} yol haritasına hesap açmadan göz atabilirsin. Beğendiğini seçince ilerlemeni kaydetmek için ücretsiz hesap oluşturursun.`}
+        actionLabel="Haritaları keşfet"
+        onAction={() => router.push('/onboarding')}
+      />
+    </TabScreen>
+  );
+}
+
+function MemberRoadmapScreen() {
   // Veri okuma (useFocusEffect ile her odakta tazeleme) ortak hook'larda
   const { roadmap, roadmaps, leftovers, status, loading, failed, retry, activate } = useLatestRoadmap();
   // Yeni kullanıcı (hiç haritası yok): harita seçimi bir kez kendiliğinden açılır (UX-02)

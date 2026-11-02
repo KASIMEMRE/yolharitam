@@ -8,6 +8,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 import { dayKey } from '@/constants/activity';
 import { XP, type XpKind } from '@/constants/xp';
+import { useAuth } from '@/lib/auth-context';
 import { matchesTodayTask } from '@/lib/daily-task';
 import { supabase } from '@/lib/supabase';
 
@@ -153,10 +154,13 @@ export async function awardXp(input: AwardInput): Promise<boolean> {
 
 // Toplam XP ve günler. Ekran odaklanınca sunucudan tazelenir.
 export function useXp() {
+  const { session } = useAuth();
+  const uid = session?.user.id;
   useFocusEffect(
     useCallback(() => {
+      if (!uid) return; // misafir: xp_events sorgusu atılmaz
       refreshXp();
-    }, [])
+    }, [uid])
   );
   return useSyncExternalStore(
     subscribe,

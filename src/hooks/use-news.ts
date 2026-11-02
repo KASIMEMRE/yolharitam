@@ -1,6 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 
+import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
 // Ekranda gösterilen tek haber. Yalnız başlık + kısa özet + link tutulur (telif kuralı).
@@ -38,6 +39,8 @@ type State = { items: NewsItem[]; status: NewsStatus; key: string };
 // topicPaths boşsa tüm haberler gelir; doluysa yalnız bu haritalarla kesişenler.
 // enabled=false iken hiçbir şey yapılmaz (örn. haritalar henüz yükleniyor, filtre belli değil).
 export function useNews(topicPaths: string[], enabled: boolean = true) {
+  const { session } = useAuth();
+  const signedIn = !!session;
   const [state, setState] = useState<State>({ items: [], status: 'loading', key: '' });
   const [refreshing, setRefreshing] = useState(false);
   // Dizi her render'da yeni nesne olur; efekt gereksiz çalışmasın diye metne çeviriyoruz.
@@ -88,7 +91,8 @@ export function useNews(topicPaths: string[], enabled: boolean = true) {
         if (isCancelled() || !ok) return;
         // 2) Kaynakları tazele; hata/zaman aşımı olsa da listeyi yeniden okuruz (kısmen yazılmış olabilir).
         // İlk çekim ~30 sn sürebildiği için zaman aşımı geniş.
-        if (force || Date.now() - lastInvokeAt > REFRESH_EVERY_MS) {
+        // Kaynak tazeleme (Edge Function) giriş ister: misafir yalnız listeyi okur (liste saatlik zamanlanmış işle güncellenir)
+        if (signedIn && (force || Date.now() - lastInvokeAt > REFRESH_EVERY_MS)) {
           const { error } = await supabase.functions.invoke('fetch-news', { body: {}, timeout: 30000 });
           if (isCancelled()) return;
           if (error && __DEV__) console.warn('Haber kaynakları tazelenemedi:', error.message);
@@ -102,7 +106,7 @@ export function useNews(topicPaths: string[], enabled: boolean = true) {
         }
       }
     },
-    [topicKey]
+    [topicKey, signedIn]
   );
 
   useFocusEffect(

@@ -6,6 +6,7 @@ import { Banner } from '@/components/banner';
 import { AchievementsSection } from '@/components/achievements-section';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
+import { GuestPrompt } from '@/components/guest-prompt';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge } from '@/components/level-badge';
 import { ScreenHeader } from '@/components/screen-header';
@@ -23,7 +24,31 @@ import { useAuth } from '@/lib/auth-context';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 
+// Misafirde kimlik, XP, rozet ve harita sorguları atılmaz: ayrı bileşen (hook kuralı yüzünden koşullu çağrı olmaz).
 export default function ProfileScreen() {
+  const { session } = useAuth();
+  return session ? <MemberProfileScreen /> : <GuestProfileScreen />;
+}
+
+// GEÇİCİ misafir görünümü (tema ve yasal bağlantılar SM-03'te eklenecek).
+function GuestProfileScreen() {
+  return (
+    <TabScreen>
+      <ScreenHeader title="Profil" />
+      <GuestPrompt
+        emoji="👤"
+        title="Hesabını oluştur"
+        text="Ücretsiz hesapla haritanı seç, konuları işaretle, XP ve rozet kazan. İlerlemen hesabında saklanır."
+        actionLabel="Hesap oluştur"
+        onAction={() => router.push({ pathname: '/login', params: { mode: 'signup' } })}
+        secondaryLabel="Giriş yap"
+        onSecondary={() => router.push({ pathname: '/login', params: { mode: 'login' } })}
+      />
+    </TabScreen>
+  );
+}
+
+function MemberProfileScreen() {
   const theme = useTheme();
   const { session } = useAuth();
   const { roadmap, loading, failed, retry } = useLatestRoadmap();
