@@ -1,20 +1,19 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { FilterChipRow } from '@/components/filter-chips';
 import { Skeleton } from '@/components/skeleton';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getRoadmap } from '@/constants/dev-roadmaps';
-import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { createProject, GITHUB_URL_RE } from '@/hooks/use-showcase';
-import { useTheme } from '@/hooks/use-theme';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 const TITLE_MAX = 80;
@@ -22,7 +21,6 @@ const DESC_MAX = 280;
 
 // Proje paylaşma formu. Parametre: ?map=<harita id> (verilirse o harita seçili açılır).
 export default function ShowcaseNewScreen() {
-  const theme = useTheme();
   const params = useLocalSearchParams<{ map?: string }>();
   const mapParam = Array.isArray(params.map) ? params.map[0] : params.map;
   const { roadmaps, status: mapsStatus, retry } = useLatestRoadmap();
@@ -118,30 +116,14 @@ export default function ShowcaseNewScreen() {
             {maps.length > 0 && (
               <View style={styles.group}>
                 <ThemedText type="smallBold">Hangi harita için?</ThemedText>
-                <View accessibilityRole="radiogroup" accessibilityLabel="Harita" style={styles.chips}>
-                  {maps.map((m) => {
-                    const selected = m.id === mapId;
-                    return (
-                      <Pressable
-                        key={m.id}
-                        onPress={() => setPicked(m.id)}
-                        accessibilityRole="radio"
-                        accessibilityLabel={m.title}
-                        accessibilityState={{ selected }}
-                        style={[
-                          styles.chip,
-                          {
-                            backgroundColor: selected ? theme.accentSoft : theme.card,
-                            borderColor: selected ? theme.accent : theme.border,
-                          },
-                        ]}>
-                        <IconLabel emoji={m.emoji} type="chip" themeColor={selected ? 'accentInk' : 'text'}>
-                          {m.title}
-                        </IconLabel>
-                      </Pressable>
-                    );
-                  })}
-                </View>
+                {/* Tek satır yatay çipler (Topluluk ve Gelişmeler ile aynı bileşen); form için zorunlu tek seçim */}
+                <FilterChipRow
+                  role="radio"
+                  label="Harita"
+                  options={maps.map((m) => ({ id: m.id, label: m.title, icon: m.emoji }))}
+                  value={mapId ?? maps[0].id}
+                  onChange={setPicked}
+                />
               </View>
             )}
 
@@ -200,13 +182,5 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.four, alignItems: 'center' },
   inner: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
   group: { gap: Spacing.two },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  chip: {
-    minHeight: MinTouch,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-  },
   multiline: { minHeight: 96, textAlignVertical: 'top' },
 });
