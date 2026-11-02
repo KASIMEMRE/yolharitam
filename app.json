@@ -43,6 +43,18 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "owner": "kasimemre",
+    "extra": {
+      "eas": {
+        "projectId": "e03fade5-4f9b-4b83-96a5-c76b292b1c08"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e03fade5-4f9b-4b83-96a5-c76b292b1c08"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

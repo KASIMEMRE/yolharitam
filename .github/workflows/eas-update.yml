@@ -1,0 +1,46 @@
+# main'e her birleşmede telefondaki uygulamaya güncelleme gönderir (EAS Update).
+# Uygulama açılışta yeni sürümü indirir ve bir sonraki açılışta kullanır; yeniden APK kurmak gerekmez.
+# Gerekli: GitHub › Settings › Secrets and variables › Actions › EXPO_TOKEN (expo.dev'den alınan erişim anahtarı).
+name: Uygulama güncellemesi (EAS Update)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: EXPO_TOKEN tanımlı mı?
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "EXPO_TOKEN sırrı yok: güncelleme atlandı. Kurulum için docs/GUNCELLEME.md dosyasına bak."
+            exit 0
+          fi
+          echo "has_token=1" >> "$GITHUB_ENV"
+
+      - uses: expo/expo-github-action@v8
+        if: env.has_token == '1'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+        if: env.has_token == '1'
+
+      - name: Güncellemeyi yayınla (preview kanalı = telefondaki test uygulaması)
+        if: env.has_token == '1'
+        env:
+          # Commit mesajı ortam değişkeniyle verilir (betiğe doğrudan yazılmaz: tırnak/komut enjeksiyonu olmasın)
+          MSG: ${{ github.event.head_commit.message || 'Elle başlatılan güncelleme' }}
+        run: eas update --channel preview --message "$(printf '%s' "$MSG" | head -n1 | cut -c1-200)" --non-interactive
