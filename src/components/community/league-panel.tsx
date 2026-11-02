@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { IconTile } from '@/components/icon-tile';
-import { IconLabel , Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { FilterChipRow } from '@/components/filter-chips';
+import { Glyph, IconLabel } from '@/components/icon';
+import { IconTile } from '@/components/icon-tile';
+import { ListGroup, ListRow } from '@/components/list-row';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { getRoadmap } from '@/constants/dev-roadmaps';
-import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useLeague, type LeagueRow } from '@/hooks/use-league';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,46 +20,8 @@ import { weekEndText } from '@/lib/week';
 // İlk üç sıra madalya simgesiyle; renkler temadan: altın (sarı), gümüş (gri), bronz (mercan)
 const MEDALS = ['markerEdge', 'textSecondary', 'coralEdge'] as const;
 
-// Yatay çip (Gelişmeler'deki kalıpla aynı). Topluluk ekranındaki segment de bunu kullanır.
-export function FilterChip({
-  label,
-  icon,
-  a11yLabel,
-  selected,
-  onPress,
-  role = 'tab',
-}: {
-  role?: 'tab' | 'radio';
-  label: string;
-  icon?: string; // simge (emoji adıyla)
-  a11yLabel: string; // ekran okuyucu için
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole={role}
-      accessibilityLabel={a11yLabel}
-      accessibilityState={{ selected }}
-      style={({ pressed }) => [
-        styles.chip,
-        {
-          backgroundColor: selected ? theme.accentSoft : theme.card,
-          borderColor: selected ? theme.accent : theme.border,
-          opacity: pressed ? 0.85 : 1,
-        },
-      ]}>
-      {icon && <Glyph emoji={icon} size={14} color={selected ? theme.accentInk : theme.textSecondary} strokeWidth={2.25} />}
-      <ThemedText type="chip" themeColor={selected ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
-}
-
 // Haftalık lig: aynı haritayı takip edenler arasında bu haftaki XP sıralaması.
+// Düzen: harita çipleri (tek satır) → tek satır bilgi → ListGroup içinde sıralama satırları.
 export function LeaguePanel() {
   const { roadmaps, status: mapsStatus, retry: retryMaps } = useLatestRoadmap();
   const [selected, setSelected] = useState<string | null>(null);
@@ -91,39 +55,26 @@ export function LeaguePanel() {
       {mapsLoading ? (
         <Skeleton height={MinTouch} radius={Radius.pill} />
       ) : (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          accessibilityRole="radiogroup"
-          style={styles.chipScroll}
-          contentContainerStyle={styles.chips}>
-          {maps.map((m) => (
-            <FilterChip
-              key={m.id}
-              label={m.title}
-                icon={m.emoji}
-              a11yLabel={m.title}
-              selected={active === m.id}
-              role="radio"
-              onPress={() => setSelected(m.id)}
-            />
-          ))}
-        </ScrollView>
+        active && (
+          <FilterChipRow
+            role="radio"
+            label="Harita"
+            options={maps.map((m) => ({ id: m.id, label: m.title, icon: m.emoji }))}
+            value={active}
+            onChange={setSelected}
+          />
+        )
       )}
 
-      <View style={styles.info}>
-        <IconLabel emoji="⏳" type="smallBold">
-          {weekEndText()}
-        </IconLabel>
-        <ThemedText type="small" themeColor="textSecondary">
-          Puan, bu hafta kazandığın toplam XP&apos;dir.
-        </ThemedText>
-      </View>
+      {/* Tek satır: hafta bitimi + puanın ne olduğu */}
+      <IconLabel emoji="⏳" type="small" themeColor="textSecondary" numberOfLines={1}>
+        {`${weekEndText()} · Puan: bu haftaki XP`}
+      </IconLabel>
 
       {leagueLoading && rows.length === 0 && (
         <View style={styles.list}>
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} height={64} radius={Radius.lg} />
+            <Skeleton key={i} height={56} radius={Radius.lg} />
           ))}
         </View>
       )}
@@ -145,11 +96,11 @@ export function LeaguePanel() {
       )}
 
       {rows.length > 0 && (
-        <View style={styles.rows}>
+        <ListGroup>
           {rows.map((row) => (
             <LeagueRowView key={row.user_id} row={row} />
           ))}
-        </View>
+        </ListGroup>
       )}
     </View>
   );
@@ -162,65 +113,38 @@ function LeagueRowView({ row }: { row: LeagueRow }) {
   const title = row.username ? `@${row.username}` : 'Gezgin';
 
   return (
+    // "Sen" satırı yumuşak vurgu zeminiyle ayrılır (kart değil, yalnız zemin). accessible: sıra bilgisi madalya
+    // simgesinde kaybolmasın diye tek cümlede okunur.
     <View
       accessible
       accessibilityLabel={`${row.rank}. sıra, ${title}${row.is_me ? ', sen' : ''}, ${row.xp} XP`}
-      style={[
-        styles.row,
-        {
-          backgroundColor: row.is_me ? theme.accentSoft : theme.card,
-          borderColor: row.is_me ? theme.accent : theme.border,
-        },
-      ]}>
-      <View style={styles.rank}>
-        {medal ? (
-          <Glyph emoji="🥇" size={22} color={medal} strokeWidth={2.25} />
-        ) : (
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {row.rank}
+      style={row.is_me ? { backgroundColor: theme.accentSoft } : undefined}>
+      <ListRow
+        left={
+          <View style={styles.rank}>
+            {medal ? (
+              <Glyph emoji="🥇" size={22} color={medal} strokeWidth={2.25} />
+            ) : (
+              <ThemedText type="smallBold" themeColor="textSecondary">
+                {row.rank}
+              </ThemedText>
+            )}
+          </View>
+        }
+        title={row.is_me ? `${title} (sen)` : title}
+        right={
+          <ThemedText type="smallBold" themeColor={row.is_me ? 'accentInk' : 'text'}>
+            {row.xp} XP
           </ThemedText>
-        )}
-      </View>
-      <View style={styles.names}>
-        <ThemedText type="smallBold" numberOfLines={2}>
-          {title}
-          {row.is_me ? ' (sen)' : ''}
-        </ThemedText>
-      </View>
-      <ThemedText type="smallBold" themeColor={row.is_me ? 'accentInk' : 'text'}>
-        {row.xp} XP
-      </ThemedText>
+        }
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   list: { gap: Spacing.three },
-  info: { gap: Spacing.half },
-  chipScroll: { flexGrow: 0 },
-  chips: { gap: Spacing.two, paddingRight: Spacing.three },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: MinTouch,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-  },
-  rows: { gap: Spacing.two },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    minHeight: 64,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-    borderWidth: Border.thick,
-  },
-  rank: { minWidth: 32, alignItems: 'center' },
-  names: { flex: 1, minWidth: 0 },
+  rank: { width: 28, alignItems: 'center' },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   center: { textAlign: 'center' },
 });

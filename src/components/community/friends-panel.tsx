@@ -1,17 +1,19 @@
-import type { ReactNode } from 'react';
 import { useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { BlockUserButton } from '@/components/block-user-button';
-import { Glyph } from '@/components/icon';
-import { IconTile } from '@/components/icon-tile';
+import { blockAction } from '@/components/block-user-button';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { Glyph } from '@/components/icon';
+import { IconTile } from '@/components/icon-tile';
+import { ListGroup, ListRow } from '@/components/list-row';
+import { RowMenu, type SheetAction } from '@/components/row-menu';
+import { SectionHeader } from '@/components/section-header';
 import { Skeleton } from '@/components/skeleton';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { computeStreak } from '@/constants/activity';
-import { Border, Edge, Radius, Spacing } from '@/constants/theme';
+import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useFriends, type FriendRow, type RequestResult } from '@/hooks/use-friends';
 import { useTheme } from '@/hooks/use-theme';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
@@ -36,8 +38,12 @@ const RESULT_TEXT: Record<RequestResult, { tone: 'success' | 'info' | 'warning';
 };
 
 // Topluluk › Arkadaşlar. Kullanıcı adı zorunluluğunu üstteki ekran (UsernameGate) sağlar.
+// Düzen: kompakt "Arkadaş ekle" → Gelen istekler / Gönderdiğin istekler / Çalışma arkadaşların
+// (her biri SectionHeader + ListGroup). Satırda yalnız kısa düğmeler; diğer eylemler "…" sayfasında.
 export function FriendsPanel() {
   const { status, friends, incoming, outgoing, retry, sendRequest, respond, remove, refresh } = useFriends();
+  // Satır eylemleri (kabul/reddet) başarısız olursa tek yerde, listenin üstünde haber verilir
+  const [notice, setNotice] = useState<string | null>(null);
 
   if (status === 'loading') return <PanelSkeleton />;
 
@@ -50,59 +56,63 @@ export function FriendsPanel() {
         </>
       )}
 
+      <AddFriend onSend={sendRequest} />
+      {notice && <Banner tone="warning">{notice}</Banner>}
+
       {incoming.length > 0 && (
         <View style={styles.group}>
-          <ThemedText type="cardTitle" accessibilityRole="header">
-            Gelen istekler
-          </ThemedText>
-          {incoming.map((r) => (
-            <IncomingCard key={r.friendship_id} row={r} onRespond={respond} onBlocked={refresh} />
-          ))}
+          <SectionHeader title="Gelen istekler" />
+          <ListGroup>
+            {incoming.map((r) => (
+              <IncomingRow key={r.friendship_id} row={r} onRespond={respond} onBlocked={refresh} onNotice={setNotice} />
+            ))}
+          </ListGroup>
         </View>
       )}
 
-      <AddFriend onSend={sendRequest} />
-
-
       {outgoing.length > 0 && (
         <View style={styles.group}>
-          <ThemedText type="cardTitle" accessibilityRole="header">
-            Gönderdiğin istekler
-          </ThemedText>
-          {outgoing.map((r) => (
-            <OutgoingCard key={r.friendship_id} row={r} onWithdraw={remove} />
-          ))}
+          <SectionHeader title="Gönderdiğin istekler" />
+          <ListGroup>
+            {outgoing.map((r) => (
+              <OutgoingRow key={r.friendship_id} row={r} onWithdraw={remove} />
+            ))}
+          </ListGroup>
         </View>
       )}
 
       {/* Liste okunamadıysa boş başlık göstermeyelim (üstte hata kutusu var) */}
       {!(status === 'error' && friends.length === 0) && (
         <View style={styles.group}>
-          <ThemedText type="cardTitle" accessibilityRole="header">
-            Çalışma arkadaşların
-          </ThemedText>
-        {status === 'ready' && friends.length === 0 && (
-          <View style={styles.empty}>
-            <IconTile emoji="🤝" tone="sky" size={64} />
-            <ThemedText themeColor="textSecondary" style={styles.center}>
-              Henüz arkadaşın yok. Bir arkadaşının kullanıcı adını yazıp istek gönder; birbirinizin seri ve günlük
-              çalışmasını görürsünüz.
-            </ThemedText>
-          </View>
-        )}
-          {friends.map((r) => (
-            <FriendCard key={r.friendship_id} row={r} onRemove={remove} onBlocked={refresh} />
-          ))}
+          <SectionHeader title="Çalışma arkadaşların" />
+          {status === 'ready' && friends.length === 0 ? (
+            <View style={styles.empty}>
+              <IconTile emoji="🤝" tone="sky" size={64} />
+              <ThemedText themeColor="textSecondary" style={styles.center}>
+                Henüz arkadaşın yok. Bir arkadaşının kullanıcı adını yazıp istek gönder; birbirinizin seri ve günlük
+                çalışmasını görürsünüz.
+              </ThemedText>
+            </View>
+          ) : (
+            <ListGroup>
+              {friends.map((r) => (
+                <FriendListRow key={r.friendship_id} row={r} onRemove={remove} onBlocked={refresh} />
+              ))}
+            </ListGroup>
+          )}
         </View>
       )}
     </View>
   );
 }
 
+// Tek alan + alanın içinde küçük "Gönder" düğmesi: form kutusu/ayrı başlık yok
 function AddFriend({ onSend }: { onSend: (username: string) => Promise<RequestResult> }) {
+  const theme = useTheme();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RequestResult | 'invalid' | null>(null);
+  const empty = text.trim().length === 0;
 
   async function submit() {
     // Başındaki @ işareti ve büyük harf kullanıcıyı yanıltmasın
@@ -126,12 +136,9 @@ function AddFriend({ onSend }: { onSend: (username: string) => Promise<RequestRe
         : null;
 
   return (
-    <View style={styles.group}>
-      <ThemedText type="cardTitle" accessibilityRole="header">
-        Arkadaş ekle
-      </ThemedText>
+    <View style={styles.add}>
       <TextField
-        label="Arkadaşının kullanıcı adı"
+        label="Arkadaş ekle"
         placeholder="@kullaniciadi"
         value={text}
         onChangeText={(v) => {
@@ -143,9 +150,26 @@ function AddFriend({ onSend }: { onSend: (username: string) => Promise<RequestRe
         returnKeyType="send"
         onSubmitEditing={submit}
         editable={!busy}
+        right={
+          // Ekranın tek birincil öğesi: alanın içindeki dolu "Gönder" (3D'siz, küçük)
+          <Pressable
+            onPress={submit}
+            disabled={empty || busy}
+            accessibilityRole="button"
+            accessibilityLabel="İstek gönder"
+            accessibilityState={{ disabled: empty || busy, busy }}
+            style={[styles.send, { backgroundColor: empty && !busy ? theme.backgroundSelected : theme.accent }]}>
+            {busy ? (
+              <ActivityIndicator color={theme.onAccent} />
+            ) : (
+              <ThemedText type="smallBold" themeColor={empty ? 'textSecondary' : 'onAccent'}>
+                Gönder
+              </ThemedText>
+            )}
+          </Pressable>
+        }
       />
       {info && <Banner tone={info.tone}>{info.text}</Banner>}
-      <Button icon="📨" label="İstek gönder" loading={busy} disabled={text.trim().length === 0} onPress={submit} />
     </View>
   );
 }
@@ -155,102 +179,137 @@ function nameOf(r: FriendRow) {
   return r.username ? `@${r.username}` : 'Gezgin';
 }
 
-function Card({ children }: { children: ReactNode }) {
+// Satır içi küçük düğme (Kabul / Reddet). Telefon genişliğinde (<480) yalnız simge: üç düğme + ad aynı satıra sığsın diye; ekran okuyucu etiketi hep var.
+function InlineButton({
+  label,
+  icon,
+  filled,
+  busy,
+  disabled,
+  accessibilityLabel,
+  onPress,
+}: {
+  label: string;
+  icon: string;
+  filled?: boolean;
+  busy: boolean;
+  disabled: boolean;
+  accessibilityLabel: string;
+  onPress: () => void;
+}) {
   const theme = useTheme();
+  const { width } = useWindowDimensions();
+  const iconOnly = width < 480;
+  const ink = filled ? theme.onAccent : theme.text;
   return (
-    <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
-      {children}
-    </View>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ disabled, busy }}
+      style={[
+        styles.inline,
+        iconOnly && styles.inlineIcon,
+        {
+          backgroundColor: filled ? theme.accent : 'transparent',
+          borderColor: filled ? theme.accent : theme.border,
+          opacity: disabled && !busy ? 0.5 : 1,
+        },
+      ]}>
+      {busy ? (
+        <ActivityIndicator color={ink} />
+      ) : (
+        <>
+          <Glyph emoji={icon} size={16} color={ink} strokeWidth={2.5} />
+          {!iconOnly && (
+            <ThemedText type="smallBold" themeColor={filled ? 'onAccent' : 'text'}>
+              {label}
+            </ThemedText>
+          )}
+        </>
+      )}
+    </Pressable>
   );
 }
 
-function IncomingCard({
+function IncomingRow({
   row,
   onRespond,
   onBlocked,
+  onNotice,
 }: {
   row: FriendRow;
   onRespond: (id: number, accept: boolean) => Promise<'ok' | 'gone' | 'error'>;
   onBlocked: () => void;
+  onNotice: (text: string | null) => void;
 }) {
-  const { width } = useWindowDimensions();
   const [busy, setBusy] = useState<'accept' | 'reject' | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const name = nameOf(row);
 
   async function act(accept: boolean) {
     setBusy(accept ? 'accept' : 'reject');
-    setMessage(null);
+    onNotice(null);
     const r = await onRespond(row.friendship_id, accept);
-    // Başarıda satır listeden kalkar (kart kaybolur); yalnız hatada kartta kalırız
+    // Başarıda satır listeden kalkar; yalnız hatada satırda kalırız
     if (r !== 'ok') {
       setBusy(null);
-      setMessage(r === 'gone' ? 'Bu istek artık geçerli değil.' : ERROR_TEXT.friendActionFailed);
+      onNotice(r === 'gone' ? 'Bu istek artık geçerli değil.' : ERROR_TEXT.friendActionFailed);
     }
   }
 
   return (
-    <Card>
-      <Who row={row} />
-      {message && <Banner tone="warning">{message}</Banner>}
-      {/* Geniş ekranda yan yana, dar ekranda alt alta */}
-      <View style={width >= 360 ? styles.rowActions : styles.actions}>
-        <View style={width >= 360 ? styles.flex1 : undefined}>
-          <Button
-            label="Kabul et"
-            accessibilityLabel={`${name} isteğini kabul et`}
-            loading={busy === 'accept'}
+    <ListRow
+      title={name}
+      subtitle="Sana istek gönderdi"
+      right={
+        <View style={styles.actions}>
+          <InlineButton
+            label="Kabul"
+            icon="✓"
+            filled
+            busy={busy === 'accept'}
             disabled={busy !== null}
+            accessibilityLabel={`${name} isteğini kabul et`}
             onPress={() => act(true)}
           />
-        </View>
-        <View style={width >= 360 ? styles.flex1 : undefined}>
-          <Button
-            variant="secondary"
+          <InlineButton
             label="Reddet"
-            accessibilityLabel={`${name} isteğini reddet`}
-            loading={busy === 'reject'}
+            icon="❌"
+            busy={busy === 'reject'}
             disabled={busy !== null}
+            accessibilityLabel={`${name} isteğini reddet`}
             onPress={() => act(false)}
           />
+          {/* İstemediğin kişiden gelen istek: engelle (bir daha istek gönderemez) */}
+          <RowMenu title={name} accessibilityLabel={`${name} için diğer eylemler`} actions={[blockAction(row.user_id, name, onBlocked)]} />
         </View>
-      </View>
-      {/* İstemediğin kişiden gelen istek: tek dokunuşla engelle (bir daha istek gönderemez) */}
-      <BlockUserButton userId={row.user_id} name={name} onBlocked={onBlocked} />
-    </Card>
+      }
+    />
   );
 }
 
-function OutgoingCard({ row, onWithdraw }: { row: FriendRow; onWithdraw: (id: number) => Promise<boolean> }) {
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  async function withdraw() {
-    setBusy(true);
-    setFailed(false);
-    const ok = await onWithdraw(row.friendship_id);
-    if (!ok) {
-      setBusy(false);
-      setFailed(true);
-    }
-  }
-
+function OutgoingRow({ row, onWithdraw }: { row: FriendRow; onWithdraw: (id: number) => Promise<boolean> }) {
+  const name = nameOf(row);
+  const withdraw: SheetAction = {
+    id: 'withdraw',
+    label: 'İsteği geri çek',
+    icon: '❌',
+    accessibilityLabel: `${name} isteğini geri çek`,
+    confirmText: `${name} kişisine gönderdiğin istek geri çekilecek. İstersen sonra yeniden istek gönderebilirsin.`,
+    confirmLabel: 'Evet, geri çek',
+    run: async () => ((await onWithdraw(row.friendship_id)) ? { ok: true } : { ok: false, error: ERROR_TEXT.friendActionFailed }),
+  };
   return (
-    <Card>
-      <Who row={row} />
-      {failed && <Banner tone="warning">{ERROR_TEXT.friendActionFailed}</Banner>}
-      <Button
-        variant="secondary"
-        label="İsteği geri çek"
-        accessibilityLabel={`${nameOf(row)} isteğini geri çek`}
-        loading={busy}
-        onPress={withdraw}
-      />
-    </Card>
+    <ListRow
+      title={name}
+      subtitle="Yanıt bekleniyor"
+      right={<RowMenu title={name} accessibilityLabel={`${name} isteği için diğer eylemler`} actions={[withdraw]} />}
+    />
   );
 }
 
-function FriendCard({
+function FriendListRow({
   row,
   onRemove,
   onBlocked,
@@ -259,7 +318,7 @@ function FriendCard({
   onRemove: (id: number) => Promise<boolean>;
   onBlocked: () => void;
 }) {
-  const theme = useTheme();
+  const name = nameOf(row);
   // Seri istemcide hesaplanır; uygulamadaki kendi serimizle aynı kural (koruyucu dahil)
   const { streak } = computeStreak(new Set(row.active_days));
   const today =
@@ -269,120 +328,75 @@ function FriendCard({
         ? `Bugün çalıştı · +${row.today_xp} XP`
         : 'Bugün henüz çalışmadı';
 
-  // Onay uygulamanın kalıbıyla: tarayıcı uyarı penceresi yok, kartın içinde iki adım
-  const [confirming, setConfirming] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  async function confirmRemove() {
-    setBusy(true);
-    setFailed(false);
-    const ok = await onRemove(row.friendship_id);
-    if (!ok) {
-      setBusy(false);
-      setFailed(true);
-    }
-  }
+  const removeAction: SheetAction = {
+    id: 'remove',
+    label: 'Arkadaşlıktan çıkar',
+    icon: '🚪',
+    destructive: true,
+    accessibilityLabel: `${name} ile arkadaşlıktan çık`,
+    confirmText: `${name} arkadaş listenden çıkarılacak. İstersen sonra yeniden istek gönderebilirsin.`,
+    confirmLabel: 'Evet, çıkar',
+    run: async () => ((await onRemove(row.friendship_id)) ? { ok: true } : { ok: false, error: ERROR_TEXT.friendActionFailed }),
+  };
 
   return (
-    <Card>
-      <View style={styles.head}>
-        <Who row={row} />
-        <View
-          accessible
-          accessibilityLabel={streak > 0 ? `${streak} günlük seri` : 'Seri yok'}
-          style={[styles.streak, { backgroundColor: streak > 0 ? theme.coralSoft : theme.backgroundSelected }]}>
-          <Glyph
-            emoji={streak > 0 ? '🔥' : '🌱'}
-            size={20}
-            color={streak > 0 ? theme.coralInk : theme.accentInk}
-            fill={streak > 0 ? theme.coralSoft : undefined}
-          />
-          <ThemedText type="smallBold" themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}>
-            {streak}
-          </ThemedText>
-        </View>
-      </View>
-      <ThemedText type="small" themeColor={row.today_done > 0 || row.today_xp > 0 ? 'accentInk' : 'textSecondary'}>
-        {today}
-      </ThemedText>
-
-      {!confirming ? (
-        <Button
-          variant="quiet"
-          label="Arkadaşlıktan çıkar"
-          accessibilityLabel={`${nameOf(row)} ile arkadaşlıktan çık`}
-          onPress={() => setConfirming(true)}
+    <ListRow
+      icon={streak > 0 ? '🔥' : '🌱'}
+      title={name}
+      // Alt satır: seri + bugünkü durum
+      subtitle={[streak > 0 ? `${streak} günlük seri` : null, today].filter(Boolean).join(' · ')}
+      right={
+        <RowMenu
+          title={name}
+          accessibilityLabel={`${name} için diğer eylemler`}
+          actions={[removeAction, blockAction(row.user_id, name, onBlocked)]}
         />
-      ) : (
-        <View style={[styles.confirm, { backgroundColor: theme.warningBackground }]}>
-          <ThemedText type="smallBold" themeColor="warningInk">
-            {`${nameOf(row)} arkadaş listenden çıkarılacak. İstersen sonra yeniden istek gönderebilirsin.`}
-          </ThemedText>
-          {failed && <Banner tone="warning">{ERROR_TEXT.friendActionFailed}</Banner>}
-          <View style={styles.actions}>
-            <Button variant="quiet" label="Evet, çıkar" loading={busy} onPress={confirmRemove} />
-            <Button variant="text" label="Vazgeç" disabled={busy} onPress={() => setConfirming(false)} />
-          </View>
-        </View>
-      )}
-      {!confirming && <BlockUserButton userId={row.user_id} name={nameOf(row)} onBlocked={onBlocked} />}
-    </Card>
-  );
-}
-
-// Ad satırı: @kullanıcıadı
-function Who({ row }: { row: FriendRow }) {
-  return (
-    <View style={styles.flexText}>
-      <ThemedText type="cardTitle" numberOfLines={1}>
-        {nameOf(row)}
-      </ThemedText>
-    </View>
+      }
+    />
   );
 }
 
 function PanelSkeleton() {
-  const theme = useTheme();
   return (
     <View accessible accessibilityLabel="Yükleniyor" accessibilityState={{ busy: true }} style={styles.panel}>
       <Skeleton height={56} radius={Radius.md} />
-      {[0, 1].map((i) => (
-        <View
-          key={i}
-          style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
-          <Skeleton width="50%" height={18} />
-          <Skeleton width="70%" height={14} />
-        </View>
-      ))}
+      <ListGroup>
+        {[0, 1].map((i) => (
+          <View key={i} style={styles.skeletonRow}>
+            <Skeleton width="50%" height={16} />
+            <Skeleton width="70%" height={12} />
+          </View>
+        ))}
+      </ListGroup>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   panel: { gap: Spacing.four },
-  group: { gap: Spacing.three },
-  card: {
-    gap: Spacing.two,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-    borderWidth: Border.thick,
-    borderBottomWidth: Edge,
+  group: { gap: Spacing.two },
+  add: { gap: Spacing.two },
+  send: {
+    minHeight: MinTouch,
+    minWidth: 76,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Radius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  head: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  flexText: { flex: 1, minWidth: 0, gap: Spacing.half },
-  streak: {
+  actions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
+  inline: {
+    minHeight: MinTouch,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: Spacing.one,
-    paddingVertical: Spacing.one,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
+    borderWidth: Border.thick,
   },
-  actions: { gap: Spacing.two },
-  rowActions: { flexDirection: 'row', gap: Spacing.two },
-  flex1: { flex: 1 },
-  confirm: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md },
+  inlineIcon: { width: MinTouch, paddingHorizontal: 0 },
+  skeletonRow: { gap: Spacing.two, padding: Spacing.three },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.four },
   center: { textAlign: 'center' },
 });

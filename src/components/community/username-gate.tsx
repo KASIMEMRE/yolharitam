@@ -7,9 +7,8 @@ import { Button } from '@/components/button';
 import { Skeleton } from '@/components/skeleton';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
-import { Border, Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { normalizeUsername, USERNAME_PATTERN, useUsername } from '@/hooks/use-username';
-import { useTheme } from '@/hooks/use-theme';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 const CHECK_DELAY_MS = 400;
@@ -124,7 +123,6 @@ export function UsernameForm({ onSaved, submitLabel = 'Kaydet' }: { onSaved?: ()
 // Yeni hesaplar adı kayıtta seçtiği için bu kapıyı hiç görmez; yalnız adı olmayan eski hesaplar için yedek.
 // Neden zorunlu? Lig ve arkadaş ekleme @kullanıcıadı ile çalışır; adsız kullanıcı listelerde görünmez.
 export function UsernameGate({ children }: { children: ReactNode }) {
-  const theme = useTheme();
   const { username, status, retry } = useUsername();
 
   if (status === 'loading') {
@@ -146,8 +144,9 @@ export function UsernameGate({ children }: { children: ReactNode }) {
   }
 
   if (!username) {
+    // Düz düzen: kutu/kart yok; başlık + kısa açıklama + form doğrudan zeminde
     return (
-      <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      <View style={styles.wrap}>
         <IconLabel emoji="🏷️" type="cardTitle" iconSize={18}>
           Bir kullanıcı adı seç
         </IconLabel>
@@ -165,5 +164,4 @@ export function UsernameGate({ children }: { children: ReactNode }) {
 
 const styles = StyleSheet.create({
   wrap: { gap: Spacing.three },
-  card: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
 });
