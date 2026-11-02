@@ -10,17 +10,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 > Hiçbir özellik kaldırılmaz; yalnız yeri ve görünümü değişir.
 
 
-### SM-04 · Yol Haritam sadeleştirme
-- Üstten aşağı hedef düzen: başlık (selam + harita değiştirici tek satır) → **tek birincil kart "Şimdi"**
-  (Sıradaki konu; günün görevi aynı konuysa rozet olarak, farklıysa kartın altında ikinci satır) → düz özet
-  satırı (ilerleme çubuğu + seri + XP + haftalık hedef; dokununca ayrıntı alt sayfası) → "Harita" bölümü
-  (SectionHeader + Segmented ağaç/liste) → bölümler.
-- Yolculuk kartı ayrı bir kart olmaktan çıkar: harita adı/kimliği başlığa, "Planımı güncelle" ve harita
-  ayarları başlıktaki "…" menüsüne ya da Ayarlar › Haritalarım'a taşınır.
-- Bölüm kartları: kart içinde kart yok; bölüm başlığı + ayırıcılı konu satırları (`ListRow`).
-- Kişisel not ve kullanıcı adı kartları en fazla bir satır bilgi şeridi.
-- Kabul: ilk ekranda en fazla 1 birincil (3D) öğe; iç içe kenarlıklı kutu yok; envanterdeki Haritalar ve
-  İlerleme maddelerinin hepsine hâlâ ulaşılıyor; önce/sonra görüntüler.
 
 ### SM-05 · Konu ekranı sadeleştirme
 - Düzen: başlık alanı (harita · bölüm, konu adı, tek satır meta: seviye · süre · işaret; çerçevesiz) → durum
@@ -73,6 +62,19 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### SM-04 · Yol Haritam sadeleştirme
+- Üstten aşağı hedef düzen: başlık (selam + harita değiştirici tek satır) → **tek birincil kart "Şimdi"**
+  (Sıradaki konu; günün görevi aynı konuysa rozet olarak, farklıysa kartın altında ikinci satır) → düz özet
+  satırı (ilerleme çubuğu + seri + XP + haftalık hedef; dokununca ayrıntı alt sayfası) → "Harita" bölümü
+  (SectionHeader + Segmented ağaç/liste) → bölümler.
+- Yolculuk kartı ayrı bir kart olmaktan çıkar: harita adı/kimliği başlığa, "Planımı güncelle" ve harita
+  ayarları başlıktaki "…" menüsüne ya da Ayarlar › Haritalarım'a taşınır.
+- Bölüm kartları: kart içinde kart yok; bölüm başlığı + ayırıcılı konu satırları (`ListRow`).
+- Kişisel not ve kullanıcı adı kartları en fazla bir satır bilgi şeridi.
+- Kabul: ilk ekranda en fazla 1 birincil (3D) öğe; iç içe kenarlıklı kutu yok; envanterdeki Haritalar ve
+  İlerleme maddelerinin hepsine hâlâ ulaşılıyor; önce/sonra görüntüler.
+- ✅ Yol Haritam (oturumlu) sadeleştirildi: tek birincil "Şimdi" kartı (sıradaki konu + günün görevi rozet/ikinci satır/onay), düz özet satırı (ilerleme, seri, XP, haftalık hedef; dokununca ayrıntı), "Harita" bölümü (Ağaç/Liste `Segmented`; liste `ListGroup`/`ListRow`), Yolculuk kartı kalktı (kimlik + "Planımı güncelle" + "Harita ayarları" başlıktaki "…" menüsünde), kullanıcı adı tek satırlık şerit.
 
 ### SM-01 · Ortak sade bileşenler ve kurallar
 - Yeni bileşenler (`src/components/`):
