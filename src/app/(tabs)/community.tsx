@@ -1,14 +1,18 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 
+import { Button } from '@/components/button';
 import { FriendsPanel } from '@/components/community/friends-panel';
 import { LeaguePanel } from '@/components/community/league-panel';
 import { ShowcasePanel } from '@/components/community/showcase-panel';
-import { GuestPrompt } from '@/components/guest-prompt';
 import { UsernameGate } from '@/components/community/username-gate';
+import { ListGroup, ListRow } from '@/components/list-row';
 import { ScreenHeader } from '@/components/screen-header';
 import { Segmented } from '@/components/segmented';
 import { TabScreen } from '@/components/tab-screen';
+import { ThemedText } from '@/components/themed-text';
+import { Spacing } from '@/constants/theme';
 import { useAuthGate } from '@/lib/auth-gate';
 
 type Segment = 'league' | 'friends' | 'showcase';
@@ -38,19 +42,22 @@ export default function CommunityScreen() {
       <ScreenHeader title="Topluluk" emoji="👥" hue="violet" />
 
       {isGuest ? (
-        // Misafirde lig/arkadaş/vitrin sorguları (RPC) hiç çağrılmaz; yalnız kayıt daveti
-        <GuestPrompt
-          emoji="👥"
-          hue="violet"
-          title="Toplulukta yerini al"
-          text="Haftalık ligde yarış, çalışma arkadaşı ekle, bitirdiğin projeleri vitrinde paylaş. Katılmak için ücretsiz hesap gerekir."
-          actionLabel="Katılmak için kayıt ol"
-          onAction={() =>
-            requireAuth({ type: 'community', tab: segment }, 'Topluluğa katılmak için ücretsiz hesap oluştur')
-          }
-          secondaryLabel="Zaten hesabım var"
-          onSecondary={() => router.push({ pathname: '/login', params: { mode: 'login' } })}
-        />
+        // Misafirde lig/arkadaş/vitrin sorguları (RPC) hiç çağrılmaz; yalnız sade tanıtım + kayıt daveti
+        <View style={styles.intro}>
+          <ThemedText themeColor="textSecondary">Birlikte çalışmak motivasyonu artırır. Katılmak için ücretsiz hesap gerekir.</ThemedText>
+          <ListGroup>
+            <ListRow icon="🏆" title="Haftalık lig" subtitle="Bu hafta kazandığın XP ile diğer öğrenenlerle yarış." />
+            <ListRow icon="🤝" title="Çalışma arkadaşları" subtitle="Arkadaş ekle, birbirinizin serisini ve bugünkü çalışmasını gör." />
+            <ListRow icon="🧩" title="Proje vitrini" subtitle="Bitirdiğin projeleri paylaş, başkalarının projelerine göz at." />
+          </ListGroup>
+          <View style={styles.actions}>
+            <Button
+              label="Katılmak için kayıt ol"
+              onPress={() => requireAuth({ type: 'community', tab: segment }, 'Topluluğa katılmak için ücretsiz hesap oluştur')}
+            />
+            <Button variant="text" label="Zaten hesabım var" onPress={() => router.push({ pathname: '/login', params: { mode: 'login' } })} />
+          </View>
+        </View>
       ) : (
         <UsernameGate>
           <Segmented label="Topluluk bölümü" options={SEGMENT_OPTIONS} value={segment} onChange={setSegment} />
@@ -62,3 +69,8 @@ export default function CommunityScreen() {
     </TabScreen>
   );
 }
+
+const styles = StyleSheet.create({
+  intro: { gap: Spacing.three },
+  actions: { gap: Spacing.one },
+});

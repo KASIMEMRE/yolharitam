@@ -10,21 +10,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 > Hiçbir özellik kaldırılmaz; yalnız yeri ve görünümü değişir.
 
 
-### SM-03 · Misafir ekranları: Keşfet, harita önizleme, salt okunur konu
-- **Keşfet** (misafirde "Yol Haritam" sekmesinin yerine, adı "Keşfet"): onboarding'deki katalog + arama bileşen
-  olarak ayrıştırılır (`RoadmapCatalog`), hem burada hem "Harita ekle"de kullanılır.
-- **Harita önizleme** (yeni rota `map/[id]`): başlık, kısa açıklama, bölüm/konu sayısı, toplam süre; bölümler
-  açılır liste ya da ağaç (salt okunur, `RoadmapTree` yeniden kullanılır); altta tek birincil düğme
-  "Bu haritayı seç" (misafirde kayıt kapısı, oturumluda seviye adımı).
-- **Konu (salt okunur):** özet, seviye/süre, kaynaklar misafire açık. Durum seçici ve yapay zekâ blokları yerine
-  tek satır: "İlerlemeni kaydetmek ve yapay zekâyı kullanmak için ücretsiz hesap oluştur" + düğme (kayıt kapısı,
-  niyet `open-topic`).
-- **Topluluk (misafir):** kısa tanıtım (lig, arkadaşlar, vitrin ne işe yarar) + "Katılmak için kayıt ol". RPC çağrılmaz.
-- **Profil (misafir):** "Hesap oluştur / Giriş yap" kartı; Görünüm (tema) ve Hakkında/yasal bağlantıları.
-- **Gelişmeler:** misafirde de çalışır (filtre: tüm haritalar).
-- Kabul: misafir dört sekmede de hata/iskelet takılması görmeden geziyor; hiçbir ekranda RLS hatası yok;
-  32 haritanın önizlemesi açılıyor; açık/koyu, 320 px görüntüler.
-
 ### SM-04 · Yol Haritam sadeleştirme
 - Üstten aşağı hedef düzen: başlık (selam + harita değiştirici tek satır) → **tek birincil kart "Şimdi"**
   (Sıradaki konu; günün görevi aynı konuysa rozet olarak, farklıysa kartın altında ikinci satır) → düz özet
@@ -230,6 +215,23 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Veritabanı: zaman damgalarını sunucu basar, harita/vitrin/bildirim/arkadaş isteği sınırları, `personalize_requests` kota tablosu (migration canlıya uygulandı).
 - Edge Function'lar: `personalize-roadmap` günlük kota (10), `topic-assist` kota yarışı ve önbellek ezme düzeltmesi, `fetch-news` çeviri yalnız cron'da + ham hata mesajı saklanmaz, `generate-roadmap` kapatıldı (410).
 - Uygulama: `https` dışı linkler açılmaz (`open-url.ts`), şifre alt sınırı her yerde 8, hesap silmede şifre doğrulaması, yeni sunucu sınırları için Türkçe mesajlar.
+
+### SM-03 · Misafir ekranları: Keşfet, harita önizleme, salt okunur konu
+- **Keşfet** (misafirde "Yol Haritam" sekmesinin yerine, adı "Keşfet"): onboarding'deki katalog + arama bileşen
+  olarak ayrıştırılır (`RoadmapCatalog`), hem burada hem "Harita ekle"de kullanılır.
+- **Harita önizleme** (yeni rota `map/[id]`): başlık, kısa açıklama, bölüm/konu sayısı, toplam süre; bölümler
+  açılır liste ya da ağaç (salt okunur, `RoadmapTree` yeniden kullanılır); altta tek birincil düğme
+  "Bu haritayı seç" (misafirde kayıt kapısı, oturumluda seviye adımı).
+- **Konu (salt okunur):** özet, seviye/süre, kaynaklar misafire açık. Durum seçici ve yapay zekâ blokları yerine
+  tek satır: "İlerlemeni kaydetmek ve yapay zekâyı kullanmak için ücretsiz hesap oluştur" + düğme (kayıt kapısı,
+  niyet `open-topic`).
+- **Topluluk (misafir):** kısa tanıtım (lig, arkadaşlar, vitrin ne işe yarar) + "Katılmak için kayıt ol". RPC çağrılmaz.
+- **Profil (misafir):** "Hesap oluştur / Giriş yap" kartı; Görünüm (tema) ve Hakkında/yasal bağlantıları.
+- **Gelişmeler:** misafirde de çalışır (filtre: tüm haritalar).
+- Kabul: misafir dört sekmede de hata/iskelet takılması görmeden geziyor; hiçbir ekranda RLS hatası yok;
+  32 haritanın önizlemesi açılıyor; açık/koyu, 320 px görüntüler.
+- ✅ `RoadmapCatalog` ayrıştırıldı; misafirde Keşfet sekmesi, herkese açık `map/[id]` önizleme, salt okunur konu (misafir ve haritayı takip etmeyen kullanıcı), sade Topluluk tanıtımı ve Profil (hesap kartı + tema + yasal) eklendi; karşılama durakları güncellendi; `GuestPrompt` silindi.
+
 
 ## Öneriler (ekipten)
 

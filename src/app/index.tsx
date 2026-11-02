@@ -12,11 +12,11 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { markWelcomeSeen, readWelcomeSeen } from '@/lib/welcome-seen';
 
-// Üç gerçek adım: uygulamanın gerçekten izlediği yol
+// Üç gerçek adım: misafir akışı (gez, seç, kaydet)
 const STOPS = [
-  { emoji: '🔑', label: 'Hesabını oluştur' },
-  { emoji: '🧭', label: 'Yol haritanı ve seviyeni seç' },
-  { emoji: '🗺️', label: 'Kişisel yol haritanı al' },
+  { emoji: '🧭', label: 'Haritaları keşfet' },
+  { emoji: '🗺️', label: 'Bir yol seç' },
+  { emoji: '🔑', label: 'Hesabınla ilerlemeni kaydet' },
 ];
 
 // Karşılama ekranı: uygulama açılınca ilk görünen sayfa ("/")

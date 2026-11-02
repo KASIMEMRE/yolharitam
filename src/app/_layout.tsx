@@ -68,6 +68,8 @@ function RootStack() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       {/* Katalog: misafir de haritalara bakabilir; seviye/devam adımında kayıt kapısına düşer */}
       <Stack.Screen name="onboarding" options={{ title: 'Yol haritanı seç' }} />
+      {/* Harita önizleme (herkese açık): bölümler ve konular salt okunur; "Bu haritayı seç" kayıt kapısına düşer */}
+      <Stack.Screen name="map/[id]" options={{ title: 'Harita' }} />
       {/* Konu detayı (kaynaklar + durum işaretleme). Başlığı ekran kendisi koyar (bölüm adı). */}
       <Stack.Screen name="topic/[id]" options={{ title: 'Konu' }} />
 
