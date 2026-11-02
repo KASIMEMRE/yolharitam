@@ -1,19 +1,17 @@
-import { Link, router } from 'expo-router';
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Glyph, IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
-import { AchievementsSection } from '@/components/achievements-section';
+import { AchievementsStrip } from '@/components/achievements-section';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { GuestPrompt } from '@/components/guest-prompt';
-import { IconTile } from '@/components/icon-tile';
-import { LevelBadge } from '@/components/level-badge';
+import { ListGroup, ListRow } from '@/components/list-row';
 import { ScreenHeader } from '@/components/screen-header';
-import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
-import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
 import { useUsername } from '@/hooks/use-username';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
@@ -48,6 +46,8 @@ function GuestProfileScreen() {
   );
 }
 
+// Sadelik: tek sütunda kimlik → seviye → başarımlar şeridi → iki satırlık liste. Ayrı çerçeveli kart yok;
+// gruplama boşlukla yapılır, yalnız liste tek bir ListGroup içinde durur.
 function MemberProfileScreen() {
   const theme = useTheme();
   const { session } = useAuth();
@@ -56,7 +56,16 @@ function MemberProfileScreen() {
   const email = session?.user.email;
 
   // Bozuk/bilinmeyen yol gelirse varsayılan görünüm kullanılır (çökme yok)
-  const { title: topicTitle, parents, category, hue, hasTopic } = describeTopic(roadmap?.topic_path);
+  const { title: topicTitle, category, hasTopic } = describeTopic(roadmap?.topic_path);
+
+  // "Şu anki haritan" artık ayrı kart değil, Haritalarım satırının alt yazısı
+  const mapsSubtitle = loading
+    ? 'Yükleniyor…'
+    : failed
+      ? undefined
+      : hasTopic && roadmap
+        ? `Şu an: ${topicTitle}`
+        : 'Henüz bir yol haritası seçmedin';
 
   return (
     <TabScreen>
@@ -81,7 +90,7 @@ function MemberProfileScreen() {
         }
       />
 
-      {/* Kimlik: kullanıcı adı + e-posta. Ad ve hesap işlemleri Ayarlar'da (burada tekrar edilmez). */}
+      {/* Kimlik: avatar + kullanıcı adı + küçük e-posta. Ad ve hesap işlemleri Ayarlar'da. */}
       <View style={styles.identity}>
         <Avatar
           email={email}
@@ -93,6 +102,7 @@ function MemberProfileScreen() {
           {username ? `@${username}` : 'Gezgin'}
         </ThemedText>
         <ThemedText
+          type="small"
           themeColor="textSecondary"
           numberOfLines={1}
           ellipsizeMode="middle"
@@ -102,70 +112,35 @@ function MemberProfileScreen() {
         </ThemedText>
       </View>
 
-      {/* Seviye: XP'den türetilir (bkz. constants/xp.ts) */}
-      <LevelCard />
+      {/* Seviye: XP'den türetilir (bkz. constants/xp.ts). Düz satır, çerçevesiz */}
+      <LevelRow />
 
-      <ThemedText type="eyebrow" themeColor="textSecondary">
-        Şu anki haritan
-      </ThemedText>
+      {/* Rozetler kendi hook'uyla yüklenir: ağ hatası olsa da diğer bölümler çalışmaya devam eder */}
+      <AchievementsStrip />
 
-      {loading ? (
-        <View
-          accessible
-          accessibilityLabel="Yükleniyor"
-          accessibilityState={{ busy: true }}
-          style={[styles.topicCard, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
-          <Skeleton width={48} height={48} radius={14} />
-          <View style={styles.topicTexts}>
-            <Skeleton width="60%" height={20} />
-            <Skeleton width="40%" height={14} />
-          </View>
-        </View>
-      ) : failed ? (
-        // Okunamadı ≠ haritan yok: yanlış "seçmedin" demek yerine hata + tekrar dene
+      {/* Okunamadı ≠ haritan yok: yanlış "seçmedin" demek yerine hata + tekrar dene */}
+      {failed && (
         <View style={styles.errorBox}>
           <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
           <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
         </View>
-      ) : hasTopic && roadmap ? (
-        <View
-          style={[styles.topicCard, { backgroundColor: theme.card, borderColor: theme[hue.line], borderBottomColor: theme[hue.edge] }]}>
-          <IconTile emoji={category.emoji} tone={category.hue} size={48} />
-          <View style={styles.topicTexts}>
-            <ThemedText type="cardTitle">{topicTitle}</ThemedText>
-            {parents !== '' && (
-              <ThemedText type="small" themeColor="textSecondary">
-                {parents}
-              </ThemedText>
-            )}
-            <LevelBadge levelId={roadmap.level} size="sm" />
-          </View>
-        </View>
-      ) : (
-        <View
-          style={[styles.topicCard, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
-          <IconTile emoji="🧭" tone="accent" size={48} />
-          <View style={styles.topicTexts}>
-            <ThemedText type="cardTitle">Henüz bir yol haritası seçmedin</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Yol Haritam sekmesinden bir harita seçebilirsin.
-            </ThemedText>
-          </View>
-        </View>
       )}
 
-      {/* Rozetler kendi hook'uyla yüklenir: ağ hatası olsa da yukarıdaki kartlar çalışmaya devam eder */}
-      <AchievementsSection />
-
-      {/* Kullanıcı adı, tema, haritaları yönetme, şifre ve çıkış: hepsi Ayarlar'da */}
-      <Link href="/settings" asChild>
-        <Button variant="secondary" icon="⚙️" label="Ayarlar" />
-      </Link>
+      <ListGroup>
+        <ListRow
+          icon="🗺"
+          title="Haritalarım"
+          subtitle={mapsSubtitle}
+          chevron
+          onPress={() => router.push('/settings/maps')}
+        />
+        <ListRow icon="⚙" title="Ayarlar" chevron onPress={() => router.push('/settings')} />
+      </ListGroup>
     </TabScreen>
   );
 }
 
-function LevelCard() {
+function LevelRow() {
   const theme = useTheme();
   const xp = useXp();
   const level = levelFor(xp.total);
@@ -173,19 +148,19 @@ function LevelCard() {
     <View
       accessible
       accessibilityLabel={`Seviye ${level.title}, ${xp.total} XP${level.next ? `, ${level.next.title} seviyesine ${level.next.remaining} XP kaldı` : ''}`}
-      style={[styles.topicCard, styles.levelCard, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge, borderBottomColor: theme.markerEdge }]}>
+      style={styles.levelBox}>
       <View style={styles.levelRow}>
-        <IconLabel emoji={level.emoji} type="cardTitle" themeColor="markerInk" iconSize={20}>
+        <IconLabel emoji={level.emoji} type="cardTitle" iconSize={20}>
           {level.title}
         </IconLabel>
         <IconLabel emoji="⭐" type="smallBold" themeColor="markerInk">
           {`${xp.total} XP`}
         </IconLabel>
       </View>
-      <View style={[styles.levelTrack, { backgroundColor: theme.card }]}>
+      <View style={[styles.levelTrack, { backgroundColor: theme.backgroundSelected }]}>
         <View style={[styles.levelFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
       </View>
-      <ThemedText type="small" themeColor="markerInk">
+      <ThemedText type="small" themeColor="textSecondary">
         {level.next
           ? `${level.next.title} seviyesine ${level.next.remaining} XP kaldı. Konu bitir (+20), quiz çöz, günün görevini yap (+30).`
           : 'En yüksek seviyedesin. Efsane!'}
@@ -203,22 +178,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  levelCard: { flexDirection: 'column', alignItems: 'stretch', gap: Spacing.two },
+  levelBox: { gap: Spacing.two },
   levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   levelTrack: { height: 10, borderRadius: Radius.pill, overflow: 'hidden' },
   levelFill: { height: '100%', borderRadius: Radius.pill },
-  identity: { alignItems: 'center', gap: Spacing.three },
+  identity: { alignItems: 'center', gap: Spacing.two },
   email: { alignSelf: 'stretch', textAlign: 'center' },
-  topicCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-    borderWidth: Border.thick,
-    borderBottomWidth: Border.thick + Edge,
-  },
-  topicTexts: { flex: 1, minWidth: 0, gap: Spacing.one },
   center: { textAlign: 'center' },
   errorBox: { gap: Spacing.three },
 });
