@@ -12,6 +12,7 @@ import { useTheme } from '@/hooks/use-theme';
 // Liste satırı: tekrar eden öğeler (ayarlar, haritalarım, kaynaklar) kart yığını yerine bu satırla dizilir.
 // `icon` emoji adıdır (icon.tsx). Düz simge Glyph ile; `iconTile` verilirse renkli IconTile (40) ile çizilir.
 type ListRowProps = {
+  left?: ReactNode; // solda özel öğe (ör. lig sırası/madalya); simge yerine geçer
   icon?: string;
   iconTile?: Hue | 'neutral';
   title: string;
@@ -24,6 +25,7 @@ type ListRowProps = {
 };
 
 export function ListRow({
+  left,
   icon,
   iconTile,
   title,
@@ -39,6 +41,7 @@ export function ListRow({
 
   const body = (pressed: boolean) => (
     <View style={[styles.row, pressed && { backgroundColor: theme.backgroundElement }]}>
+      {left}
       {icon &&
         (iconTile ? (
           <IconTile emoji={icon} tone={iconTile} size={40} />

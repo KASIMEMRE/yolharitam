@@ -55,13 +55,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Kabul: envanterdeki Hesap ve Ayarlar maddelerinin hepsi alt sayfalarda; hesap silme akışı aynen çalışıyor;
   geri gezinme web ve native'de doğru.
 
-### SM-07 · Topluluk ve Gelişmeler sadeleştirme
-- Topluluk: `Segmented` (Lig · Arkadaşlar · Vitrin) → her sekmede tek liste. Lig ve arkadaş satırları `ListRow`;
-  onay kutuları satırın içinde değil alt sayfada/diyalogda. Vitrin kartlarında eylemler (Bildir, Engelle, Sil)
-  "…" menüsüne toplanır; kartta yalnız başlık, açıklama, sahibi ve bağlantılar.
-- Gelişmeler: haber kartları düz liste (başlık, kaynak · zaman, kısa özet); filtre çipleri tek satır yatay kaydırma.
-- Kabul: envanterdeki Topluluk ve Gelişmeler maddelerinin hepsi çalışıyor; kart içinde kart yok.
-
 ### SM-08 · Son kabul (ürün sorumlusu + testçi + tasarımcı)
 - Plan bölüm 5'teki **özellik envanterinin her maddesi** tek tek denenir; tablo halinde PR'a eklenir (✅/❌ + ekran görüntüsü).
 - Misafir akışı uçtan uca: aç → gez → harita seç → kayıt → onay → giriş → seviye adımı → harita hazır.
@@ -88,6 +81,14 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### SM-07 · Topluluk ve Gelişmeler sadeleştirme
+- Topluluk: `Segmented` (Lig · Arkadaşlar · Vitrin) → her sekmede tek liste. Lig ve arkadaş satırları `ListRow`;
+  onay kutuları satırın içinde değil alt sayfada/diyalogda. Vitrin kartlarında eylemler (Bildir, Engelle, Sil)
+  "…" menüsüne toplanır; kartta yalnız başlık, açıklama, sahibi ve bağlantılar.
+- Gelişmeler: haber kartları düz liste (başlık, kaynak · zaman, kısa özet); filtre çipleri tek satır yatay kaydırma.
+- Kabul: envanterdeki Topluluk ve Gelişmeler maddelerinin hepsi çalışıyor; kart içinde kart yok.
+- ✅ Özet: Topluluk üç sekmede tek düz liste (Lig/Arkadaşlar `ListGroup`+`ListRow`, Vitrin düz `Surface`); satır eylemleri "…" ile alttan sayfa (`RowMenu`, onay sayfada); çipler tek satır (`FilterChipRow`); Gelişmeler düz haber listesi. Kullanıcı adı kapısı kutusuz. Yeni paket yok.
 
 ### SM-01 · Ortak sade bileşenler ve kurallar
 - Yeni bileşenler (`src/components/`):

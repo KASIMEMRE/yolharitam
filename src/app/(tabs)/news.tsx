@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { IconTile } from '@/components/icon-tile';
-import { Glyph } from '@/components/icon';
+import { FilterChipRow } from '@/components/filter-chips';
+import { ListGroup } from '@/components/list-row';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { NewsCard } from '@/components/news-card';
@@ -11,15 +12,13 @@ import { Skeleton } from '@/components/skeleton';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { getRoadmap } from '@/constants/dev-roadmaps';
-import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useNews } from '@/hooks/use-news';
-import { useTheme } from '@/hooks/use-theme';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 // Gelişmeler: kullanıcının haritalarına bağlı haber akışı (başlık + kısa özet + kaynağa link).
 export default function NewsScreen() {
-  const theme = useTheme();
   const { roadmaps, status: mapsStatus } = useLatestRoadmap();
   // null = "Tümü"; yoksa seçili haritanın id'si
   const [selected, setSelected] = useState<string | null>(null);
@@ -52,41 +51,29 @@ export default function NewsScreen() {
         <Skeleton height={MinTouch} radius={Radius.pill} />
       ) : (
         maps.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            accessibilityRole="tablist"
-            style={styles.chipScroll}
-            contentContainerStyle={styles.chips}>
-            <FilterChip label="Tümü" a11yLabel="Tüm haberler" selected={active === null} onPress={() => setSelected(null)} />
-            {maps.map((m) => (
-              <FilterChip
-                key={m.id}
-                label={m.title}
-                icon={m.emoji}
-                a11yLabel={m.title}
-                selected={active === m.id}
-                onPress={() => setSelected(m.id)}
-              />
-            ))}
-          </ScrollView>
+          <FilterChipRow
+            label="Harita süzgeci"
+            options={[
+              { id: ALL, label: 'Tümü', accessibilityLabel: 'Tüm haberler' },
+              ...maps.map((m) => ({ id: m.id, label: m.title, icon: m.emoji })),
+            ]}
+            value={active ?? ALL}
+            onChange={(id) => setSelected(id === ALL ? null : id)}
+          />
         )
       )}
 
       {newsLoading && items.length === 0 && (
-        <View style={styles.list}>
+        <ListGroup>
           {[0, 1, 2].map((i) => (
-            // Gerçek karta benzer iskelet: aynı kenarlık, alt kenar ve özet satırları
-            <View
-              key={i}
-              style={[styles.skeletonCard, { backgroundColor: theme.card, borderColor: theme.border, borderBottomColor: theme.borderEdge }]}>
+            // Gerçek satıra benzer iskelet: meta, başlık ve özet satırları
+            <View key={i} style={styles.skeletonRow}>
               <Skeleton width="40%" height={12} />
               <Skeleton height={18} />
-              <Skeleton height={14} />
               <Skeleton width="70%" height={14} />
             </View>
           ))}
-        </View>
+        </ListGroup>
       )}
 
       {!newsLoading && status === 'error' && items.length === 0 && (
@@ -118,87 +105,32 @@ export default function NewsScreen() {
               <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
             </>
           )}
-          {items.map((item) => (
-            <NewsCard
-              key={item.id}
-              item={item}
-              // Belirli bir harita seçiliyken etiket zaten belli: tekrarlamayız
-              tags={active ? [] : maps.filter((m) => item.topic_paths.includes(m.id))}
-            />
-          ))}
-          <View style={styles.notes}>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-              Başlık ve kısa özet kaynaklardan alınır; haberin tamamı kaynağın sitesindedir.
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-              Başlık ve özetler yapay zekâyla Türkçeye çevrilir; ayrıntı ve orijinal metin kaynağın sitesindedir.
-            </ThemedText>
-          </View>
+          <ListGroup>
+            {items.map((item) => (
+              <NewsCard
+                key={item.id}
+                item={item}
+                // Belirli bir harita seçiliyken etiket zaten belli: tekrarlamayız
+                tags={active ? [] : maps.filter((m) => item.topic_paths.includes(m.id))}
+              />
+            ))}
+          </ListGroup>
+          {/* Tek satır not: başlık/özet çevirisi yapay zekâ işi; tam metin kaynakta */}
+          <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
+            Çeviri yapay zekâyla yapılır.
+          </ThemedText>
         </View>
       )}
     </TabScreen>
   );
 }
 
-function FilterChip({
-  label,
-  icon,
-  a11yLabel,
-  selected,
-  onPress,
-}: {
-  label: string;
-  icon?: string; // simge (emoji adıyla)
-  a11yLabel: string; // ekran okuyucu için
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="tab"
-      accessibilityLabel={a11yLabel}
-      accessibilityState={{ selected }}
-      style={({ pressed }) => [
-        styles.chip,
-        {
-          backgroundColor: selected ? theme.accentSoft : theme.card,
-          borderColor: selected ? theme.accent : theme.border,
-          opacity: pressed ? 0.85 : 1,
-        },
-      ]}>
-      {icon && <Glyph emoji={icon} size={14} color={selected ? theme.accentInk : theme.textSecondary} strokeWidth={2.25} />}
-      <ThemedText type="chip" themeColor={selected ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
-        {label}
-      </ThemedText>
-    </Pressable>
-  );
-}
+// "Tümü" çipinin kimliği (harita kimlikleriyle çakışmaz)
+const ALL = '__all__';
 
 const styles = StyleSheet.create({
-  // Yatay kaydırma: çok haritası olan kullanıcıda çipler alt satırlara yığılmaz
-  chipScroll: { flexGrow: 0 },
-  chips: { gap: Spacing.two, paddingRight: Spacing.three },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: MinTouch,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-  },
   list: { gap: Spacing.three },
-  skeletonCard: {
-    gap: Spacing.two,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-    borderWidth: Border.thick,
-    borderBottomWidth: Edge,
-  },
+  skeletonRow: { gap: Spacing.two, padding: Spacing.three },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   center: { textAlign: 'center' },
-  notes: { gap: Spacing.one, paddingTop: Spacing.two },
 });

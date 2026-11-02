@@ -27,6 +27,7 @@ import {
   Diamond,
   Dna,
   Earth,
+  Ellipsis,
   Eraser,
   FileText,
   Flag,
@@ -235,6 +236,7 @@ const GLYPHS: Record<string, LucideIcon> = {
   '➕': Plus,
   '＋': Plus,
   '›': ChevronRight, // liste satırı oku (ListRow)
+  '…': Ellipsis, // satırın "daha fazla eylem" düğmesi (RowMenu)
 };
 
 // Emojinin sonundaki "renkli göster" işaretini (U+FE0F) atar: "🗺️" ile "🗺" aynı simgeye gitsin
