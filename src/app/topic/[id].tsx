@@ -1,18 +1,20 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { openBrowserAsync } from 'expo-web-browser';
-import { useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useState } from 'react';
+import { Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Glyph, IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { HeaderBackButton } from '@/components/header-back-button';
-import { StatusChip } from '@/components/level-badge';
+import { ListGroup, ListRow } from '@/components/list-row';
 import { type Milestone, MilestoneCelebration } from '@/components/milestone-celebration';
+import { SectionHeader } from '@/components/section-header';
+import { Segmented, type SegmentedOption } from '@/components/segmented';
 import { Skeleton } from '@/components/skeleton';
 import { Surface } from '@/components/surface';
-import { type AssistBlockId, TopicAssist } from '@/components/topic-assist';
+import { TopicAssist } from '@/components/topic-assist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { allTopics, findTopic, getRoadmap } from '@/constants/dev-roadmaps';
@@ -20,7 +22,7 @@ import { computeProgress, personalizationFor, planTopics, type TopicStatus } fro
 import { toLevelId, type GoalId } from '@/constants/plan';
 import { isAnswerId } from '@/constants/roadmap-questions';
 import { XP } from '@/constants/xp';
-import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, RESOURCE_KIND_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
@@ -30,6 +32,8 @@ import { ERROR_TEXT } from '@/lib/supabase-errors';
 import { awardXp } from '@/lib/xp';
 
 const LEVEL_LABEL = { 1: 'Başlangıç konusu', 2: 'Orta seviye konu', 3: 'İleri seviye konu' } as const;
+// Meta satırı için kısa seviye adı
+const LEVEL_SHORT = { 1: 'Başlangıç', 2: 'Orta', 3: 'İleri' } as const;
 
 // Durum seçenekleri: seçili olana tekrar dokunmak durumu sıfırlar ("başlanmadı").
 // Açıklama, 3'lü seçicinin altında yalnız seçili olan için tek satır olarak görünür.
@@ -37,13 +41,6 @@ const STATUS_OPTIONS: { id: TopicStatus; description: string }[] = [
   { id: 'in_progress', description: 'Şu an bu konuyu çalışıyorum.' },
   { id: 'done', description: 'Bu konuyu öğrendim.' },
   { id: 'skipped', description: 'Zaten biliyorum ya da gerek yok; planımdan çıkar.' },
-];
-
-// Yapay zekâ kısayolları: dokununca ilgili bloğa kaydırır
-const ASSIST_SHORTCUTS: { id: AssistBlockId; label: string; icon: string }[] = [
-  { id: 'explain', label: 'Alt konular', icon: '🧩' },
-  { id: 'quiz', label: 'Quiz çöz', icon: '📝' },
-  { id: 'ask', label: 'Soru sor', icon: '💬' },
 ];
 
 function first(param: string | string[] | undefined): string | undefined {
@@ -75,18 +72,6 @@ export default function TopicScreen() {
   // Kaynak bağlantısı açılamadıysa true; opening çift dokunuşta tarayıcının iki kez açılmasını önler
   const [linkError, setLinkError] = useState(false);
   const [opening, setOpening] = useState(false);
-
-  // Kısayolla kaydırma: blokların y konumu onLayout ile toplanır (TopicAssist içinde), ScrollView ref ile kaydırılır
-  const scrollRef = useRef<{ scrollTo: (options: { y: number; animated?: boolean }) => void } | null>(null);
-  const assistOffset = useRef({ inner: 0, assist: 0 });
-  const blockY = useRef<Partial<Record<AssistBlockId, number>>>({});
-  function scrollToBlock(id: AssistBlockId) {
-    const y = blockY.current[id];
-    if (y === undefined) return;
-    // Blok konumu = içerik kabının dolgusu + yapay zekâ alanının konumu + bloğun alan içindeki konumu
-    const total = assistOffset.current.inner + assistOffset.current.assist + y;
-    scrollRef.current?.scrollTo({ y: Math.max(0, total - Spacing.two), animated: true });
-  }
 
   const theme = useTheme();
   const { width } = useWindowDimensions();
@@ -197,87 +182,128 @@ export default function TopicScreen() {
     router.setParams({ id: next.id });
   }
 
+  // Durum seçici seçenekleri: açıklama ekran okuyucuya gider (görünen tek satır aşağıda)
+  const statusOptions: SegmentedOption<TopicStatus>[] = STATUS_OPTIONS.map((o) => ({
+    id: o.id,
+    label: STATUS_STYLE[o.id].label,
+    // Simge yok: "Çalışıyorum" 390pt genişlikte simgeyle sığmıyor, kesiliyordu
+    accessibilityLabel: `${STATUS_STYLE[o.id].label}. ${o.description}`,
+  }));
+  const progressFailed = progress.status === 'schema' || progress.status === 'network' || progress.status === 'error';
+
   return (
     <ThemedView style={styles.container}>
       {screenOptions}
       <SafeAreaView style={styles.flex} edges={['bottom']}>
-        <ScrollView ref={(r) => { scrollRef.current = r; }} style={styles.flex} contentContainerStyle={[styles.content, { padding: gutter }]}>
-          <View style={styles.inner} onLayout={(e) => (assistOffset.current.inner = e.nativeEvent.layout.y)}>
-            {/* Başlık bloğu: harita rengiyle */}
-            <View style={[styles.hero, { backgroundColor: theme[hue.soft], borderColor: theme[hue.line] }]}>
+        <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { padding: gutter }]}>
+          <View style={styles.inner}>
+            {/* Başlık alanı: çerçevesiz; harita kimliği yalnız üst satırın rengiyle (hue) */}
+            <View style={styles.head}>
               <ThemedText type="eyebrow" themeColor={hue.ink}>
                 {map.title} · {section.title}
               </ThemedText>
               <ThemedText type="heading" accessibilityRole="header">
                 {topic.title}
               </ThemedText>
-              <View style={styles.chips}>
-                <StatusChip
-                  tone={topic.marker === 'core' ? 'accent' : 'neutral'}
-                  label={MARKER_STYLE[topic.marker].label}
-                />
-                <StatusChip tone="neutral" emoji="📶" label={LEVEL_LABEL[topic.level]} />
-                <StatusChip tone="neutral" emoji="⏱" label={`yaklaşık ${topic.hours} saat`} />
-              </View>
+              {/* Tek satır meta: rozet kutuları yerine nokta ayrımlı metin (işaret açıklaması ekran okuyucuda) */}
+              <ThemedText
+                type="small"
+                themeColor="textSecondary"
+                accessibilityLabel={`${MARKER_STYLE[topic.marker].label}. ${MARKER_STYLE[topic.marker].description} ${LEVEL_LABEL[topic.level]}, yaklaşık ${topic.hours} saat`}>
+                {MARKER_STYLE[topic.marker].label} · {LEVEL_SHORT[topic.level]} · ~{topic.hours} saat
+              </ThemedText>
             </View>
 
             <ThemedText>{topic.summary}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {MARKER_STYLE[topic.marker].description}
-            </ThemedText>
 
-            {/* Kişisel işaretler (yapay zekâ ya da kurallar) */}
+            {/* Kişisel işaret: ayrı kutu yok, tek satır (+ varsa bölüm notu küçük metin) */}
             {(focusIndex >= 0 || skipHint || note) && (
-              <View style={[styles.personal, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge }]}>
+              <View style={styles.personal}>
                 {focusIndex >= 0 && (
                   <IconLabel emoji="✨" type="smallBold" themeColor="markerInk">
-                    {`Senin için öncelikli konulardan biri (${focusIndex + 1}. sırada)`}
+                    {`Senin için öncelikli (${focusIndex + 1}. sırada)`}
                   </IconLabel>
                 )}
                 {skipHint && (
-                  <ThemedText type="smallBold" themeColor="markerInk">
-                    Seviyene göre bu konuyu biliyor olabilirsin. Biliyorsan “Atla” de.
-                  </ThemedText>
+                  <IconLabel emoji={STATUS_STYLE.skipped.emoji} type="smallBold" themeColor="markerInk">
+                    Biliyorsan atlayabilirsin
+                  </IconLabel>
                 )}
                 {note && (
-                  <ThemedText type="small" themeColor="markerInk">
+                  <ThemedText type="small" themeColor="textSecondary">
                     {note}
                   </ThemedText>
                 )}
               </View>
             )}
 
-            {/* Kaynaklar: dokununca adı + konu başlığı tarayıcıda aranır */}
+            {/* Durum: bu ekranın birincil öğesi (yalnız takip edilen haritada). Seçili duruma tekrar
+                dokunmak durumu kaldırır; choose() bunu yapar, Segmented yalnız ipucunu verir (allowDeselect). */}
+            {!readOnly && (
+              <View style={styles.block}>
+                {progress.saveError && <Banner tone="warning">{progress.saveError}</Banner>}
+                {progressFailed ? (
+                  // Okunamadı: iskeleti sonsuza dek göstermek yerine hata ve "Tekrar dene"
+                  <View style={styles.block}>
+                    <Banner tone="warning">
+                      {progress.status === 'schema'
+                        ? ERROR_TEXT.loadSchema
+                        : progress.status === 'network'
+                          ? ERROR_TEXT.network
+                          : ERROR_TEXT.other}
+                    </Banner>
+                    <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={progress.retry} />
+                  </View>
+                ) : !ready ? (
+                  <Skeleton width="100%" height={52} radius={Radius.lg} />
+                ) : (
+                  <>
+                    <Segmented
+                      label="Konu durumu"
+                      options={statusOptions}
+                      value={current ?? null}
+                      allowDeselect
+                      onChange={choose}
+                    />
+                    {/* Seçili durumun kısa açıklaması; seçim yoksa nasıl işaretleneceği */}
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {STATUS_OPTIONS.find((o) => o.id === current)?.description ?? 'Bu konuda neredesin? Birini seç.'}
+                    </ThemedText>
+                  </>
+                )}
+              </View>
+            )}
+
+            {/* Sonraki konu durumun hemen altında: işaretledikten sonra ilerlemek için kaydırmak gerekmesin.
+                Konu bitince birincil (dolu) olur; aksi halde ikincil. */}
+            {next && !readOnly && (
+              <Button
+                variant={current === 'done' ? 'primary' : 'secondary'}
+                icon="➡️"
+                label={`Sonraki konu: ${next.title}`}
+                accessibilityHint={current === 'done' ? 'Konu bitti, sonraki konuya geç' : undefined}
+                onPress={openNext}
+              />
+            )}
+
+            {/* Kaynaklar: kart yığını değil tek liste; dokununca adı + konu başlığı tarayıcıda aranır */}
             {topic.resources.length > 0 && (
               <View style={styles.block}>
-                <ThemedText type="cardTitle" accessibilityRole="header">
-                  Önerilen kaynaklar
-                </ThemedText>
-                <ThemedText type="small" themeColor="textSecondary">
-                  Dokununca kaynak tarayıcıda aranır.
-                </ThemedText>
-                {topic.resources.map((r) => (
-                  <Pressable
-                    key={r.title}
-                    onPress={() => openResource(r.title)}
-                    accessibilityRole="link"
-                    accessibilityLabel={`${RESOURCE_KIND_STYLE[r.kind].label}: ${r.title}`}
-                    accessibilityHint="Tarayıcıda arama açar"
-                    style={({ pressed }) => [
-                      styles.resource,
-                      { borderColor: theme.border, backgroundColor: pressed ? theme.backgroundSelected : theme.card },
-                    ]}>
-                    <Glyph emoji={RESOURCE_KIND_STYLE[r.kind].emoji} size={20} color={theme.accentInk} />
-                    <View style={styles.flexText}>
-                      <ThemedText type="smallBold">{r.title}</ThemedText>
-                      <ThemedText type="small" themeColor="textSecondary">
-                        {RESOURCE_KIND_STYLE[r.kind].label}
-                      </ThemedText>
-                    </View>
-                    {/* "Dışarı aç" simgesi: bu satır uygulamadan çıkar */}
-                    <Glyph emoji="↗" size={18} color={theme.textSecondary} />
-                  </Pressable>
-                ))}
+                <SectionHeader title="Kaynaklar" subtitle="Dokununca kaynak tarayıcıda aranır." />
+                <ListGroup>
+                  {topic.resources.map((r) => (
+                    <ListRow
+                      key={r.title}
+                      icon={RESOURCE_KIND_STYLE[r.kind].emoji}
+                      title={r.title}
+                      subtitle={RESOURCE_KIND_STYLE[r.kind].label}
+                      // "Dışarı aç" simgesi: bu satır uygulamadan çıkar
+                      right={<Glyph emoji="↗" size={18} color={theme.textSecondary} />}
+                      accessibilityLabel={`${RESOURCE_KIND_STYLE[r.kind].label}: ${r.title}. Tarayıcıda arama açar`}
+                      onPress={() => openResource(r.title)}
+                    />
+                  ))}
+                </ListGroup>
                 {/* liveRegion: hata sonradan çıkınca ekran okuyucu da duyurur */}
                 <View accessibilityLiveRegion="polite">
                   {linkError && <Banner tone="warning">Bağlantı açılamadı. Birazdan tekrar dene.</Banner>}
@@ -313,111 +339,20 @@ export default function TopicScreen() {
                 </Surface>
               )
             )}
-
-            {/* Durum (yalnız takip edilen haritada) */}
-            {!readOnly && (
-            <View style={styles.block}>
-              <ThemedText type="cardTitle" accessibilityRole="header">
-                Durumun
-              </ThemedText>
-              {progress.saveError && <Banner tone="warning">{progress.saveError}</Banner>}
-              {progress.status === 'schema' || progress.status === 'network' || progress.status === 'error' ? (
-                // Okunamadı: iskeleti sonsuza dek göstermek yerine hata ve "Tekrar dene"
-                <View style={styles.block}>
-                  <Banner tone="warning">
-                    {progress.status === 'schema'
-                      ? ERROR_TEXT.loadSchema
-                      : progress.status === 'network'
-                        ? ERROR_TEXT.network
-                        : ERROR_TEXT.other}
-                  </Banner>
-                  <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={progress.retry} />
-                </View>
-              ) : !ready ? (
-                <Skeleton width="100%" height={52} radius={Radius.lg} />
-              ) : (
-                <View style={styles.block}>
-                  {/* Kompakt 3'lü seçici: tek satır, her parça en az 44pt yüksekliğinde */}
-                  <View
-                    accessibilityRole="radiogroup"
-                    accessibilityLabel="Konu durumu"
-                    style={[styles.segment, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
-                    {STATUS_OPTIONS.map((o) => {
-                      const selected = current === o.id;
-                      return (
-                        <Pressable
-                          key={o.id}
-                          onPress={() => choose(o.id)}
-                          accessibilityRole="radio"
-                          accessibilityState={{ selected }}
-                          accessibilityLabel={`${STATUS_STYLE[o.id].label}. ${o.description}`}
-                          accessibilityHint={selected ? 'Seçimi kaldırmak için tekrar dokun' : undefined}
-                          style={[
-                            styles.segmentItem,
-                            selected && { backgroundColor: theme.accentSoft, borderColor: theme.accent },
-                          ]}>
-                          <IconLabel emoji={STATUS_STYLE[o.id].emoji} type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
-                            {STATUS_STYLE[o.id].label}
-                          </IconLabel>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                  {/* Seçili durumun kısa açıklaması; seçim yoksa nasıl işaretleneceği */}
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {STATUS_OPTIONS.find((o) => o.id === current)?.description ?? 'Bu konuda neredesin? Birini seç.'}
-                  </ThemedText>
-                </View>
-              )}
-            </View>
+            {next && readOnly && (
+              <Button variant="secondary" icon="➡️" label={`Sonraki konu: ${next.title}`} onPress={openNext} />
             )}
 
-            {/* Yapay zekâ kısayolları: araçlar sayfanın altında kaldığı için durumun yanında hızlı erişim */}
+            {/* Yapay zekâ: tek alan, üç sekme. Durum + kaynaklardan hemen sonra gelir (kaydırmadan bulunur).
+                key: "Sonraki konu"ya geçince önceki konunun cevapları kalmasın */}
             {!readOnly && (
-            <View style={styles.shortcuts} accessibilityRole="toolbar" accessibilityLabel="Yapay zekâ araçları">
-              {ASSIST_SHORTCUTS.map((a) => (
-                <Pressable
-                  key={a.id}
-                  onPress={() => scrollToBlock(a.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={a.label}
-                  accessibilityHint="Sayfada ilgili bölüme kaydırır"
-                  style={({ pressed }) => [
-                    styles.shortcut,
-                    { borderColor: theme.border, backgroundColor: pressed ? theme.backgroundSelected : theme.card },
-                  ]}>
-                  <IconLabel emoji={a.icon} type="smallBold" themeColor="accentInk" iconSize={16}>
-                    {a.label}
-                  </IconLabel>
-                </Pressable>
-              ))}
-            </View>
-            )}
-
-            {/* Sonraki konu durumun hemen altında: işaretledikten sonra ilerlemek için sayfayı kaydırmak gerekmesin.
-                Konu bitince birincil (dolu) olur; aksi halde ikincil. Durum yüklenmese de görünür. */}
-            {next && (
-              <Button
-                variant={current === 'done' ? 'primary' : 'secondary'}
-                icon="➡️"
-                label={`Sonraki konu: ${next.title}`}
-                accessibilityHint={current === 'done' ? 'Konu bitti, sonraki konuya geç' : undefined}
-                onPress={openNext}
+              <TopicAssist
+                key={topic.id}
+                map={map}
+                section={section}
+                topic={topic}
+                level={roadmap ? toLevelId(roadmap.level) : undefined}
               />
-            )}
-
-            {/* Yapay zekâ araçları. key: "Sonraki konu"ya geçince önceki konunun cevapları kalmasın */}
-            {!readOnly && (
-              <View onLayout={(e) => (assistOffset.current.assist = e.nativeEvent.layout.y)}>
-                <TopicAssist
-                  key={topic.id}
-                  map={map}
-                  section={section}
-                  topic={topic}
-                  level={roadmap ? toLevelId(roadmap.level) : undefined}
-                  onBlockLayout={(id, y) => (blockY.current[id] = y)}
-                />
-              </View>
             )}
 
             {/* Proje konularında: bitirdiğin projeyi Topluluk vitrinine ekleme bağlantısı (vitrin giriş ister) */}
@@ -444,38 +379,8 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { alignItems: 'center' },
   inner: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
-  hero: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  segment: { flexDirection: 'row', gap: 2, padding: 2, borderRadius: Radius.pill, borderWidth: Border.thin },
-  segmentItem: {
-    flex: 1,
-    minHeight: MinTouch,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.one,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-    borderColor: 'transparent',
-  },
-  shortcuts: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
-  shortcut: {
-    minHeight: MinTouch,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-  },
-  personal: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thick },
+  head: { gap: Spacing.one },
+  personal: { gap: Spacing.half },
   block: { gap: Spacing.two },
-  resource: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderRadius: Radius.md,
-    borderWidth: Border.thick,
-    minHeight: MinTouch,
-  },
-  flexText: { flex: 1, minWidth: 0, gap: Spacing.half },
   problem: { flex: 1, justifyContent: 'center', gap: Spacing.three },
 });
