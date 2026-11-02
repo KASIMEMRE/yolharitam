@@ -15,6 +15,7 @@ import {
   Camera,
   ChartColumn,
   Check,
+  ChevronRight,
   CircleCheck,
   Clapperboard,
   ClipboardList,
@@ -233,6 +234,7 @@ const GLYPHS: Record<string, LucideIcon> = {
   '⚓': Anchor,
   '➕': Plus,
   '＋': Plus,
+  '›': ChevronRight, // liste satırı oku (ListRow)
 };
 
 // Emojinin sonundaki "renkli göster" işaretini (U+FE0F) atar: "🗺️" ile "🗺" aynı simgeye gitsin

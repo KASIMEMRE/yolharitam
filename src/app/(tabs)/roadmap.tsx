@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 
 import { Glyph , IconLabel } from '@/components/icon';
+import { Segmented } from '@/components/segmented';
 import { MapPin } from '@/components/map-pin';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
@@ -695,35 +696,19 @@ function Sections({
   );
 }
 
-// İki seçenekli anahtar (segmented control)
+// Harita / Liste görünüm anahtarı: ortak Segmented bileşeni (içeriği kadar geniş)
 function ViewSwitch({ value, onChange }: { value: 'tree' | 'list'; onChange: (v: 'tree' | 'list') => void }) {
-  const theme = useTheme();
-  const options = [
-    { id: 'tree' as const, label: 'Harita', icon: '🗺️' },
-    { id: 'list' as const, label: 'Liste', icon: '☰' },
-  ];
   return (
-    <View
-      accessibilityRole="radiogroup"
-      accessibilityLabel="Görünüm"
-      style={[styles.switch, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
-      {options.map((o) => {
-        const selected = value === o.id;
-        return (
-          <Pressable
-            key={o.id}
-            onPress={() => onChange(o.id)}
-            accessibilityRole="radio"
-            accessibilityState={{ selected }}
-            accessibilityLabel={o.id === 'tree' ? 'Harita görünümü' : 'Liste görünümü'}
-            style={[styles.switchItem, selected && { backgroundColor: theme.card, borderColor: theme.accent }]}>
-            <IconLabel emoji={o.icon} type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
-              {o.label}
-            </IconLabel>
-          </Pressable>
-        );
-      })}
-    </View>
+    <Segmented
+      fill={false}
+      label="Görünüm"
+      value={value}
+      onChange={onChange}
+      options={[
+        { id: 'tree', label: 'Harita', icon: '🗺️', accessibilityLabel: 'Harita görünümü' },
+        { id: 'list', label: 'Liste', icon: '☰', accessibilityLabel: 'Liste görünümü' },
+      ]}
+    />
   );
 }
 
@@ -995,15 +980,6 @@ const styles = StyleSheet.create({
   sectionsHead: { gap: Spacing.two, marginBottom: Spacing.one },
   headRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
   flex1: { flex: 1 },
-  switch: { flexDirection: 'row', borderRadius: Radius.pill, borderWidth: Border.thin, padding: 2 },
-  switchItem: {
-    minHeight: MinTouch,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-    borderColor: 'transparent',
-  },
   sectionRow: { flexDirection: 'row', gap: Spacing.two },
   rail: { width: 32, alignItems: 'center' },
   node: {
