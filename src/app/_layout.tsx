@@ -99,7 +99,14 @@ function RootStack() {
           }}
         />
         {/* Topluluk › Vitrin için proje paylaşma formu */}
-        <Stack.Screen name="showcase-new" options={{ title: 'Projeni paylaş' }} />
+        <Stack.Screen
+          name="showcase-new"
+          options={{
+            title: 'Projeni paylaş',
+            // Web'de varsayılan geri oku küçük (30 px); doğrudan açılışta hiç görünmeyebiliyor: 44 pt'lik özel düğme
+            headerLeft: Platform.OS === 'web' ? webHeaderLeft('/community') : undefined,
+          }}
+        />
       </Stack.Protected>
     </Stack>
   );

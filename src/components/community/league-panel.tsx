@@ -66,8 +66,8 @@ export function LeaguePanel() {
         )
       )}
 
-      {/* Tek satır: hafta bitimi + puanın ne olduğu */}
-      <IconLabel emoji="⏳" type="small" themeColor="textSecondary" numberOfLines={1}>
+      {/* Hafta bitimi + puanın ne olduğu. Dar ekranda (320 px) kırpılmasın diye gerekirse alt satıra iner. */}
+      <IconLabel emoji="⏳" type="small" themeColor="textSecondary">
         {`${weekEndText()} · Puan: bu haftaki XP`}
       </IconLabel>
 

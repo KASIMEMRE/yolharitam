@@ -26,7 +26,7 @@ export function HeaderBackButton({ onPress, label }: HeaderBackButtonProps) {
 
 // Web'de üst çubuğa konacak geri düğmesi. Geçmiş yoksa (sayfa yenilendi) `fallback` adresine gider.
 // Native'de kullanılmaz: sistemin geri düğmesi ve kaydırma hareketi zaten doğru çalışır.
-export function webHeaderLeft(fallback: '/profile' | '/settings') {
+export function webHeaderLeft(fallback: '/profile' | '/settings' | '/community') {
   const goBack = () => {
     if (router.canGoBack()) router.back();
     else router.replace(fallback);

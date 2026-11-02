@@ -54,6 +54,7 @@ export function TabButton({
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const narrow = width < 600;
+  const tiny = width < 360;
 
   return (
     <Pressable
@@ -79,7 +80,7 @@ export function TabButton({
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.8}
-        style={narrow && styles.labelNarrow}>
+        style={narrow && [styles.labelNarrow, tiny && styles.labelTiny]}>
         {children}
       </ThemedText>
     </Pressable>
@@ -128,7 +129,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
   },
-  innerNarrow: { paddingHorizontal: Spacing.two },
+  innerNarrow: { paddingHorizontal: Spacing.one, gap: Spacing.half },
   brand: { marginRight: 'auto' },
   tab: {
     minHeight: 48,
@@ -141,4 +142,6 @@ const styles = StyleSheet.create({
   },
   tabNarrow: { flex: 1, minWidth: 0, flexDirection: 'column', justifyContent: 'center', gap: 0, paddingHorizontal: 2 },
   labelNarrow: { fontSize: 13, lineHeight: 16, textAlign: 'center', maxWidth: '100%' },
+  // 320 px: dört sekme etiketi ("Yol Haritam", "Gelişmeler") kırpılmadan sığsın
+  labelTiny: { fontSize: 12, lineHeight: 15 },
 });

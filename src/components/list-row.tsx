@@ -17,6 +17,7 @@ type ListRowProps = {
   iconTile?: Hue | 'neutral';
   title: string;
   subtitle?: string;
+  subtitleLines?: number; // uzun, boşluksuz alt yazı (e-posta) için: orta kısaltma ile tek satır
   right?: ReactNode; // sağda rozet / değer / düğme
   chevron?: boolean; // sağda ">" oku
   onPress?: () => void;
@@ -30,6 +31,7 @@ export function ListRow({
   iconTile,
   title,
   subtitle,
+  subtitleLines,
   right,
   chevron = false,
   onPress,
@@ -53,7 +55,7 @@ export function ListRow({
           {title}
         </ThemedText>
         {subtitle ? (
-          <ThemedText type="small" themeColor="textSecondary">
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={subtitleLines} ellipsizeMode="middle">
             {subtitle}
           </ThemedText>
         ) : null}
