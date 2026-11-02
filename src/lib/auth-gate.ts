@@ -14,12 +14,14 @@ export type PendingIntent =
   | { type: 'community'; tab?: 'league' | 'friends' | 'showcase' };
 
 const KEY = 'yolharitam.pending-intent.v1';
+// Niyet yalnız kısa süre geçerli: kayıt ekranını kapatıp günler sonra giriş yapan kişi habersiz yönlendirilmesin
+const MAX_AGE_MS = 30 * 60 * 1000;
 
 // Niyeti yazar. Depolama hatası kayıt akışını bozmasın diye sessizce yutulur (en kötü ihtimal: kişi
 // kayıttan sonra yarım kalan işe değil, normal açılışa gider).
 export async function savePendingIntent(intent: PendingIntent): Promise<void> {
   try {
-    await AsyncStorage.setItem(KEY, JSON.stringify(intent));
+    await AsyncStorage.setItem(KEY, JSON.stringify({ ...intent, at: Date.now() }));
   } catch {
     // yut
   }
@@ -30,6 +32,7 @@ function parseIntent(raw: string | null): PendingIntent | null {
   if (!raw) return null;
   try {
     const v = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof v.at !== 'number' || Date.now() - v.at > MAX_AGE_MS) return null; // eski niyet: yok say
     if (v.type === 'pick-map' && typeof v.mapId === 'string') return { type: 'pick-map', mapId: v.mapId };
     if (v.type === 'open-topic' && typeof v.mapId === 'string' && typeof v.topicId === 'string')
       return { type: 'open-topic', mapId: v.mapId, topicId: v.topicId };
@@ -52,6 +55,15 @@ export async function takePendingIntent(): Promise<PendingIntent | null> {
     return parseIntent(raw);
   } catch {
     return null;
+  }
+}
+
+// Niyeti iptal et: kişi kayıt ekranını "Şimdilik gez" ile kapatınca ya da çıkış yapınca
+export async function clearPendingIntent(): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(KEY);
+  } catch {
+    // yut
   }
 }
 
@@ -85,9 +97,14 @@ export function usePendingIntentRunner() {
   // Aynı niyet ikinci kez uygulanmasın (yol her değiştiğinde efekt yeniden çalışır)
   const applied = useRef<PendingIntent | null>(null);
 
-  // 1) Oturum oluşunca niyeti oku (ve sil)
+  // 1) Oturum oluşunca niyeti oku (ve sil). Çıkışta önceki oturumun izleri temizlenir.
   useEffect(() => {
-    if (loading || !uid) return;
+    if (loading) return;
+    if (!uid) {
+      taking = null;
+      applied.current = null;
+      return;
+    }
     // İptal bayrağı bilerek yok: niyet okunurken silinir, geliştirmedeki çift efekt çalışmasında
     // ikinci çalışma boş dönerdi; birincinin sonucu uygulanmalı.
     const job = takePendingIntent();
@@ -97,11 +114,12 @@ export function usePendingIntentRunner() {
 
   // 2) Yığın oturduğunda uygula
   useEffect(() => {
-    if (!intent || applied.current === intent) return;
+    // Kimlik değil İÇERİK karşılaştırılır: geliştirmedeki çift efekt aynı niyeti iki ayrı nesne olarak getirebilir
+    if (!intent || (applied.current && JSON.stringify(applied.current) === JSON.stringify(intent))) return;
     if (pathname === '/login' || pathname === '/') return;
     applied.current = intent;
-    const target = targetOf(intent);
-    if (!target) return;
+    // Bilinmeyen harita (içerik değişmiş): yeni kullanıcı boş ekranda kalmasın, katalog açılsın
+    const target = targetOf(intent) ?? { pathname: '/onboarding' as const, params: {} };
     // Zaten o ekrandaysak (örn. toparlama doğrudan oraya düştüyse) yığına bir kopya daha ekleme
     if (pathname === target.pathname) router.replace(target);
     else router.push(target);

@@ -17,13 +17,16 @@ const NO_ROWS: Roadmap[] = []; // misafir için sabit boş liste (her çizimde y
 export function useLatestRoadmap() {
   const { session } = useAuth();
   const uid = session?.user.id;
+  // Liste kime ait? Çıkış yapıp başka hesapla girilince önceki kişinin haritaları bir an bile görünmesin
+  const [owner, setOwner] = useState<string | null>(null);
   const [fetchedRows, setRows] = useState<Roadmap[]>([]);
   // loading = ilk okuma · ready = okundu (liste boş olabilir) · error = okunamadı.
   // "Hiç haritan yok" ile "okuyamadık" karışmasın: karışırsa çevrimdışı kullanıcı haritasının silindiğini sanar.
   const [fetchedStatus, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   // MİSAFİR (oturum yok): sorgu atılmaz (RLS zaten boş döndürür ya da hata verir). Liste "okundu ve boş" sayılır.
-  const rows = uid ? fetchedRows : NO_ROWS;
-  const status = uid ? fetchedStatus : 'ready';
+  const mine = !!uid && owner === uid;
+  const rows = mine ? fetchedRows : NO_ROWS;
+  const status = !uid ? 'ready' : mine ? fetchedStatus : 'loading';
   const [reloadKey, setReloadKey] = useState(0);
 
   // useFocusEffect: Bu ekran her görünür olduğunda çalışır (onboarding'den dönünce veri tazelenir).
@@ -31,21 +34,33 @@ export function useLatestRoadmap() {
     useCallback(() => {
       if (!uid) return;
       let cancelled = false;
+      // Hata durumunda da sahibi bu hesap yap; önceki hesabın listesi kalmasın
+      function markOwner() {
+        setOwner((prev) => {
+          if (prev !== uid) setRows([]);
+          return uid ?? null;
+        });
+      }
       async function load() {
         try {
           // SQL karşılığı: SELECT * FROM roadmaps ORDER BY updated_at DESC (RLS: yalnız kendi satırların)
           const { data, error } = await supabase.from('roadmaps').select('*').order('updated_at', { ascending: false });
           if (cancelled) return;
           if (error) {
-            // Hata: eldeki (eski) liste silinmez; yalnız durum 'error' olur
+            // Hata: eldeki (eski) liste silinmez; yalnız durum 'error' olur. Liste başka hesaba aitse boşaltılır.
+            markOwner();
             setStatus('error');
             return;
           }
+          setOwner(uid ?? null);
           setRows(data ?? []);
           setStatus('ready');
         } catch {
           // fetch istisna fırlatırsa (internet yok) da yükleme bitmeli
-          if (!cancelled) setStatus('error');
+          if (!cancelled) {
+            markOwner();
+            setStatus('error');
+          }
         }
       }
       load();
