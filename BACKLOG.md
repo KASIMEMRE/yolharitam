@@ -9,17 +9,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 > "Sadelik ilkeleri" (bölüm 3) uygulanır ve "Özellik envanteri" (bölüm 5) ilgili maddeleri işaretlenir.
 > Hiçbir özellik kaldırılmaz; yalnız yeri ve görünümü değişir.
 
-### SM-01 · Ortak sade bileşenler ve kurallar
-- Yeni bileşenler (`src/components/`):
-  - `Surface`: tek seviye kart. `tone` (düz/hafif/birincil); yalnız `primary` 3D alt kenarlı. İç içe kullanılırsa
-    geliştirmede uyarı versin (context ile).
-  - `ListRow`: simge (Glyph veya IconTile 40) + başlık + alt satır + sağda ok/eylem/rozet; ayırıcılı liste; 44 pt+.
-  - `SectionHeader`: bölüm başlığı + isteğe bağlı sağ bağlantı ("Tümü", "Düzenle").
-  - `Segmented`: tek tip segment kontrolü (bugün Topluluk, ViewSwitch, Ayarlar Choice ve konu durumu ayrı ayrı yazılmış).
-- Mevcut tekrarlar bunlara taşınır, görünüm değişikliği bu PR'da sınırlı kalır (asıl ekran işleri SM-04…07).
-- AGENTS.md "Ortak bileşenler" listesine ekle ve sadelik ilkelerini (plan bölüm 3) kısa madde olarak yaz.
-- Kabul: tsc + lint temiz; dört bileşenin açık/koyu ekran görüntüsü; en az 3 ekranda tekrar eden kod bu bileşenlere geçti.
-
 ### SM-02 · Misafir modu altyapısı 🗄️
 - `src/app/_layout.tsx`: `(tabs)`, `topic/[id]` ve keşif/önizleme ekranları oturumsuz da açılabilsin. Korumalı kalanlar:
   `roadmap-questions`, `settings` (alt sayfalarıyla), `showcase-new`. `login` hem oturumsuzken açık kalsın.
@@ -114,6 +103,18 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### SM-01 · Ortak sade bileşenler ve kurallar
+- Yeni bileşenler (`src/components/`):
+  - `Surface`: tek seviye kart. `tone` (düz/hafif/birincil); yalnız `primary` 3D alt kenarlı. İç içe kullanılırsa
+    geliştirmede uyarı versin (context ile).
+  - `ListRow`: simge (Glyph veya IconTile 40) + başlık + alt satır + sağda ok/eylem/rozet; ayırıcılı liste; 44 pt+.
+  - `SectionHeader`: bölüm başlığı + isteğe bağlı sağ bağlantı ("Tümü", "Düzenle").
+  - `Segmented`: tek tip segment kontrolü (bugün Topluluk, ViewSwitch, Ayarlar Choice ve konu durumu ayrı ayrı yazılmış).
+- Mevcut tekrarlar bunlara taşınır, görünüm değişikliği bu PR'da sınırlı kalır (asıl ekran işleri SM-04…07).
+- AGENTS.md "Ortak bileşenler" listesine ekle ve sadelik ilkelerini (plan bölüm 3) kısa madde olarak yaz.
+- Kabul: tsc + lint temiz; dört bileşenin açık/koyu ekran görüntüsü; en az 3 ekranda tekrar eden kod bu bileşenlere geçti.
+- ✅ `Surface`, `ListRow`/`ListGroup`, `SectionHeader`, `Segmented` eklendi; Harita görünüm anahtarı, Topluluk segmenti ve Ayarlar seçicisi `Segmented`'e taşındı.
 
 ### Y-03 · Harita seçiminde arama
 - Onboarding'deki harita listesinin üstünde arama kutusu: harita ve konu başlıklarında arasın

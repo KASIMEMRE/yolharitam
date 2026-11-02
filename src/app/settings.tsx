@@ -6,11 +6,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 
 import { IconTile } from '@/components/icon-tile';
-import { Glyph, IconLabel } from '@/components/icon';
+import { Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { UsernameForm } from '@/components/community/username-gate';
 import { HeaderBackButton } from '@/components/header-back-button';
+import { Segmented } from '@/components/segmented';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -92,7 +93,7 @@ function Card({ children }: { children: React.ReactNode }) {
   return <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border }]}>{children}</View>;
 }
 
-// Seçenek grubu (segmented): tema ve görünüm için
+// Etiketli seçenek grubu: başlık + ortak Segmented (tema ve görünüm için)
 function Choice<T extends string>({
   label,
   value,
@@ -104,36 +105,10 @@ function Choice<T extends string>({
   options: { id: T; label: string; icon?: string }[];
   onChange: (v: T) => void;
 }) {
-  const theme = useTheme();
   return (
     <View style={styles.choiceBlock}>
       <ThemedText type="smallBold">{label}</ThemedText>
-      <View
-        accessibilityRole="radiogroup"
-        accessibilityLabel={label}
-        style={[styles.choice, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
-        {options.map((o) => {
-          const selected = o.id === value;
-          return (
-            <Pressable
-              key={o.id}
-              onPress={() => onChange(o.id)}
-              accessibilityRole="radio"
-              accessibilityState={{ selected }}
-              style={[styles.choiceItem, selected && { backgroundColor: theme.card, borderColor: theme.accent }]}>
-              {o.icon ? (
-                <IconLabel emoji={o.icon} type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
-                  {o.label}
-                </IconLabel>
-              ) : (
-                <ThemedText type="smallBold" themeColor={selected ? 'accentInk' : 'textSecondary'}>
-                  {o.label}
-                </ThemedText>
-              )}
-            </Pressable>
-          );
-        })}
-      </View>
+      <Segmented label={label} options={options} value={value} onChange={onChange} />
     </View>
   );
 }
@@ -734,16 +709,6 @@ const styles = StyleSheet.create({
   underline: { textDecorationLine: 'underline' },
   choiceBlock: { gap: Spacing.two },
   blockedRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  choice: { flexDirection: 'row', borderRadius: Radius.pill, borderWidth: Border.thin, padding: 2 },
-  choiceItem: {
-    flex: 1,
-    minHeight: MinTouch,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-    borderColor: 'transparent',
-  },
   mapRow: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
   mapHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   mapIcon: { width: 48, height: 48, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center' },

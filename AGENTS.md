@@ -62,9 +62,18 @@ Proje sahibi (Emre) yazılımı bu projeyi geliştirerek ÖĞRENİYOR. Kod okuna
 - Supabase: Postgres + Auth. İstemci: `src/lib/supabase.ts`, tipler: `src/lib/database.types.ts`
 - Oturum: `src/lib/auth-context.tsx` + `_layout.tsx` içinde `Stack.Protected`
 - Tema: `src/constants/theme.ts` (`accent` = harita yeşili, `marker` = patika sarısı). Renk sabit kodlama; temadan al.
-- Ortak bileşenler: `OptionCard`, `TextField`, `RouteSteps`, `ThemedText`, `ThemedView`, `ProgressSummary`
+- Ortak bileşenler: `OptionCard`, `TextField`, `RouteSteps`, `ThemedText`, `ThemedView`, `ProgressSummary`,
+  `Surface` (tek seviye kart: plain/soft/primary), `ListRow` + `ListGroup` (ayırıcılı liste satırı), `SectionHeader`
+  (başlık + sağ bağlantı), `Segmented` (tek tip segment kontrolü)
 - Simgeler: tek çizgi simge seti (Lucide, `src/components/icon.tsx`: `Glyph`, `IconLabel`, `IconTile`). Arayüz metnine
   doğrudan emoji YAZMA. İçerik dosyaları simgeyi emoji adıyla seçer; yeni emoji kullanırsan `icon.tsx` tablosuna eşlemesini ekle.
+
+## Sadelik kuralları (ayrıntı: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 3)
+- Kart içinde kart yok: gruplama boşluk, ince ayırıcı ya da başlıkla yapılır (`Surface` iç içe kullanılırsa geliştirmede uyarır).
+- Ekranda tek birincil (3D) öğe olur (`Surface tone="primary"` ya da birincil `Button`); diğerleri düz ya da yalnız zemin.
+- Tekrar eden öğeler (ayarlar, haritalarım, kaynaklar) kart yığını değil `ListGroup` + `ListRow` ile dizilir.
+- Ayrıntı aşamalı gösterilir: ilk ekranda yalnız "şimdi ne yapmalıyım?" cevabı, gerisi dokununca açılır.
+- Renk az ve anlamlı: renkli zemin yalnız harita kimliği (hue) ve durum için; seçenek anahtarı için `Segmented`.
 
 ## Çalışma kuralları
 1. Görevleri `BACKLOG.md` dosyasından al: "Sıradaki" bölümündeki EN ÜSTTEKİ, başlamamış görevi seç. Sırayı değiştirme.
