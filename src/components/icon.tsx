@@ -16,6 +16,7 @@ import {
   ChartColumn,
   Check,
   ChevronRight,
+  Circle,
   CircleCheck,
   Clapperboard,
   ClipboardList,
@@ -27,6 +28,7 @@ import {
   Diamond,
   Dna,
   Earth,
+  Ellipsis,
   Eraser,
   FileText,
   Flag,
@@ -235,6 +237,8 @@ const GLYPHS: Record<string, LucideIcon> = {
   '➕': Plus,
   '＋': Plus,
   '›': ChevronRight, // liste satırı oku (ListRow)
+  '⋯': Ellipsis, // "…" menü düğmesi (Yol Haritam başlığı)
+  '○': Circle, // henüz işaretlenmemiş konu (liste satırı durum simgesi)
 };
 
 // Emojinin sonundaki "renkli göster" işaretini (U+FE0F) atar: "🗺️" ile "🗺" aynı simgeye gitsin

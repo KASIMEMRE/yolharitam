@@ -13,9 +13,18 @@ type Props = {
   total: number;
   remainingHours: number; // planda bitmemiş konuların tahmini saat toplamı
   weeks?: number; // (isteğe bağlı) tüm planın tahmini süresi, hafta olarak
+  // compact: Yol Haritam'ın düz özet satırı için; yalnız "N / M konu" + çubuk (kalan süre ayrıntıda gösterilir)
+  compact?: boolean;
 };
 
-export function ProgressSummary({ done, total, remainingHours, weeks }: Props) {
+// Kalan süre cümlesi: özet satırının açılan ayrıntısı da aynı metni kullansın diye dışarı açıldı
+export function remainingLabel(done: number, total: number, remainingHours: number, weeks?: number) {
+  const hours = Math.round(remainingHours);
+  if (done === total) return 'Planındaki tüm konuları bitirdin.';
+  return `Kalan süre: yaklaşık ${hours} saat${weeks ? ` · plan yaklaşık ${weeks} hafta` : ''}`;
+}
+
+export function ProgressSummary({ done, total, remainingHours, weeks, compact = false }: Props) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
   const ratio = total > 0 ? done / total : 0;
@@ -27,28 +36,34 @@ export function ProgressSummary({ done, total, remainingHours, weeks }: Props) {
   }, [ratio, reduceMotion, fill]);
   const fillStyle = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
 
-  const hours = Math.round(remainingHours);
-  const remainingText =
-    done === total ? 'Planındaki tüm konuları bitirdin.' : `Kalan süre: yaklaşık ${hours} saat${weeks ? ` · plan yaklaşık ${weeks} hafta` : ''}`;
+  const remainingText = remainingLabel(done, total, remainingHours, weeks);
 
   return (
     <View style={styles.box}>
-      <ThemedText type="cardTitle">
-        {done} / {total} konu tamamlandı
-      </ThemedText>
+      {compact ? (
+        <ThemedText type="smallBold">
+          {done} / {total} konu
+        </ThemedText>
+      ) : (
+        <ThemedText type="cardTitle">
+          {done} / {total} konu tamamlandı
+        </ThemedText>
+      )}
       {/* Çubuk ekran okuyucuya sayısal değer verir; metin zaten yukarıda olduğu için ayrıca okunmaz */}
       <View
         accessible
         accessibilityRole="progressbar"
         accessibilityLabel="İlerleme"
         accessibilityValue={{ min: 0, max: total, now: done, text: `${total} konunun ${done} tanesi tamamlandı` }}
-        style={[styles.track, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
+        style={[styles.track, compact && styles.trackThin, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
         <Animated.View style={[styles.fill, { backgroundColor: theme.accent }, fillStyle]} />
       </View>
-      <ThemedText type="small" themeColor="textSecondary">
-        {done === 0 ? 'İlk konuyu bitirince çubuğun dolmaya başlar. ' : ''}
-        {remainingText}
-      </ThemedText>
+      {!compact && (
+        <ThemedText type="small" themeColor="textSecondary">
+          {done === 0 ? 'İlk konuyu bitirince çubuğun dolmaya başlar. ' : ''}
+          {remainingText}
+        </ThemedText>
+      )}
     </View>
   );
 }
@@ -56,5 +71,6 @@ export function ProgressSummary({ done, total, remainingHours, weeks }: Props) {
 const styles = StyleSheet.create({
   box: { gap: Spacing.two },
   track: { height: 12, borderRadius: Radius.pill, borderWidth: Border.thin, overflow: 'hidden' },
+  trackThin: { height: 8 },
   fill: { height: '100%', borderRadius: Radius.pill },
 });
