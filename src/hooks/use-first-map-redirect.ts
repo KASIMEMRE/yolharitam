@@ -1,6 +1,8 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 
+import { intentBeingApplied } from '@/lib/auth-gate';
+
 // Uygulama açık kaldığı sürece bir kez: hiç haritası olmayan kullanıcıyı harita seçimine götür.
 // Modül düzeyinde bayrak: ekran yeniden açılsa da tekrar yönlendirmez (döngü olmaz; kullanıcı
 // seçimden geri dönerse boş ekranı ve "Yol haritanı seç" düğmesini görür).
@@ -12,6 +14,10 @@ export function useFirstMapRedirect(status: 'loading' | 'ready' | 'error', mapCo
   useEffect(() => {
     if (redirected || status !== 'ready' || mapCount > 0) return;
     redirected = true;
-    router.push('/onboarding');
+    // Girişten yeni gelen kişinin bekleyen niyeti varsa (örn. "bu haritayı seç") o kendi yönlendirmesini
+    // yapar; ikisi üst üste binmesin diye ilk harita yönlendirmesi atlanır.
+    intentBeingApplied().then((intent) => {
+      if (!intent) router.push('/onboarding');
+    });
   }, [status, mapCount]);
 }

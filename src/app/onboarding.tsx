@@ -22,6 +22,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { countTopics, DEV_ROADMAPS, getRoadmap, KIND_LABEL } from '@/constants/dev-roadmaps';
 import { LEVEL_STYLE } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuthGate } from '@/lib/auth-gate';
 import { searchRoadmaps } from '@/lib/search-roadmaps';
 import { resetWizardDone } from '@/lib/wizard-done';
 
@@ -53,6 +54,7 @@ export default function OnboardingScreen() {
     }
   }
 
+  const { requireAuth } = useAuthGate();
   const isPicked = selected !== undefined;
   const canContinue = isPicked && level !== null;
 
@@ -60,6 +62,10 @@ export default function OnboardingScreen() {
   // yapılır. push kullanıyoruz (replace değil): sorulardan geri gelince seçim korunur.
   function handleContinue() {
     if (!selected || !level) return;
+    // Misafir de katalogda gezip seviye seçebilir; haritayı KAYDETMEK hesap ister. Kayıttan sonra
+    // aynı harita için seviye adımına geri döner (bekleyen niyet).
+    if (!requireAuth({ type: 'pick-map', mapId: selected.id }, `${selected.title} haritasını kaydetmek için ücretsiz hesap oluştur`))
+      return;
     router.push({ pathname: '/roadmap-questions', params: { topicPath: selected.id, level } });
   }
 

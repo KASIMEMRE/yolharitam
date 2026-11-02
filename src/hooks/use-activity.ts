@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 
 import { dayKey } from '@/constants/activity';
 import { findTopic, getRoadmap } from '@/constants/dev-roadmaps';
+import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 
 export type Activity = {
@@ -15,11 +16,14 @@ type Row = { roadmap_id: string; topic_id: string; status: string; updated_at: s
 // Seri ve haftalık hedef için kullanıcının tüm konu işaretlerini okur (RLS yalnız kendi satırlarını verir).
 // Hata olursa null kalır ve kart hiç çizilmez: motivasyon kartı yüzünden ekran bozulmaz.
 export function useActivity() {
+  const { session } = useAuth();
+  const uid = session?.user.id;
   const [rows, setRows] = useState<Row[] | null>(null);
   const [maps, setMaps] = useState<Record<string, string>>({}); // roadmap_id → harita kimliği
 
   useFocusEffect(
     useCallback(() => {
+      if (!uid) return; // misafir: istek atılmaz
       let cancelled = false;
       (async () => {
         try {
@@ -37,10 +41,11 @@ export function useActivity() {
       return () => {
         cancelled = true;
       };
-    }, [])
+    }, [uid])
   );
 
-  if (!rows) return null;
+  // Misafirde (ya da çıkıştan sonra) eski kullanıcının satırları görünmesin
+  if (!uid || !rows) return null;
 
   const activeDays = new Set(
     rows

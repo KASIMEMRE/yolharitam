@@ -20,22 +20,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - AGENTS.md "Ortak bileşenler" listesine ekle ve sadelik ilkelerini (plan bölüm 3) kısa madde olarak yaz.
 - Kabul: tsc + lint temiz; dört bileşenin açık/koyu ekran görüntüsü; en az 3 ekranda tekrar eden kod bu bileşenlere geçti.
 
-### SM-02 · Misafir modu altyapısı 🗄️
-- `src/app/_layout.tsx`: `(tabs)`, `topic/[id]` ve keşif/önizleme ekranları oturumsuz da açılabilsin. Korumalı kalanlar:
-  `roadmap-questions`, `settings` (alt sayfalarıyla), `showcase-new`. `login` hem oturumsuzken açık kalsın.
-- `src/lib/auth-gate.ts` + `useAuthGate()`:
-  `requireAuth(intent, reason)` → oturum varsa `true`; yoksa login'i `mode=signup` ve `reason` ile açar, niyeti
-  AsyncStorage'a yazar (`yolharitam.pending-intent.v1`).
-  Niyet tipleri: `pick-map {mapId}`, `open-topic {mapId, topicId}`, `community {tab}`.
-- Girişten sonra (auth-context'te oturum oluşunca) bekleyen niyet okunur, tek seferlik uygulanır ve silinir:
-  `pick-map` → `/onboarding?map=…` (seviye adımı), `open-topic` → konu ekranı, `community` → Topluluk.
-- `login.tsx`: üstte `reason` satırı ("Frontend haritasını kaydetmek için ücretsiz hesap oluştur"); "Şimdilik gez" ile kapat.
-- Karşılama (`index.tsx`): birincil "Gezinmeye başla" → sekmeler (misafir), ikincil "Giriş yap". Gördü bilgisi
-  cihazda saklanır (bir kez gösterilir; çıkış yapınca yeniden gösterilebilir).
-- Migration: `news_items` ve `news_sources` için `anon` SELECT politikası ve grant (yalnız okuma). `database.types.ts` değişmez.
-- Kabul: oturumsuz açılışta formsuz gezilebiliyor; "Bu haritayı seç" → kayıt → (onay sonrası) ilk girişte seviye
-  adımına düşüyor; niyet bir kez uygulanıyor; oturumlu kullanıcının akışı bozulmadı; ağ hatasında yönlendirme döngüsü yok.
-
 ### SM-03 · Misafir ekranları: Keşfet, harita önizleme, salt okunur konu
 - **Keşfet** (misafirde "Yol Haritam" sekmesinin yerine, adı "Keşfet"): onboarding'deki katalog + arama bileşen
   olarak ayrıştırılır (`RoadmapCatalog`), hem burada hem "Harita ekle"de kullanılır.
@@ -114,6 +98,22 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### SM-02 · Misafir modu altyapısı 🗄️
+- `src/app/_layout.tsx`: `(tabs)`, `topic/[id]` ve keşif/önizleme ekranları oturumsuz da açılabilsin. Korumalı kalanlar:
+  `roadmap-questions`, `settings` (alt sayfalarıyla), `showcase-new`. `login` hem oturumsuzken açık kalsın.
+- `src/lib/auth-gate.ts` + `useAuthGate()`:
+  `requireAuth(intent, reason)` → oturum varsa `true`; yoksa login'i `mode=signup` ve `reason` ile açar, niyeti
+  AsyncStorage'a yazar (`yolharitam.pending-intent.v1`).
+  Niyet tipleri: `pick-map {mapId}`, `open-topic {mapId, topicId}`, `community {tab}`.
+- Girişten sonra (auth-context'te oturum oluşunca) bekleyen niyet okunur, tek seferlik uygulanır ve silinir:
+  `pick-map` → `/onboarding?map=…` (seviye adımı), `open-topic` → konu ekranı, `community` → Topluluk.
+- `login.tsx`: üstte `reason` satırı ("Frontend haritasını kaydetmek için ücretsiz hesap oluştur"); "Şimdilik gez" ile kapat.
+- Karşılama (`index.tsx`): birincil "Gezinmeye başla" → sekmeler (misafir), ikincil "Giriş yap". Gördü bilgisi
+  cihazda saklanır (bir kez gösterilir; çıkış yapınca yeniden gösterilebilir).
+- Migration: `news_items` ve `news_sources` için `anon` SELECT politikası ve grant (yalnız okuma). `database.types.ts` değişmez.
+- Kabul: oturumsuz açılışta formsuz gezilebiliyor; "Bu haritayı seç" → kayıt → (onay sonrası) ilk girişte seviye
+  adımına düşüyor; niyet bir kez uygulanıyor; oturumlu kullanıcının akışı bozulmadı; ağ hatasında yönlendirme döngüsü yok.
 
 ### Y-03 · Harita seçiminde arama
 - Onboarding'deki harita listesinin üstünde arama kutusu: harita ve konu başlıklarında arasın

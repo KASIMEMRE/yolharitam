@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 
 import { computeAchievements, type AchievementInput } from '@/constants/achievements';
+import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/lib/supabase';
 import { classifyError } from '@/lib/supabase-errors';
 
@@ -17,12 +18,15 @@ const EMPTY: AchievementInput = { roadmaps: [], progress: [] };
 // rozetleri istemcide hesaplar. İki küçük sorgu yeter; RLS yalnız kullanıcının kendi satırlarını verir.
 // Profil her görününce (useFocusEffect) tazelenir: konu işaretleyip dönünce rozet güncel olur.
 export function useAchievements() {
+  const { session } = useAuth();
+  const uid = session?.user.id;
   const [state, setState] = useState<State>({ status: 'loading', data: EMPTY });
   const [reloadKey, setReloadKey] = useState(0);
   const [retrying, setRetrying] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
+      if (!uid) return; // misafir: istek atılmaz (profil ekranı zaten rozet bölümünü göstermez)
       let cancelled = false; // hızlı odak değişiminde eski cevap yeni state'i ezmesin
       async function load() {
         try {
@@ -59,7 +63,7 @@ export function useAchievements() {
       // reloadKey fonksiyonun içinde okunmuyor; "Tekrar dene" basılınca değişip efekti yeniden
       // çalıştırması için BİLEREK bağımlılıkta. Lint bunu "gereksiz" sanıyor.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reloadKey])
+    }, [uid, reloadKey])
   );
 
   // Hesap saf fonksiyonda; veri değişmedikçe tekrar çalışmasın
