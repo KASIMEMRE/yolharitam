@@ -14,17 +14,20 @@ import { ThemedText } from './themed-text';
 import { Glyph } from '@/components/icon';
 import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useAuth } from '@/lib/auth-context';
 
 // Web'deki sekme çubuğu (geliştirme/önizleme için). Geniş ekranda üstte yüzen kapsül,
 // dar ekranda altta tam genişlik çubuk. Simgeler uygulamanın ortak çizgi simge setinden (icon.tsx).
 export default function AppTabs() {
+  // Misafirde ilk sekme kataloğu gösterir: adı "Keşfet"
+  const { session } = useAuth();
   return (
     <Tabs>
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
           <TabTrigger name="roadmap" href="/roadmap" asChild>
-            <TabButton emoji="🗺️">Yol Haritam</TabButton>
+            <TabButton emoji={session ? '🗺️' : '🧭'}>{session ? 'Yol Haritam' : 'Keşfet'}</TabButton>
           </TabTrigger>
           <TabTrigger name="news" href="/news" asChild>
             <TabButton emoji="📰">Gelişmeler</TabButton>

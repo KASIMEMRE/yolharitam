@@ -1,16 +1,18 @@
 import { Link, router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { Glyph, IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { AchievementsSection } from '@/components/achievements-section';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
-import { GuestPrompt } from '@/components/guest-prompt';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge } from '@/components/level-badge';
+import { ListGroup, ListRow } from '@/components/list-row';
 import { ScreenHeader } from '@/components/screen-header';
+import { Segmented } from '@/components/segmented';
 import { Skeleton } from '@/components/skeleton';
+import { Surface } from '@/components/surface';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
@@ -21,6 +23,9 @@ import { levelFor } from '@/constants/xp';
 import { useXp } from '@/lib/xp';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
+import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/lib/config';
+import { openExternalUrl } from '@/lib/open-url';
+import { setPreferences, usePreferences } from '@/lib/preferences';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 
@@ -30,20 +35,53 @@ export default function ProfileScreen() {
   return session ? <MemberProfileScreen /> : <GuestProfileScreen />;
 }
 
-// GEÇİCİ misafir görünümü (tema ve yasal bağlantılar SM-03'te eklenecek).
+// MİSAFİR profil: üstte tek birincil "Hesap oluştur" kartı, altında düz ayar/yasal listesi.
+// Kimlik, XP, rozet gibi kişisel sorgular hiç atılmaz.
 function GuestProfileScreen() {
+  const prefs = usePreferences();
   return (
     <TabScreen>
       <ScreenHeader title="Profil" />
-      <GuestPrompt
-        emoji="👤"
-        title="Hesabını oluştur"
-        text="Ücretsiz hesapla haritanı seç, konuları işaretle, XP ve rozet kazan. İlerlemen hesabında saklanır."
-        actionLabel="Hesap oluştur"
-        onAction={() => router.push({ pathname: '/login', params: { mode: 'signup' } })}
-        secondaryLabel="Giriş yap"
-        onSecondary={() => router.push({ pathname: '/login', params: { mode: 'login' } })}
-      />
+
+      {/* Ekrandaki tek birincil (3D) öğe */}
+      <Surface tone="primary">
+        <ThemedText type="cardTitle" accessibilityRole="header">
+          Hesap oluştur
+        </ThemedText>
+        <ThemedText>Haritanı kaydet, konuları işaretle, XP ve rozet kazan. İlerlemen hesabında saklanır.</ThemedText>
+        <View style={styles.guestActions}>
+          <Button variant="secondary" label="Kayıt ol" onPress={() => router.push({ pathname: '/login', params: { mode: 'signup' } })} />
+          <Button variant="text" label="Giriş yap" onPress={() => router.push({ pathname: '/login', params: { mode: 'login' } })} />
+        </View>
+      </Surface>
+
+      <ListGroup>
+        {/* Tema seçimi doğrudan burada (cihazda saklanır) */}
+        <View style={styles.themeRow}>
+          <ThemedText type="smallBold">Görünüm</ThemedText>
+          <Segmented
+            label="Görünüm"
+            value={prefs.theme}
+            onChange={(theme) => setPreferences({ theme })}
+            options={[
+              { id: 'system', label: 'Sistem' },
+              { id: 'light', label: 'Açık', icon: '☀️' },
+              { id: 'dark', label: 'Koyu', icon: '🌙' },
+            ]}
+          />
+        </View>
+        <ListRow icon="🛡️" title="Gizlilik politikası" chevron onPress={() => openExternalUrl(PRIVACY_URL)} />
+        <ListRow icon="📄" title="Kullanım koşulları" chevron onPress={() => openExternalUrl(TERMS_URL)} />
+        <ListRow
+          icon="✉️"
+          title="Destek"
+          subtitle={SUPPORT_EMAIL}
+          chevron
+          onPress={() =>
+            Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Yol Haritam destek')}`).catch(() => {})
+          }
+        />
+      </ListGroup>
     </TabScreen>
   );
 }
@@ -221,4 +259,6 @@ const styles = StyleSheet.create({
   topicTexts: { flex: 1, minWidth: 0, gap: Spacing.one },
   center: { textAlign: 'center' },
   errorBox: { gap: Spacing.three },
+  guestActions: { gap: Spacing.one },
+  themeRow: { gap: Spacing.two, padding: Spacing.three },
 });
