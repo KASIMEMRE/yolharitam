@@ -1,22 +1,24 @@
 import { Link, router } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, ZoomIn, useReducedMotion } from 'react-native-reanimated';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Glyph , IconLabel } from '@/components/icon';
+import { Glyph, IconLabel } from '@/components/icon';
 import { Segmented } from '@/components/segmented';
-import { MapPin } from '@/components/map-pin';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { GuestPrompt } from '@/components/guest-prompt';
 import { FriendsTodayCard } from '@/components/community/friends-today-card';
 import { UsernameForm } from '@/components/community/username-gate';
 import { IconTile } from '@/components/icon-tile';
-import { LevelBadge } from '@/components/level-badge';
-import { ProgressSummary } from '@/components/progress-summary';
+import { ListGroup, ListRow } from '@/components/list-row';
+import { ProgressSummary, remainingLabel } from '@/components/progress-summary';
 import { RoadmapTree, TreeLegend } from '@/components/roadmap-tree';
 import { ScreenHeader } from '@/components/screen-header';
+import { SectionHeader } from '@/components/section-header';
 import { Skeleton } from '@/components/skeleton';
+import { Surface } from '@/components/surface';
 import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { DEV_ROADMAPS, getRoadmap, KIND_LABEL, type DevRoadmap, type Section, type Topic } from '@/constants/dev-roadmaps';
@@ -31,13 +33,14 @@ import {
 import { computeStreak, startOfWeek, weeklyProgress } from '@/constants/activity';
 import { levelFor } from '@/constants/xp';
 import { toLevelId, type GoalId, type WeeklyHoursId } from '@/constants/plan';
+import { LEVELS } from '@/constants/onboarding';
 import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questions';
-import { Border, Edge, MinTouch, Radius, Spacing } from '@/constants/theme';
-import { HUES, MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
+import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { HUES, LEVEL_STYLE, MARKER_STYLE, STATUS_STYLE, type Hue } from '@/constants/visuals';
 import { useActivity, type Activity } from '@/hooks/use-activity';
 import { useFirstMapRedirect } from '@/hooks/use-first-map-redirect';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
-import { useShadow, useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
 import { useUsername } from '@/hooks/use-username';
 import { getTodayTask, taskTitle, type DailyTask } from '@/lib/daily-task';
@@ -49,6 +52,23 @@ import { ERROR_TEXT } from '@/lib/supabase-errors';
 // Konu detayını açar. Harita kimliği de gönderilir: detay ekranı içeriği veritabanına gitmeden bulur.
 function openTopic(roadmap: Roadmap, topicId: string) {
   router.push({ pathname: '/topic/[id]', params: { id: topicId, map: roadmap.topic_path, roadmapId: roadmap.id } });
+}
+
+// Haftalık süre + hedef cümlesi ("Haftada 3-5 saat · Hedef: İş ve kariyer"); eski kayıtta yoksa null
+function planText(roadmap: Roadmap): string | null {
+  if (!isAnswerId('weeklyHours', roadmap.weekly_hours) || !isAnswerId('goal', roadmap.goal)) return null;
+  return [weeklyLabel(roadmap.weekly_hours), `Hedef: ${findOption('goal', roadmap.goal)?.title}`].join(' · ');
+}
+
+// Harita kimliği tek satırda: "Orta seviye · Haftada 3-5 saat · Hedef: İş". Eski JourneyCard'ın seviye + plan bilgisi.
+// Ayrı kart olmaktan çıktı; özet satırının ayrıntısında ve "…" menüsünde bu satır görünür.
+function IdentityLine({ roadmap }: { roadmap: Roadmap }) {
+  const level = LEVELS.find((l) => l.id === roadmap.level);
+  const plan = planText(roadmap);
+  const parts = [level ? `${level.title} seviye` : null, plan].filter((x): x is string => Boolean(x));
+  if (parts.length === 0) return null;
+  const emoji = (roadmap.level && LEVEL_STYLE[roadmap.level]?.emoji) || '🧭';
+  return <IconLabel emoji={emoji}>{parts.join(' · ')}</IconLabel>;
 }
 
 // Oturum yoksa kişisel veri sorguları (haritalar, XP, ilerleme) hiç atılmaz: misafir ekranı ayrı bileşen.
@@ -87,13 +107,14 @@ function MemberRoadmapScreen() {
   // useCallback: kimliği sabit kalsın (gereksiz yeniden çizimi önler)
   const onNameSaved = useCallback(() => setNameVersion((v) => v + 1), []);
 
+  // Harita yokken ("…" menüsü ve harita değiştirici anlamsız) yalın başlık
   const header = <RoadmapHeader key={nameVersion} />;
 
   if (loading) {
     return (
       <TabScreen>
         {header}
-        <JourneySkeleton />
+        <RoadmapSkeleton />
       </TabScreen>
     );
   }
@@ -126,7 +147,7 @@ function MemberRoadmapScreen() {
 
   const map = getRoadmap(roadmap.topic_path);
   if (!map) {
-    // Eski sürümde seçilmiş genel bir konu (spor, finans…): artık yalnız yazılımcı haritaları var
+    // Eski sürümde seçilmiş genel bir konu (spor, finans…): artık yazılımcı haritaları var
     return (
       <TabScreen>
         {header}
@@ -140,23 +161,128 @@ function MemberRoadmapScreen() {
 
   return (
     <TabScreen>
-      {header}
-      {/* Birden çok harita takip ediliyorsa üstte hızlı geçiş */}
-      {/* Kullanıcı adı yoksa (kayıtta ad seçilmeyen eski hesaplar) kısa bir kartla bir kez sor */}
+      {/* Başlık bloğu: selam + "…" menüsü, hemen altında harita değiştirici ("Harita ekle" de burada) */}
+      <RoadmapHeader key={nameVersion} menu={{ roadmap, map }}>
+        {roadmaps.length > 0 && <MapSwitcher roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
+      </RoadmapHeader>
+      {/* Kullanıcı adı yoksa (kayıtta ad seçilmeyen eski hesaplar) tek satırlık şerit olarak bir kez sorulur */}
       <NamePrompt onSaved={onNameSaved} />
-      {/* Haritalar arası geçiş + "Harita ekle": harita eklemenin tek yeri burası */}
-      {roadmaps.length > 0 && <MapSwitcher roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
       {/* key: harita değişince içteki açık/kapalı bölüm durumu sıfırdan başlasın */}
       <MapView key={roadmap.id} roadmap={roadmap} map={map} progress={progress} activity={activity} />
     </TabScreen>
   );
 }
 
-// Başlık + selamlama. Ayrı bileşen: ad değişince key ile yeniden kurulup adı tazeler.
-function RoadmapHeader() {
+// Başlık + selamlama (+ varsa "…" menüsü ve altında children: harita değiştirici).
+// Ayrı bileşen: ad değişince key ile yeniden kurulup adı tazeler.
+function RoadmapHeader({
+  menu,
+  children,
+}: {
+  menu?: { roadmap: Roadmap; map: DevRoadmap };
+  children?: ReactNode;
+}) {
+  const theme = useTheme();
   const { username } = useUsername();
+  const [menuOpen, setMenuOpen] = useState(false);
   const greeting = username ? `Merhaba, @${username}` : undefined;
-  return <ScreenHeader title="Yol Haritam" eyebrow={greeting} emoji="🗺️" hue="accent" />;
+
+  return (
+    <View style={styles.headBlock}>
+      <ScreenHeader
+        title="Yol Haritam"
+        eyebrow={greeting}
+        emoji="🗺️"
+        hue="accent"
+        right={
+          menu ? (
+            <Pressable
+              onPress={() => setMenuOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Harita seçenekleri"
+              style={({ pressed }) => [styles.moreButton, pressed && { backgroundColor: theme.backgroundElement }]}>
+              <Glyph emoji="⋯" size={24} color={theme.text} />
+            </Pressable>
+          ) : undefined
+        }
+      />
+      {children}
+      {menu && <MapMenu visible={menuOpen} onClose={() => setMenuOpen(false)} roadmap={menu.roadmap} map={menu.map} />}
+    </View>
+  );
+}
+
+// "…" menüsü: alttan açılan sayfa. Üstte harita kimliği (eski Yolculuk kartının içeriği), altında iki eylem.
+// Modal Expo Go'da hazır gelir (yeni paket gerekmez); Android geri tuşu onRequestClose ile kapatır.
+function MapMenu({
+  visible,
+  onClose,
+  roadmap,
+  map,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  roadmap: Roadmap;
+  map: DevRoadmap;
+}) {
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const hue = HUES[map.hue];
+
+  // Önce sayfayı kapat, sonra git: geri dönünce menü açık kalmasın
+  function go(action: () => void) {
+    onClose();
+    action();
+  }
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.sheetRoot}>
+        {/* Boş alana dokununca kapanır */}
+        <Pressable
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Menüyü kapat"
+          style={[StyleSheet.absoluteFill, styles.scrim]}
+        />
+        <View style={[styles.sheet, { backgroundColor: theme.card, paddingBottom: insets.bottom + Spacing.three }]}>
+          <View style={styles.sheetIdentity}>
+            <IconTile emoji={map.emoji} tone={map.hue} size={48} />
+            <View style={styles.flex1}>
+              <ThemedText type="eyebrow" themeColor={hue.ink}>
+                {KIND_LABEL[map.kind]}
+              </ThemedText>
+              <ThemedText type="cardTitle">{map.title}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {map.tagline}
+              </ThemedText>
+            </View>
+          </View>
+          <View style={styles.sheetMeta}>
+            <IdentityLine roadmap={roadmap} />
+          </View>
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <ListRow
+            icon="🎯"
+            title="Planımı güncelle"
+            subtitle="Soruları yeniden cevapla; öncelikli konular yenilensin"
+            chevron
+            onPress={() =>
+              go(() => router.push({ pathname: '/roadmap-questions', params: { roadmapId: roadmap.id } }))
+            }
+          />
+          <View style={[styles.divider, { backgroundColor: theme.border }]} />
+          <ListRow
+            icon="⚙"
+            title="Harita ayarları"
+            subtitle="Haritalarım, görünüm ve hesap"
+            chevron
+            onPress={() => go(() => router.push('/settings'))}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
 }
 
 function MapView({
@@ -181,17 +307,12 @@ function MapView({
     [map, roadmap.personalization, roadmap.level, goal]
   );
 
-  const plan =
-    isAnswerId('weeklyHours', roadmap.weekly_hours) && isAnswerId('goal', roadmap.goal)
-      ? [weeklyLabel(roadmap.weekly_hours), `Hedef: ${findOption('goal', roadmap.goal)?.title}`].join(' · ')
-      : null;
-
   const ready = progress.status === 'ready';
   const statuses = progress.statuses;
   const sum = computeProgress(map, statuses, personalization, weekly);
   const next = ready ? nextTopic(map, statuses, personalization) : undefined;
 
-  // Günün görevi burada (MapView'da) yüklenir: "Şimdi yap" bölgesinde görevle sıradaki konuyu
+  // Günün görevi burada (MapView'da) yüklenir: "Şimdi" kartında görevle sıradaki konuyu
   // birlikte yönetebilmek için durum üst bileşende durmalı (lifting state up).
   // Görev o gün ilk açılışta belirlenir ve gün boyu sabit kalır (bkz. daily-task.ts).
   const xp = useXp();
@@ -208,48 +329,28 @@ function MapView({
   }, [ready, roadmap.id, map, statuses, personalization]);
   const taskDone = !!task && xp.dailyDoneDays.has(task.day);
 
-  // Sıra kuralı: yapılacak bir "başla" görevi varsa en üstte o; görev bitmişse ya da quiz/bitir türündeyse
-  // asıl devam noktası "Sıradaki konu" olur. Görev aynı konuya götürüyorsa ikinci kart gereksiz.
-  const dailyFirst = !!task && !taskDone && task.kind === 'start';
-  const sameTopic = dailyFirst && !!next && task.topicId === next.id;
-  const showNext = !!next && !sameTopic;
-  const showDaily = ready && !!task;
-  const dailyCard = showDaily && (
-    // Üstteki kart 3D kenarını korur, alttaki düz olur; tamamlanmış görev her zaman sade
-    <DailyTaskCard
-      task={task}
-      done={taskDone}
-      flat={taskDone || (!dailyFirst && showNext)}
-      onPress={() => openTopic(roadmap, task.topicId)}
-    />
-  );
-  const nextCard = ready && showNext && (
-    <NextCard
-      topic={next}
-      personalization={personalization}
-      flat={dailyFirst && showDaily}
-      onPress={() => openTopic(roadmap, next.id)}
-    />
-  );
-
   return (
     <>
-      {/* "Şimdi yap" bölgesi: kaydırmadan ilk ekranda, ne yapacağını söyleyen kartlar */}
-      {dailyFirst ? (
-        <>
-          {dailyCard}
-          {nextCard}
-        </>
-      ) : (
-        <>
-          {nextCard}
-          {dailyCard}
-        </>
+      {/* "Şimdi": ekranın TEK birincil kartı. Sıradaki konu + günün görevi tek kartta */}
+      {ready && (next || task) && (
+        <NowCard
+          hue={map.hue}
+          next={next}
+          task={task}
+          taskDone={taskDone}
+          personalization={personalization}
+          onOpenNext={() => next && openTopic(roadmap, next.id)}
+          onOpenTask={() => task && openTopic(roadmap, task.topicId)}
+        />
       )}
 
-      <JourneyCard roadmap={roadmap} map={map} plan={plan} sum={ready ? sum : null} />
-      {/* Seri + XP + haftalık hedef tek şeritte; arkadaş etkinliği şeridin genişleyen kısmında */}
-      {ready && activity && <MomentumStrip activity={activity} roadmapId={roadmap.id} weekly={weekly} />}
+      {/* Düz özet satırı: ilerleme + seri + XP + haftalık hedef; dokununca ayrıntılar */}
+      <SummaryRow
+        roadmap={roadmap}
+        sum={ready ? sum : null}
+        activity={ready ? activity : null}
+        weekly={weekly}
+      />
 
       {(progress.status === 'schema' || progress.status === 'network' || progress.status === 'error') && (
         <View style={styles.errorBox}>
@@ -265,122 +366,63 @@ function MapView({
       )}
 
       {ready && (
-        <>
-          <Sections
-            roadmap={roadmap}
-            map={map}
-            statuses={statuses}
-            personalization={personalization}
-            nextId={next?.id}
-          />
-        </>
+        <Sections
+          roadmap={roadmap}
+          map={map}
+          statuses={statuses}
+          personalization={personalization}
+          nextId={next?.id}
+        />
       )}
-
     </>
   );
 }
 
-// Yolculuk kartı: harita, tür, seviye, plan ve toplam özet
-function JourneyCard({
-  roadmap,
-  map,
-  plan,
-  sum,
-}: {
-  roadmap: Roadmap;
-  map: DevRoadmap;
-  plan: string | null;
-  sum: { done: number; total: number; remainingHours: number; weeks: number } | null;
-}) {
-  const theme = useTheme();
-  const shadow = useShadow();
-  const reduceMotion = useReducedMotion();
-  const hue = HUES[map.hue];
-
-  return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.card, borderColor: theme[hue.line], borderBottomColor: theme[hue.edge] },
-        shadow('card'),
-      ]}>
-      <View style={[styles.band, { backgroundColor: theme[hue.soft] }]}>
-        <View>
-          <Animated.View entering={reduceMotion ? FadeIn.duration(150) : ZoomIn.springify().damping(10)}>
-            <IconTile emoji={map.emoji} tone={map.hue} size={64} />
-          </Animated.View>
-          <Animated.View
-            entering={reduceMotion ? FadeIn.duration(150) : FadeInDown.delay(250).springify().damping(8).stiffness(200)}
-            style={styles.pin}>
-            <MapPin size={26} />
-          </Animated.View>
-        </View>
-        <View style={styles.bandTexts}>
-          <ThemedText type="eyebrow" themeColor={hue.ink}>
-            {KIND_LABEL[map.kind]}
-          </ThemedText>
-          <ThemedText type="heading">{map.title}</ThemedText>
-          <ThemedText type="small" themeColor={hue.ink}>
-            {map.tagline}
-          </ThemedText>
-        </View>
-      </View>
-
-      <View style={styles.body}>
-        <View style={styles.meta}>
-          <LevelBadge levelId={roadmap.level} size="md" />
-          {plan !== null && (
-            <ThemedText type="small" style={styles.planText}>
-              {plan}
-            </ThemedText>
-          )}
-        </View>
-        {/* Konu sayısı/süre yalnız burada (ProgressSummary'de): aynı bilgi iki yerde tekrarlanmaz */}
-        {sum ? (
-          <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} weeks={sum.weeks} />
-        ) : (
-          <View style={styles.chips}>
-            <Skeleton width="60%" height={16} />
-            <Skeleton width="100%" height={12} radius={Radius.pill} />
-          </View>
-        )}
-        {/* Planı yeniden kişiselleştirme (soruları tekrar cevaplama): eskiden sayfanın en altındaydı */}
-        <Link href={{ pathname: '/roadmap-questions', params: { roadmapId: roadmap.id } }} asChild>
-          <Button variant="secondary" icon="🎯" label="Planımı güncelle" />
-        </Link>
-      </View>
-    </View>
-  );
-}
-
-// Kullanıcı adı seçme kartı. Yeni hesaplar adı kayıtta seçer (veritabanı profile yazar), kart hiç görünmez.
-// Adı olmayan eski hesaplarda bir kez görünür; alan bir öneriyle dolu gelir (bkz. useUsername.suggestion).
+// Kullanıcı adı seçme şeridi. Yeni hesaplar adı kayıtta seçer (veritabanı profile yazar), şerit hiç görünmez.
+// Adı olmayan eski hesaplarda bir kez görünür. Kapalıyken tek satır; dokununca form açılır (ayrıntı aşamalı).
 function NamePrompt({ onSaved }: { onSaved: () => void }) {
   const theme = useTheme();
   const { username, status } = useUsername();
   const [hidden, setHidden] = useState(false);
+  const [open, setOpen] = useState(false);
 
   if (hidden || status !== 'ready' || username) return null;
   return (
-    <View style={[styles.momentum, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
-      <IconLabel emoji="🏷" type="cardTitle" iconSize={18}>
-        Kullanıcı adını seç
-      </IconLabel>
-      <ThemedText type="small" themeColor="textSecondary">
-        Uygulamada seni bu ad temsil eder; arkadaşların seni bununla bulur.
-      </ThemedText>
-      <UsernameForm
-        submitLabel="Kaydet"
-        onSaved={() => {
-          setHidden(true);
-          onSaved();
-        }}
-      />
-    </View>
+    <Surface tone="soft" hue="accent" padded={false}>
+      <Pressable
+        onPress={() => setOpen((o) => !o)}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel="Kullanıcı adını seç. Arkadaşların seni bu adla bulur."
+        style={styles.stripRow}>
+        <View style={styles.flex1}>
+          <IconLabel emoji="🏷" type="smallBold" themeColor="accentInk" iconSize={16}>
+            Kullanıcı adını seç
+          </IconLabel>
+        </View>
+        <View style={open ? styles.chevronOpen : undefined}>
+          <Glyph emoji="›" size={20} color={theme.accentInk} />
+        </View>
+      </Pressable>
+      {open && (
+        <View style={styles.stripBody}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Uygulamada seni bu ad temsil eder; arkadaşların seni bununla bulur.
+          </ThemedText>
+          <UsernameForm
+            submitLabel="Kaydet"
+            onSaved={() => {
+              setHidden(true);
+              onSaved();
+            }}
+          />
+        </View>
+      )}
+    </Surface>
   );
 }
 
-// Haritalar arası geçiş: takip ettiğin her harita için bir çip
+// Haritalar arası geçiş: tek satır. Açık harita yumuşak renkli zeminde, diğerleri düz yazı; kenarlık yok.
 function MapSwitcher({
   roadmaps,
   activeId,
@@ -409,13 +451,7 @@ function MapSwitcher({
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
             accessibilityLabel={`${m.title}${active ? ', şu an açık' : ', geçmek için dokun'}`}
-            style={[
-              styles.mapChip,
-              {
-                backgroundColor: active ? theme[hue.soft] : theme.card,
-                borderColor: active ? theme[hue.line] : theme.border,
-              },
-            ]}>
+            style={[styles.mapChip, { backgroundColor: active ? theme[hue.soft] : 'transparent' }]}>
             <Glyph emoji={m.emoji} size={16} color={active ? theme[hue.ink] : theme.textSecondary} />
             <ThemedText type="smallBold" themeColor={active ? hue.ink : 'textSecondary'}>
               {m.title}
@@ -428,9 +464,9 @@ function MapSwitcher({
         onPress={() => router.push('/onboarding')}
         accessibilityRole="button"
         accessibilityLabel="Yeni harita ekle"
-        style={[styles.mapChip, { backgroundColor: theme.card, borderColor: theme.border, borderStyle: 'dashed' }]}>
-        <Glyph emoji="➕" size={16} color={theme.textSecondary} />
-        <ThemedText type="smallBold" themeColor="textSecondary">
+        style={styles.mapChip}>
+        <Glyph emoji="➕" size={16} color={theme.accentInk} />
+        <ThemedText type="smallBold" themeColor="accentInk">
           Harita ekle
         </ThemedText>
       </Pressable>
@@ -438,16 +474,27 @@ function MapSwitcher({
   );
 }
 
-// Motivasyon şeridi: seri, seviye/XP ve haftalık hedef tek bakışta. Dokununca ayrıntılar
-// (ipucu, seri koruyucu, XP'ye kalan, arkadaşların) açılır; böylece ekran uzamaz.
-function MomentumStrip({ activity, roadmapId, weekly }: { activity: Activity; roadmapId: string; weekly: WeeklyHoursId }) {
+// Düz özet satırı: "N / M konu" + çubuk, altında seri · seviye/XP · haftalık hedef. Dokununca ayrıntılar
+// (seviye ilerlemesi, seri koruyucu, arkadaşların bugün, kalan süre, harita kimliği) açılır; ekran uzamaz.
+function SummaryRow({
+  roadmap,
+  sum,
+  activity,
+  weekly,
+}: {
+  roadmap: Roadmap;
+  sum: { done: number; total: number; remainingHours: number; weeks: number } | null;
+  activity: Activity | null;
+  weekly: WeeklyHoursId;
+}) {
   const theme = useTheme();
   const xp = useXp();
   const [open, setOpen] = useState(false);
+
   // Aktif gün: konu işaretlenen günler + XP kazanılan günler (quiz, soru, görev)
-  const days = new Set([...activity.activeDays, ...xp.days]);
+  const days = new Set([...(activity?.activeDays ?? []), ...xp.days]);
   const { streak, activeToday, freezeUsedThisWeek } = computeStreak(days);
-  const week = weeklyProgress(activity.doneThisWeekFor(roadmapId, startOfWeek()), weekly);
+  const week = weeklyProgress(activity?.doneThisWeekFor(roadmap.id, startOfWeek()) ?? [], weekly);
   const level = levelFor(xp.total);
   const hint = activeToday
     ? 'Bugün çalıştın, serin devam ediyor.'
@@ -456,196 +503,219 @@ function MomentumStrip({ activity, roadmapId, weekly }: { activity: Activity; ro
       : 'Günün görevini yap, serin başlasın.';
   const weekDone = week.ratio >= 1;
 
+  // Yüklenirken aynı yükseklikte iskelet: içerik gelince sayfa zıplamaz
+  if (!sum) {
+    return (
+      <Surface tone="plain">
+        <Skeleton width="40%" height={16} />
+        <Skeleton width="100%" height={8} radius={Radius.pill} />
+        <Skeleton width="80%" height={14} />
+      </Surface>
+    );
+  }
+
   return (
-    <View style={[styles.strip, { backgroundColor: theme.card, borderColor: theme.border }]}>
+    <Surface tone="plain" padded={false} style={styles.summary}>
       <Pressable
         onPress={() => setOpen((o) => !o)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`Seviye ${level.title}, ${xp.total} XP. Seri: ${streak} gün. Bu hafta ${week.hours} / ${week.target} saat. ${open ? 'Ayrıntıları gizlemek' : 'Ayrıntılar'} için dokun.`}
-        style={({ pressed }) => [styles.stripMain, pressed && { backgroundColor: theme.backgroundSelected }]}>
-        <View style={styles.stripRow}>
-          {/* Seri */}
-          <View style={[styles.streakBadge, { backgroundColor: streak > 0 ? theme.coralSoft : theme.backgroundSelected }]}>
-            <Glyph
+        accessibilityLabel={`${sum.done} / ${sum.total} konu tamamlandı. Seri: ${streak} gün. Seviye ${level.title}, ${xp.total} XP. Bu hafta ${week.hours} / ${week.target} saat. ${open ? 'Ayrıntıları gizlemek' : 'Ayrıntılar'} için dokun.`}
+        style={({ pressed }) => [styles.summaryMain, pressed && { backgroundColor: theme.backgroundElement }]}>
+        <View style={styles.summaryTop}>
+          <View style={styles.flex1}>
+            <ProgressSummary done={sum.done} total={sum.total} remainingHours={sum.remainingHours} compact />
+          </View>
+          <View style={open ? styles.chevronOpen : styles.chevronClosed}>
+            <Glyph emoji="›" size={20} color={theme.textSecondary} />
+          </View>
+        </View>
+        {activity && (
+          <View style={styles.stats}>
+            <IconLabel
               emoji={streak > 0 ? '🔥' : '🌱'}
-              size={20}
-              color={streak > 0 ? theme.coralInk : theme.accentInk}
-              fill={streak > 0 ? theme.coralSoft : undefined}
-            />
-            <ThemedText type="smallBold" themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}>
-              {streak} gün
-            </ThemedText>
-          </View>
-          {/* Seviye + XP */}
-          <View style={styles.stripLevel}>
-            <IconLabel emoji={level.emoji} type="smallBold" iconSize={16}>
-              {level.title}
+              type="smallBold"
+              themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}
+              iconSize={16}>
+              {`${streak} gün seri`}
             </IconLabel>
-            <ThemedText type="small" themeColor="textSecondary">
-              {xp.total} XP
-            </ThemedText>
+            <IconLabel emoji={level.emoji} type="small" iconSize={16}>
+              {`${level.title} · ${xp.total} XP`}
+            </IconLabel>
+            {/* Hedef tamamsa kutlama simgesi */}
+            <IconLabel
+              emoji={weekDone ? '🎉' : '📅'}
+              type="small"
+              themeColor={weekDone ? 'accentInk' : 'text'}
+              iconSize={16}>
+              {`${week.hours} / ${week.target} sa`}
+            </IconLabel>
           </View>
-          <ThemedText type="smallBold" themeColor="textSecondary">
-            {open ? '▴' : '▾'}
-          </ThemedText>
-        </View>
-        {/* Haftalık hedef */}
-        <View style={styles.weekBlock}>
-          <View style={styles.weekRow}>
-            <ThemedText type="small" themeColor="textSecondary">
-              Bu haftanın hedefi
-            </ThemedText>
-            {/* Hedef tamamsa kutlama simgesi; simge yazının içinde değil, IconLabel ile ayrı çizilir */}
-            {weekDone ? (
-              <IconLabel emoji="🎉" type="smallBold" themeColor="accentInk" iconSize={16}>
-                {`${week.hours} / ${week.target} saat`}
-              </IconLabel>
-            ) : (
-              <ThemedText type="smallBold">
-                {week.hours} / {week.target} saat
-              </ThemedText>
-            )}
-          </View>
-          <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
-            <View
-              style={[
-                styles.weekFill,
-                { width: `${Math.round(week.ratio * 100)}%`, backgroundColor: weekDone ? theme.accent : theme.marker },
-              ]}
-            />
-          </View>
-        </View>
+        )}
       </Pressable>
 
       {open && (
-        <Animated.View entering={FadeIn.duration(150)} style={[styles.stripDetail, { borderTopColor: theme.border }]}>
-          <View style={styles.weekBlock}>
-            <ThemedText type="small" themeColor="textSecondary">
-              {level.next ? `${level.next.title} seviyesi için ${level.next.remaining} XP kaldı` : 'En yüksek seviyedesin.'}
-            </ThemedText>
-            <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
-              <View style={[styles.weekFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
-            </View>
-          </View>
-          <ThemedText type="small">{hint}</ThemedText>
-          <IconLabel emoji="🧊" themeColor="skyInk">
-            {freezeUsedThisWeek
-              ? 'Bu haftaki seri koruyucun kullanıldı.'
-              : 'Seri koruyucu hazır: bu hafta bir gün kaçırsan da serin bozulmaz.'}
-          </IconLabel>
-          {/* Bugün çalışan arkadaş yoksa bu bileşen hiçbir şey çizmez */}
-          <FriendsTodayCard compact />
+        <Animated.View entering={FadeIn.duration(150)} style={[styles.summaryDetail, { borderTopColor: theme.border }]}>
+          <ThemedText type="small" themeColor="textSecondary">
+            {remainingLabel(sum.done, sum.total, sum.remainingHours, sum.weeks)}
+          </ThemedText>
+          <IdentityLine roadmap={roadmap} />
+          {activity && (
+            <>
+              <View style={styles.weekBlock}>
+                <View style={styles.weekRow}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    Bu haftanın hedefi
+                  </ThemedText>
+                  <ThemedText type="smallBold">
+                    {week.hours} / {week.target} saat
+                  </ThemedText>
+                </View>
+                <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
+                  <View
+                    style={[
+                      styles.weekFill,
+                      { width: `${Math.round(week.ratio * 100)}%`, backgroundColor: weekDone ? theme.accent : theme.marker },
+                    ]}
+                  />
+                </View>
+              </View>
+              <View style={styles.weekBlock}>
+                <ThemedText type="small" themeColor="textSecondary">
+                  {level.next ? `${level.next.title} seviyesi için ${level.next.remaining} XP kaldı` : 'En yüksek seviyedesin.'}
+                </ThemedText>
+                <View style={[styles.weekTrack, { backgroundColor: theme.backgroundSelected }]}>
+                  <View style={[styles.weekFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
+                </View>
+              </View>
+              <ThemedText type="small">{hint}</ThemedText>
+              <IconLabel emoji="🧊" themeColor="skyInk">
+                {freezeUsedThisWeek
+                  ? 'Bu haftaki seri koruyucun kullanıldı.'
+                  : 'Seri koruyucu hazır: bu hafta bir gün kaçırsan da serin bozulmaz.'}
+              </IconLabel>
+              {/* Bugün çalışan arkadaş yoksa bu bileşen hiçbir şey çizmez */}
+              <FriendsTodayCard compact />
+            </>
+          )}
         </Animated.View>
       )}
-    </View>
+    </Surface>
   );
 }
 
-// Günün görevi: tek, küçük bir iş (≈5 dk). Tamamlanınca +30 XP ve seri devam eder.
-// Yalnız sunum yapar; görevi MapView yükler. flat: alttaki/tamamlanmış kart düz alt kenarlı (3D yok).
-function DailyTaskCard({
+// "Şimdi" kartı: ekrandaki tek birincil (3D) öğe, harita renginde.
+//  - Sıradaki konu her zaman ana satır.
+//  - Günün görevi AYNI konuya götürüyorsa kartta rozet; farklıysa ayırıcıyla ikinci satır (ayrı kart değil).
+//  - Görev tamamsa küçük onay satırı.
+function NowCard({
+  hue,
+  next,
   task,
-  done,
-  flat,
-  onPress,
+  taskDone,
+  personalization,
+  onOpenNext,
+  onOpenTask,
 }: {
-  task: DailyTask;
-  done: boolean;
-  flat: boolean;
-  onPress: () => void;
+  hue: Hue;
+  next: Topic | undefined;
+  task: DailyTask | null;
+  taskDone: boolean;
+  personalization: Personalization;
+  onOpenNext: () => void;
+  onOpenTask: () => void;
 }) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
+  const family = HUES[hue];
+
+  // Rozet yalnız "başla" görevi sıradaki konuyla aynıysa: quiz/bitir görevi başka bir iş olduğu için kendi satırında kalır
+  const sameTopic = !!task && !taskDone && task.kind === 'start' && !!next && task.topicId === next.id;
+  const showTaskRow = !!task && !sameTopic;
+  const taskText = task ? taskTitle(task) : '';
+  const focusIndex = next ? personalization.focus.indexOf(next.id) : -1;
+  const aiPick = focusIndex >= 0 && personalization.source === 'ai';
+
+  const nextRow = next && (
+    <Pressable
+      onPress={onOpenNext}
+      accessibilityRole="button"
+      accessibilityLabel={`Sıradaki konu: ${next.title}.${sameTopic ? ' Günün görevi, +30 XP.' : ''} Açmak için dokun.`}
+      style={({ pressed }) => [styles.nowRow, pressed && styles.nowPressed]}>
+      <Glyph emoji="🥾" size={28} color={theme[family.ink]} />
+      <View style={styles.flex1}>
+        {aiPick ? (
+          <IconLabel emoji="✨" type="eyebrow" themeColor={family.ink} iconSize={12}>
+            Şimdi · senin için seçildi
+          </IconLabel>
+        ) : (
+          <ThemedText type="eyebrow" themeColor={family.ink}>
+            Şimdi · sıradaki konu
+          </ThemedText>
+        )}
+        <ThemedText type="cardTitle">{next.title}</ThemedText>
+        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
+          {next.summary}
+        </ThemedText>
+        {sameTopic && (
+          // Rozet: durum rengi (marker) yalnız burada; kenarlıksız küçük hap
+          <View style={[styles.badge, { backgroundColor: theme.markerSoft }]}>
+            <IconLabel emoji="🎯" type="eyebrow" themeColor="markerInk" iconSize={12}>
+              Günün görevi · +30 XP
+            </IconLabel>
+          </View>
+        )}
+      </View>
+      <Glyph emoji="›" size={22} color={theme[family.ink]} />
+    </Pressable>
+  );
+
+  // Görev satırı: yapılacaksa dokunulur; tamamsa yalnız küçük onay
+  const taskRow =
+    showTaskRow &&
+    (taskDone ? (
+      <View style={styles.doneRow} accessible accessibilityLabel="Günün görevi tamam, artı 30 XP. Yarın yeni görev seni bekliyor.">
+        <Glyph emoji="✅" size={20} color={theme.accentInk} />
+        <View style={styles.flex1}>
+          <ThemedText type="smallBold" themeColor="accentInk">
+            Günün görevi tamam · +30 XP
+          </ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            Yarın yeni görev seni bekliyor.
+          </ThemedText>
+        </View>
+      </View>
+    ) : (
+      <Pressable
+        onPress={onOpenTask}
+        accessibilityRole="button"
+        accessibilityLabel={`Günün görevi: ${taskText}. Açmak için dokun.`}
+        style={({ pressed }) => [styles.nowRow, pressed && styles.nowPressed]}>
+        <Glyph emoji="🎯" size={28} color={theme.markerInk} />
+        <View style={styles.flex1}>
+          <ThemedText type="eyebrow" themeColor="markerInk">
+            {next ? 'Günün görevi · +30 XP' : 'Şimdi · günün görevi · +30 XP'}
+          </ThemedText>
+          <ThemedText type={next ? 'smallBold' : 'cardTitle'}>{taskText}</ThemedText>
+        </View>
+        <Glyph emoji="›" size={22} color={theme.markerInk} />
+      </Pressable>
+    ));
+
   return (
     // Görev sonradan (async) geldiği için yumuşakça belirir; hareketi azalt açıksa animasyon yok
     <Animated.View entering={reduceMotion ? undefined : FadeIn.duration(150)}>
-      <Pressable
-        onPress={onPress}
-        accessibilityRole="button"
-        accessibilityLabel={`Günün görevi: ${taskTitle(task)}. ${done ? 'Tamamlandı.' : 'Açmak için dokun.'}`}
-        style={({ pressed }) => [
-          styles.next,
-          flat && styles.nextFlat,
-          {
-            backgroundColor: done ? theme.accentSoft : theme.markerSoft,
-            borderColor: done ? theme.accent : theme.markerEdge,
-            borderBottomColor: done ? theme.accentEdge : theme.markerEdge,
-          },
-          pressed && { transform: [{ translateY: 2 }] },
-        ]}>
-        <IconTile emoji={done ? '✅' : '🎯'} tone={done ? 'accent' : 'marker'} size={48} />
-        <View style={styles.bandTexts}>
-          <ThemedText type="eyebrow" themeColor={done ? 'accentInk' : 'markerInk'}>
-            {done ? 'Günün görevi tamam · +30 XP' : 'Günün görevi · yaklaşık 5 dk · +30 XP'}
-          </ThemedText>
-          <ThemedText type="cardTitle">{taskTitle(task)}</ThemedText>
-          {done && (
-            <ThemedText type="small" themeColor="textSecondary">
-              Yarın yeni görev seni bekliyor.
-            </ThemedText>
-          )}
-        </View>
-        {!done && (
-          <ThemedText type="cardTitle" themeColor="markerInk">
-            ›
-          </ThemedText>
-        )}
-      </Pressable>
+      <Surface tone="primary" hue={hue}>
+        {nextRow}
+        {nextRow && taskRow && <View style={[styles.divider, { backgroundColor: theme[family.line] }]} />}
+        {taskRow}
+      </Surface>
     </Animated.View>
   );
 }
 
-// "Sıradaki konu": tek dokunuşla kaldığın yerden devam
-function NextCard({
-  topic,
-  personalization,
-  flat,
-  onPress,
-}: {
-  topic: Topic;
-  personalization: Personalization;
-  flat: boolean; // günün görevi üstteyse bu kart düz alt kenarlı olur
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  const focusIndex = personalization.focus.indexOf(topic.id);
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`Sıradaki konu: ${topic.title}. Açmak için dokun.`}
-      style={({ pressed }) => [
-        styles.next,
-        flat && styles.nextFlat,
-        { backgroundColor: theme.accentSoft, borderColor: theme.accent, borderBottomColor: theme.accentEdge },
-        pressed && { transform: [{ translateY: 2 }] },
-      ]}>
-      <IconTile emoji="🥾" tone="accent" size={48} />
-      <View style={styles.bandTexts}>
-        {focusIndex >= 0 && personalization.source === 'ai' ? (
-          <IconLabel emoji="✨" type="eyebrow" themeColor="accentInk" iconSize={12}>
-            Sıradaki konu · senin için seçildi
-          </IconLabel>
-        ) : (
-          <ThemedText type="eyebrow" themeColor="accentInk">
-            Sıradaki konu
-          </ThemedText>
-        )}
-        <ThemedText type="cardTitle">{topic.title}</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary" numberOfLines={2}>
-          {topic.summary}
-        </ThemedText>
-      </View>
-      <ThemedText type="cardTitle" themeColor="accentInk">
-        ›
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-// Bölümler: roadmap.sh'teki ağacın dikey hali. Her bölüm açılıp kapanır; sıradaki konunun bölümü
-// ve ilk bölüm açık başlar, uzun liste tek ekranda boğmasın.
+// "Harita" bölümü: roadmap.sh'teki ağacın dikey hali. Başlık satırında Ağaç/Liste anahtarı.
+// Liste görünümünde her bölüm açılıp kapanır; sıradaki konunun bölümü ve ilk bölüm açık başlar.
 function Sections({
   roadmap,
   map,
@@ -665,7 +735,7 @@ function Sections({
     return new Set([first, withNext].filter((x): x is string => Boolean(x)));
   });
   const planIds = new Set(planTopics(map, statuses, personalization).map((t) => t.id));
-  // Görünüm: "Harita" (roadmap.sh gibi ağaç) ya da "Liste" (açılır bölümler). Seçim cihazda hatırlanır
+  // Görünüm: "Ağaç" (roadmap.sh gibi) ya da "Liste" (açılır bölümler). Seçim cihazda hatırlanır
   // (Ayarlar'daki "Haritanın varsayılan görünümü" ile aynı tercih).
   const { mapView: view } = usePreferences();
   const setView = (v: MapViewPref) => setPreferences({ mapView: v });
@@ -681,18 +751,13 @@ function Sections({
 
   return (
     <View style={styles.sections}>
-      <View style={styles.sectionsHead}>
-        <View style={styles.headRow}>
-          <ThemedText type="cardTitle" accessibilityRole="header" style={styles.flex1}>
-            Harita
-          </ThemedText>
-          <ViewSwitch value={view} onChange={setView} />
+      <View style={styles.mapHead}>
+        <View style={styles.flex1}>
+          <SectionHeader title="Harita" />
         </View>
-        <ThemedText type="small" themeColor="textSecondary">
-          Bir konuya dokun: ne olduğunu, kaynaklarını gör ve durumunu işaretle.
-        </ThemedText>
-        {view === 'tree' && <TreeLegend />}
+        <ViewSwitch value={view} onChange={setView} />
       </View>
+      {view === 'tree' && <TreeLegend />}
       {view === 'tree' && (
         <RoadmapTree
           map={map}
@@ -702,26 +767,25 @@ function Sections({
           onOpenTopic={(id) => openTopic(roadmap, id)}
         />
       )}
-      {view === 'list' && map.sections.map((section, index) => (
-        <SectionCard
-          key={section.id}
-          index={index}
-          last={index === map.sections.length - 1}
-          section={section}
-          open={open.has(section.id)}
-          onToggle={() => toggle(section.id)}
-          statuses={statuses}
-          personalization={personalization}
-          planIds={planIds}
-          nextId={nextId}
-          onOpenTopic={(id) => openTopic(roadmap, id)}
-        />
-      ))}
+      {view === 'list' &&
+        map.sections.map((section) => (
+          <SectionBlock
+            key={section.id}
+            section={section}
+            open={open.has(section.id)}
+            onToggle={() => toggle(section.id)}
+            statuses={statuses}
+            personalization={personalization}
+            planIds={planIds}
+            nextId={nextId}
+            onOpenTopic={(id) => openTopic(roadmap, id)}
+          />
+        ))}
     </View>
   );
 }
 
-// Harita / Liste görünüm anahtarı: ortak Segmented bileşeni (içeriği kadar geniş)
+// Ağaç / Liste görünüm anahtarı: ortak Segmented bileşeni (içeriği kadar geniş)
 function ViewSwitch({ value, onChange }: { value: 'tree' | 'list'; onChange: (v: 'tree' | 'list') => void }) {
   return (
     <Segmented
@@ -730,16 +794,17 @@ function ViewSwitch({ value, onChange }: { value: 'tree' | 'list'; onChange: (v:
       value={value}
       onChange={onChange}
       options={[
-        { id: 'tree', label: 'Harita', icon: '🗺️', accessibilityLabel: 'Harita görünümü' },
+        { id: 'tree', label: 'Ağaç', icon: '🗺️', accessibilityLabel: 'Ağaç görünümü' },
         { id: 'list', label: 'Liste', icon: '☰', accessibilityLabel: 'Liste görünümü' },
       ]}
     />
   );
 }
 
-function SectionCard({
-  index,
-  last,
+// Liste görünümünde bir bölüm: başlık satırı + (açıksa) not satırı + ListGroup konu satırları.
+// Eskiden bölüm kartının içinde kenarlıklı konu kutuları vardı (kart içinde kart); şimdi kutu yok,
+// konular tek düz grupta ince ayırıcıyla dizilir.
+function SectionBlock({
   section,
   open,
   onToggle,
@@ -749,8 +814,6 @@ function SectionCard({
   nextId,
   onOpenTopic,
 }: {
-  index: number;
-  last: boolean;
   section: Section;
   open: boolean;
   onToggle: () => void;
@@ -767,166 +830,89 @@ function SectionCard({
   const note = personalization.notes[section.id];
 
   return (
-    <View style={styles.sectionRow}>
-      {/* Sol taraftaki patika: düğüm + bölümleri birbirine bağlayan çizgi */}
-      <View style={styles.rail} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        <View
-          style={[
-            styles.node,
-            {
-              backgroundColor: complete ? theme.accent : theme.card,
-              borderColor: complete ? theme.accentEdge : theme.borderStrong,
-            },
-          ]}>
-          <Text allowFontScaling={false} style={[styles.nodeText, { color: complete ? theme.onAccent : theme.text }]}>
-            {complete ? '✓' : String(index + 1)}
-          </Text>
-        </View>
-        {!last && <View style={[styles.line, { backgroundColor: theme.borderStrong }]} />}
-      </View>
-
-      <View style={[styles.section, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        <Pressable
-          onPress={onToggle}
-          accessibilityRole="button"
-          accessibilityState={{ expanded: open }}
-          accessibilityLabel={`${section.title}. ${inPlan.length} konunun ${done} tanesi bitti. ${open ? 'Kapatmak' : 'Açmak'} için dokun.`}
-          style={styles.sectionHead}>
-          <Glyph emoji={section.emoji} size={20} color={theme.textSecondary} />
-          <View style={styles.bandTexts}>
-            <ThemedText type="cardTitle">{section.title}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {inPlan.length > 0 ? `${done} / ${inPlan.length} konu` : `${section.topics.length} konu · planında yok`}
-            </ThemedText>
-          </View>
-          <ThemedText type="cardTitle" themeColor="textSecondary">
-            {open ? '▴' : '▾'}
+    <View style={styles.block}>
+      <Pressable
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
+        accessibilityLabel={`${section.title}. ${inPlan.length} konunun ${done} tanesi bitti. ${open ? 'Kapatmak' : 'Açmak'} için dokun.`}
+        style={styles.blockHead}>
+        {/* Bölüm tamamsa onay simgesi (bölüm kutlamasının sakin hali) */}
+        <Glyph
+          emoji={complete ? '✅' : section.emoji}
+          size={20}
+          color={complete ? theme.accent : theme.textSecondary}
+        />
+        <View style={styles.flex1}>
+          <ThemedText type="cardTitle">{section.title}</ThemedText>
+          <ThemedText type="small" themeColor="textSecondary">
+            {inPlan.length > 0 ? `${done} / ${inPlan.length} konu` : `${section.topics.length} konu · planında yok`}
           </ThemedText>
-        </Pressable>
+        </View>
+        <View style={open ? styles.chevronOpen : styles.chevronClosed}>
+          <Glyph emoji="›" size={20} color={theme.textSecondary} />
+        </View>
+      </Pressable>
 
-        {open && (
-          <Animated.View entering={FadeIn.duration(150)} style={styles.topics}>
-            {note && (
-              <View style={[styles.note, { backgroundColor: theme.markerSoft }]}>
-                <IconLabel emoji="✨" themeColor="markerInk">
-                  {note}
-                </IconLabel>
-              </View>
-            )}
-            {section.topics.map((topic) => (
-              <TopicRow
-                key={topic.id}
-                topic={topic}
-                status={statuses.get(topic.id)}
-                focus={personalization.focus.includes(topic.id)}
-                skipHint={personalization.skip.includes(topic.id)}
-                isNext={topic.id === nextId}
-                onPress={() => onOpenTopic(topic.id)}
-              />
-            ))}
-          </Animated.View>
-        )}
-      </View>
+      {open && (
+        <Animated.View entering={FadeIn.duration(150)} style={styles.blockBody}>
+          {/* Kişisel bölüm notu: kutusuz tek bilgi satırı */}
+          {note && (
+            <IconLabel emoji="✨" themeColor="markerInk">
+              {note}
+            </IconLabel>
+          )}
+          <ListGroup>
+            {section.topics.map((topic) => {
+              const status = statuses.get(topic.id);
+              const focus = personalization.focus.includes(topic.id);
+              const skipHint = personalization.skip.includes(topic.id);
+
+              // Etiketler alt satırda: sıradaki + harita işareti (önerilen konularda gösterilmez, varsayılan odur)
+              // + kişisel işaretler + durum
+              const tags: string[] = [];
+              if (topic.id === nextId) tags.push('Sıradaki konu');
+              if (topic.marker !== 'core') tags.push(MARKER_STYLE[topic.marker].label);
+              if (focus && !status) tags.push('Önce bununla başla');
+              if (skipHint && !status) tags.push('Biliyorsan atlayabilirsin');
+              if (status) tags.push(STATUS_STYLE[status].label);
+
+              return (
+                <ListRow
+                  key={topic.id}
+                  icon={status ? STATUS_STYLE[status].emoji : '○'}
+                  title={topic.title}
+                  subtitle={tags.length > 0 ? tags.join(' · ') : undefined}
+                  right={
+                    <ThemedText type="small" themeColor="textSecondary">
+                      {topic.hours} sa
+                    </ThemedText>
+                  }
+                  accessibilityLabel={`${topic.title}. ${tags.join(', ')}. ${topic.hours} saat. Ayrıntılar için dokun.`}
+                  onPress={() => onOpenTopic(topic.id)}
+                />
+              );
+            })}
+          </ListGroup>
+        </Animated.View>
+      )}
     </View>
   );
 }
 
-function TopicRow({
-  topic,
-  status,
-  focus,
-  skipHint,
-  isNext,
-  onPress,
-}: {
-  topic: Topic;
-  status: TopicStatus | undefined;
-  focus: boolean;
-  skipHint: boolean;
-  isNext: boolean;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  const muted = status === 'skipped' || (!status && (topic.marker !== 'core' || skipHint));
-
-  // Etiketler: harita işareti (önerilen konularda gösterilmez, varsayılan odur) + kişisel işaretler
-  const tags: string[] = [];
-  if (topic.marker !== 'core') tags.push(MARKER_STYLE[topic.marker].label);
-  if (focus && !status) tags.push('Önce bununla başla');
-  if (skipHint && !status) tags.push('Biliyorsan atlayabilirsin');
-  if (status) tags.push(STATUS_STYLE[status].label);
-
+// Yüklenirken aynı düzende iskelet: içerik gelince sayfa zıplamaz
+function RoadmapSkeleton() {
   return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={`${topic.title}. ${tags.join(', ')}. Ayrıntılar için dokun.`}
-      style={({ pressed }) => [
-        styles.topic,
-        {
-          borderColor: isNext ? theme.accent : theme.border,
-          backgroundColor: pressed ? theme.backgroundSelected : 'transparent',
-        },
-      ]}>
-      <View
-        style={[
-          styles.check,
-          {
-            borderColor: status === 'done' ? theme.accent : status === 'in_progress' ? theme.markerEdge : theme.borderStrong,
-            backgroundColor: status === 'done' ? theme.accent : status === 'in_progress' ? theme.markerSoft : 'transparent',
-          },
-        ]}>
-        {status && (
-          <Text
-            allowFontScaling={false}
-            style={[
-              styles.checkText,
-              { color: status === 'done' ? theme.onAccent : status === 'in_progress' ? theme.markerInk : theme.textSecondary },
-            ]}>
-            {status === 'done' ? '✓' : status === 'in_progress' ? '…' : '–'}
-          </Text>
-        )}
-      </View>
-      <View style={styles.bandTexts}>
-        <ThemedText
-          type="smallBold"
-          themeColor={muted ? 'textSecondary' : 'text'}
-          style={status === 'skipped' ? styles.strike : undefined}>
-          {topic.title}
-        </ThemedText>
-        {tags.length > 0 && (
-          <ThemedText type="small" themeColor={focus && !status ? 'accentInk' : 'textSecondary'}>
-            {tags.join(' · ')}
-          </ThemedText>
-        )}
-      </View>
-      <ThemedText type="small" themeColor="textSecondary">
-        {topic.hours} sa
-      </ThemedText>
-    </Pressable>
-  );
-}
-
-// Yüklenirken kartla aynı boyutta iskelet: içerik gelince sayfa zıplamaz
-function JourneySkeleton() {
-  const theme = useTheme();
-  return (
-    <View
-      accessible
-      accessibilityLabel="Yükleniyor"
-      accessibilityState={{ busy: true }}
-      style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, minHeight: 232 }]}>
-      <View style={[styles.band, { backgroundColor: theme.backgroundElement }]}>
-        <Skeleton width={64} height={64} radius={18} />
-        <View style={styles.bandTexts}>
-          <Skeleton width="40%" height={14} />
-          <Skeleton width="70%" height={24} />
-        </View>
-      </View>
-      <View style={styles.body}>
-        <Skeleton width="50%" height={16} />
-        <Skeleton width={120} height={28} radius={Radius.pill} />
-      </View>
+    <View accessible accessibilityLabel="Yükleniyor" accessibilityState={{ busy: true }} style={styles.sections}>
+      <Surface tone="soft">
+        <Skeleton width="40%" height={14} />
+        <Skeleton width="70%" height={24} />
+        <Skeleton width="90%" height={14} />
+      </Surface>
+      <Surface tone="plain">
+        <Skeleton width="40%" height={16} />
+        <Skeleton width="100%" height={8} radius={Radius.pill} />
+      </Surface>
     </View>
   );
 }
@@ -949,21 +935,12 @@ function EmptyState({ title, text }: { title: string; text: string }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    borderWidth: Border.chunky,
-    borderBottomWidth: Border.chunky + Edge, // 3D alt kenar
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-  },
-  band: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, padding: Spacing.three },
-  bandTexts: { flex: 1, minWidth: 0, gap: Spacing.half },
-  pin: { position: 'absolute', top: -12, right: -10 },
-  body: { padding: Spacing.three, gap: Spacing.three },
-  meta: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
-  planText: { flex: 1, minWidth: 120 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  flex1: { flex: 1, minWidth: 0, gap: Spacing.half },
   errorBox: { gap: Spacing.three },
-  switcher: { gap: Spacing.two, paddingVertical: Spacing.half },
+  // Başlık bloğu: başlık ile harita değiştirici arası dar (tek satır gibi okunsun)
+  headBlock: { gap: Spacing.one },
+  moreButton: { width: MinTouch, height: MinTouch, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
+  switcher: { gap: Spacing.one, paddingVertical: Spacing.half },
   mapChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -971,83 +948,54 @@ const styles = StyleSheet.create({
     minHeight: MinTouch,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
-    borderWidth: Border.thick,
   },
-  strip: { borderRadius: Radius.lg, borderWidth: Border.thick, overflow: 'hidden' },
-  stripMain: { gap: Spacing.two, padding: Spacing.three, minHeight: MinTouch },
-  stripRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  stripLevel: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: Spacing.two },
-  stripDetail: { gap: Spacing.two, padding: Spacing.three, borderTopWidth: Border.thin },
-  momentum: { gap: Spacing.three, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
-  streakBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.two,
-    borderRadius: Radius.pill,
+  // "…" menüsü (alt sayfa)
+  sheetRoot: { flex: 1, justifyContent: 'flex-end' },
+  // Perde rengi tema dışı ama koyu/açık fark etmez (milestone-celebration ile aynı kalıp)
+  scrim: { backgroundColor: 'rgba(0,0,0,0.4)' },
+  sheet: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
+    borderTopLeftRadius: Radius.xl,
+    borderTopRightRadius: Radius.xl,
+    paddingTop: Spacing.three,
   },
+  sheetIdentity: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingHorizontal: Spacing.three },
+  sheetMeta: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
+  divider: { height: Border.thin },
+  // Bilgi şeridi (kullanıcı adı): tek satır, dokununca açılır
+  stripRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingHorizontal: Spacing.three, minHeight: MinTouch },
+  stripBody: { gap: Spacing.three, paddingHorizontal: Spacing.three, paddingBottom: Spacing.three },
+  chevronOpen: { transform: [{ rotate: '90deg' }] },
+  chevronClosed: { transform: [{ rotate: '0deg' }] },
+  // Özet satırı
+  summary: { gap: 0, overflow: 'hidden' },
+  summaryMain: { gap: Spacing.two, padding: Spacing.three, minHeight: MinTouch },
+  summaryTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  stats: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three, rowGap: Spacing.one },
+  summaryDetail: { gap: Spacing.two, padding: Spacing.three, borderTopWidth: Border.thin },
   weekBlock: { gap: Spacing.one },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   weekTrack: { height: 10, borderRadius: Radius.pill, overflow: 'hidden' },
   weekFill: { height: '100%', borderRadius: Radius.pill },
-  next: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.three,
-    padding: Spacing.three,
-    borderWidth: Border.thick,
-    borderBottomWidth: Border.thick + Edge,
-    borderRadius: Radius.lg,
-  },
-  nextFlat: { borderBottomWidth: Border.thick },
-  sections: { gap: Spacing.two },
-  sectionsHead: { gap: Spacing.two, marginBottom: Spacing.one },
-  headRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
-  flex1: { flex: 1 },
-  sectionRow: { flexDirection: 'row', gap: Spacing.two },
-  rail: { width: 32, alignItems: 'center' },
-  node: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: Border.thick,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: Spacing.three,
-  },
-  nodeText: { fontSize: 14, fontWeight: '900' },
-  line: { flex: 1, width: 3, borderRadius: 2, marginTop: Spacing.one },
-  section: { flex: 1, minWidth: 0, borderWidth: Border.thick, borderRadius: Radius.md, overflow: 'hidden' },
-  sectionHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    padding: Spacing.three,
-    minHeight: MinTouch,
-  },
-  topics: { gap: Spacing.two, paddingHorizontal: Spacing.two, paddingBottom: Spacing.two },
-  note: { borderRadius: Radius.sm, padding: Spacing.two },
-  topic: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    minHeight: MinTouch,
-    paddingVertical: Spacing.two,
+  // "Şimdi" kartı
+  nowRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: MinTouch },
+  nowPressed: { opacity: 0.7 },
+  doneRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
+  badge: {
+    alignSelf: 'flex-start',
+    marginTop: Spacing.one,
+    paddingVertical: Spacing.half,
     paddingHorizontal: Spacing.two,
-    borderWidth: Border.thick,
-    borderRadius: Radius.sm,
+    borderRadius: Radius.pill,
   },
-  check: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: Border.thick,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkText: { fontSize: 13, fontWeight: '900' },
-  strike: { textDecorationLine: 'line-through' },
+  // Harita bölümü
+  sections: { gap: Spacing.three },
+  mapHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  block: { gap: Spacing.two },
+  blockHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, minHeight: MinTouch },
+  blockBody: { gap: Spacing.two },
   empty: { alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.five },
   centerText: { textAlign: 'center' },
 });
