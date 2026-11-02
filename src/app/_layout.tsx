@@ -1,8 +1,10 @@
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import { Platform } from 'react-native';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AppErrorScreen } from '@/components/app-error';
+import { webHeaderLeft } from '@/components/header-back-button';
 import { XpToast } from '@/components/xp-toast';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -86,7 +88,16 @@ function RootStack() {
       <Stack.Protected guard={!!session}>
         {/* 3 soru + "haritan hazırlanıyor" anı. Başlık ve geri düğmesini ekranın kendisi ayarlar. */}
         <Stack.Screen name="roadmap-questions" options={{ title: 'Sana özel plan' }} />
-        <Stack.Screen name="settings" options={{ title: 'Ayarlar' }} />
+        {/* Ayarlar bir klasör rotası: kendi iç Stack'i (settings/_layout.tsx) başlıkları koyar */}
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
+        {/* Profil'deki "Tümü": tüm başarımlar */}
+        <Stack.Screen
+          name="achievements"
+          options={{
+            title: 'Başarımlar',
+            headerLeft: Platform.OS === 'web' ? webHeaderLeft('/profile') : undefined,
+          }}
+        />
         {/* Topluluk › Vitrin için proje paylaşma formu */}
         <Stack.Screen name="showcase-new" options={{ title: 'Projeni paylaş' }} />
       </Stack.Protected>
