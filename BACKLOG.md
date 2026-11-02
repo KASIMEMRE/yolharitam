@@ -20,15 +20,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
   şartı korunur.
 - Kabul: kart içinde kart yok; XP/kutlama/ilerleme davranışı aynı; misafir sürümü (SM-03) bozulmadı.
 
-### SM-06 · Profil ve Ayarlar sadeleştirme
-- **Profil:** kimlik (avatar, @kullanıcı adı) → düz seviye/XP satırı → rozetler (yatay şerit, "Tümü" ile tam liste)
-  → ListRow'lar: Haritalarım, Ayarlar. Ayrı kartlar azaltılır.
-- **Ayarlar** alt sayfalara: `settings/index` (ListRow listesi) → `settings/maps`, `settings/appearance`,
-  `settings/account` (kullanıcı adı, şifre, çıkış, en altta hesap silme), `settings/blocked`, `settings/about`
-  (sürüm, yapay zekâ notu, gizlilik, koşullar, destek). Mevcut bileşenler taşınır, mantık değişmez.
-- Kabul: envanterdeki Hesap ve Ayarlar maddelerinin hepsi alt sayfalarda; hesap silme akışı aynen çalışıyor;
-  geri gezinme web ve native'de doğru.
-
 ### SM-07 · Topluluk ve Gelişmeler sadeleştirme
 - Topluluk: `Segmented` (Lig · Arkadaşlar · Vitrin) → her sekmede tek liste. Lig ve arkadaş satırları `ListRow`;
   onay kutuları satırın içinde değil alt sayfada/diyalogda. Vitrin kartlarında eylemler (Bildir, Engelle, Sil)
@@ -75,6 +66,16 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Kabul: ilk ekranda en fazla 1 birincil (3D) öğe; iç içe kenarlıklı kutu yok; envanterdeki Haritalar ve
   İlerleme maddelerinin hepsine hâlâ ulaşılıyor; önce/sonra görüntüler.
 - ✅ Yol Haritam (oturumlu) sadeleştirildi: tek birincil "Şimdi" kartı (sıradaki konu + günün görevi rozet/ikinci satır/onay), düz özet satırı (ilerleme, seri, XP, haftalık hedef; dokununca ayrıntı), "Harita" bölümü (Ağaç/Liste `Segmented`; liste `ListGroup`/`ListRow`), Yolculuk kartı kalktı (kimlik + "Planımı güncelle" + "Harita ayarları" başlıktaki "…" menüsünde), kullanıcı adı tek satırlık şerit.
+
+### SM-06 · Profil ve Ayarlar sadeleştirme
+- **Profil:** kimlik (avatar, @kullanıcı adı) → düz seviye/XP satırı → rozetler (yatay şerit, "Tümü" ile tam liste)
+  → ListRow'lar: Haritalarım, Ayarlar. Ayrı kartlar azaltılır.
+- **Ayarlar** alt sayfalara: `settings/index` (ListRow listesi) → `settings/maps`, `settings/appearance`,
+  `settings/account` (kullanıcı adı, şifre, çıkış, en altta hesap silme), `settings/blocked`, `settings/about`
+  (sürüm, yapay zekâ notu, gizlilik, koşullar, destek). Mevcut bileşenler taşınır, mantık değişmez.
+- Kabul: envanterdeki Hesap ve Ayarlar maddelerinin hepsi alt sayfalarda; hesap silme akışı aynen çalışıyor;
+  geri gezinme web ve native'de doğru.
+- ✅ Ayarlar `settings/` klasörüne bölündü (liste + Haritalarım, Görünüm, Hesap ve güvenlik, Engellenenler, Hakkında); Profil kimlik → düz seviye → başarım şeridi ("Tümü" → `/achievements`) → Haritalarım/Ayarlar listesi. Mantık aynı, yalnız düzen.
 
 ### SM-01 · Ortak sade bileşenler ve kurallar
 - Yeni bileşenler (`src/components/`):

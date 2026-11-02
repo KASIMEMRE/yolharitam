@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
@@ -23,7 +24,19 @@ export function HeaderBackButton({ onPress, label }: HeaderBackButtonProps) {
   );
 }
 
-const styles = StyleSheet.create({
+// Web'de üst çubuğa konacak geri düğmesi. Geçmiş yoksa (sayfa yenilendi) `fallback` adresine gider.
+// Native'de kullanılmaz: sistemin geri düğmesi ve kaydırma hareketi zaten doğru çalışır.
+export function webHeaderLeft(fallback: '/profile' | '/settings') {
+  const goBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace(fallback);
+  };
+  return function WebHeaderLeft() {
+    return <HeaderBackButton onPress={goBack} label="Geri dön" />;
+  };
+}
+
+const styles =StyleSheet.create({
   button: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   text: { fontSize: 32, lineHeight: 36, fontWeight: '900' },
 });

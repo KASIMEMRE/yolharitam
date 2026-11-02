@@ -1,9 +1,11 @@
-import { StyleSheet, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { IconTile } from '@/components/icon-tile';
 import { StatusChip } from '@/components/level-badge';
+import { SectionHeader } from '@/components/section-header';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { summaryText, type AchievementResult } from '@/constants/achievements';
@@ -88,6 +90,62 @@ export function AchievementsSection() {
   );
 }
 
+// Profil'deki yatay şerit: ilk birkaç rozet (kazanılanlar önce) + "Tümü" ile tam liste ekranı.
+// Neden şerit: profilde 9 kartlık ızgara sayfayı uzatıyordu; ayrıntı aşamalı gösterilir (dokununca açılır).
+const STRIP_COUNT = 5;
+
+export function AchievementsStrip() {
+  const { status, achievements, earnedCount, retrying, retry } = useAchievements();
+  const ordered = [...achievements].sort((a, b) => Number(b.earned) - Number(a.earned));
+  const failed = status === 'schema' || status === 'network' || status === 'error';
+  const errorText =
+    status === 'schema' ? ERROR_TEXT.loadSchema : status === 'network' ? ERROR_TEXT.achievementsFailed : ERROR_TEXT.other;
+  const openAll = () => router.push('/achievements');
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader
+        title="Başarımlar"
+        subtitle={status === 'ready' ? summaryText(earnedCount, achievements.length) : undefined}
+        action={status === 'ready' ? { label: 'Tümü', onPress: openAll } : undefined}
+      />
+      {status === 'loading' && (
+        <View accessible accessibilityLabel="Başarımlar yükleniyor" accessibilityState={{ busy: true }} style={styles.stripRow}>
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} width={72} height={84} radius={Radius.md} />
+          ))}
+        </View>
+      )}
+      {failed && (
+        <View style={styles.grid}>
+          <Banner tone="warning">{errorText}</Banner>
+          <Button variant="secondary" label="Tekrar dene" loading={retrying} onPress={retry} />
+        </View>
+      )}
+      {status === 'ready' && (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripRow}>
+          {ordered.slice(0, STRIP_COUNT).map((a) => (
+            <Pressable
+              key={a.id}
+              onPress={openAll}
+              accessibilityRole="button"
+              accessibilityLabel={`${a.title}. ${a.earned ? 'Kazanıldı' : 'Henüz kazanılmadı'}. Tüm başarımları aç`}
+              style={styles.chip}>
+              {/* Kazanılmayan soluk; renk tek başına anlam taşımasın diye erişilebilirlik etiketi durumu da söyler */}
+              <View style={a.earned ? undefined : styles.dimmed}>
+                <IconTile emoji={a.emoji} tone={a.earned ? a.hue : 'neutral'} size={48} />
+              </View>
+              <ThemedText type="small" themeColor={a.earned ? 'text' : 'textSecondary'} numberOfLines={2} style={styles.chipText}>
+                {a.title}
+              </ThemedText>
+            </Pressable>
+          ))}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
 function AchievementCard({ item }: { item: AchievementResult }) {
   const theme = useTheme();
   const hue = HUES[item.hue];
@@ -165,6 +223,9 @@ const styles = StyleSheet.create({
     borderWidth: Border.thick,
     borderBottomWidth: Border.thick + Edge,
   },
+  stripRow: { flexDirection: 'row', gap: Spacing.three },
+  chip: { width: 72, alignItems: 'center', gap: Spacing.one },
+  chipText: { textAlign: 'center' },
   dimmed: { opacity: 0.5, alignSelf: 'flex-start' },
   hintBlock: { gap: Spacing.one, marginTop: Spacing.one },
   track: { height: 6, borderRadius: Radius.pill, overflow: 'hidden' },
