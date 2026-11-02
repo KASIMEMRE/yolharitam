@@ -11,14 +11,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 
 
-### SM-05 · Konu ekranı sadeleştirme
-- Düzen: başlık alanı (harita · bölüm, konu adı, tek satır meta: seviye · süre · işaret; çerçevesiz) → durum
-  `Segmented` (birincil) → "Sonraki konu" → **Kaynaklar** (ListRow listesi) → **Yapay zekâ** bölümü: üç sekmeli
-  tek alan (Alt konular / Quiz / Soru sor) — üç ayrı kutu yerine tek kutu, sekmeyle içerik değişir.
-- Kişisel odak/atla bilgisi başlığın altında tek satır rozet; ayrı kutu değil.
-- Kısayol çipleri kaldırılabilir (yapay zekâ alanı artık tek ve görünür), ama "aşağı kaydırmadan bulunabilir"
-  şartı korunur.
-- Kabul: kart içinde kart yok; XP/kutlama/ilerleme davranışı aynı; misafir sürümü (SM-03) bozulmadı.
 
 ### SM-07 · Topluluk ve Gelişmeler sadeleştirme
 - Topluluk: `Segmented` (Lig · Arkadaşlar · Vitrin) → her sekmede tek liste. Lig ve arkadaş satırları `ListRow`;
@@ -76,6 +68,17 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Kabul: envanterdeki Hesap ve Ayarlar maddelerinin hepsi alt sayfalarda; hesap silme akışı aynen çalışıyor;
   geri gezinme web ve native'de doğru.
 - ✅ Ayarlar `settings/` klasörüne bölündü (liste + Haritalarım, Görünüm, Hesap ve güvenlik, Engellenenler, Hakkında); Profil kimlik → düz seviye → başarım şeridi ("Tümü" → `/achievements`) → Haritalarım/Ayarlar listesi. Mantık aynı, yalnız düzen.
+
+### SM-05 · Konu ekranı sadeleştirme
+- Düzen: başlık alanı (harita · bölüm, konu adı, tek satır meta: seviye · süre · işaret; çerçevesiz) → durum
+  `Segmented` (birincil) → "Sonraki konu" → **Kaynaklar** (ListRow listesi) → **Yapay zekâ** bölümü: üç sekmeli
+  tek alan (Alt konular / Quiz / Soru sor) — üç ayrı kutu yerine tek kutu, sekmeyle içerik değişir.
+- Kişisel odak/atla bilgisi başlığın altında tek satır rozet; ayrı kutu değil.
+- Kısayol çipleri kaldırılabilir (yapay zekâ alanı artık tek ve görünür), ama "aşağı kaydırmadan bulunabilir"
+  şartı korunur.
+- Kabul: kart içinde kart yok; XP/kutlama/ilerleme davranışı aynı; misafir sürümü (SM-03) bozulmadı.
+- ✅ Konu ekranı: çerçevesiz başlık + tek satır meta, tek satır kişisel işaret, `Segmented` durum seçici (birincil), Kaynaklar `ListGroup`, tek alanlı 3 sekmeli "Yapay zekâ ile çalış" (kısayol çipleri kaldırıldı); `Segmented`'e `allowDeselect` eklendi; salt okunur görünüm korundu.
+
 
 ### SM-01 · Ortak sade bileşenler ve kurallar
 - Yeni bileşenler (`src/components/`):
