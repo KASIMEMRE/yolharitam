@@ -73,6 +73,7 @@ function GuestProfileScreen() {
           icon="✉️"
           title="Destek"
           subtitle={SUPPORT_EMAIL}
+          subtitleLines={1}
           chevron
           onPress={() =>
             Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Yol Haritam destek')}`).catch(() => {})

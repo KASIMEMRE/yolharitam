@@ -16,10 +16,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { TrailMap } from '@/components/route-steps';
+import { Segmented } from '@/components/segmented';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Border, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { normalizeUsername, USERNAME_PATTERN } from '@/hooks/use-username';
 import { clearPendingIntent } from '@/lib/auth-gate';
@@ -240,35 +241,16 @@ export default function LoginScreen() {
                   {reason}
                 </ThemedText>
               )}
-              {/* Giriş / Kayıt seçici */}
-              <View
-                style={[
-                  styles.segment,
-                  { backgroundColor: theme.backgroundElement, borderColor: theme.border },
+              {/* Giriş / Kayıt seçici: uygulamanın tek tip segment kontrolü (Segmented) */}
+              <Segmented
+                label="Giriş türü"
+                value={mode}
+                onChange={switchMode}
+                options={[
+                  { id: 'login', label: 'Giriş yap' },
+                  { id: 'signup', label: 'Kayıt ol' },
                 ]}
-                accessibilityRole="tablist">
-                {(['login', 'signup'] as const).map((m) => {
-                  const active = mode === m;
-                  return (
-                    <Pressable
-                      key={m}
-                      onPress={() => switchMode(m)}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: active }}
-                      style={[
-                        styles.segmentItem,
-                        {
-                          borderColor: active ? theme.accent : 'transparent',
-                          backgroundColor: active ? theme.accentSoft : 'transparent',
-                        },
-                      ]}>
-                      <ThemedText type="smallBold" themeColor={active ? 'accentInk' : 'textSecondary'}>
-                        {m === 'login' ? 'Giriş yap' : 'Kayıt ol'}
-                      </ThemedText>
-                    </Pressable>
-                  );
-                })}
-              </View>
+              />
 
               {mode === 'signup' && (
                 <TextField
@@ -395,15 +377,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: Radius.xl,
   },
   form: { gap: Spacing.four },
-  segment: { flexDirection: 'row', borderRadius: Radius.md, borderWidth: Border.thick, padding: Spacing.one },
-  segmentItem: {
-    flex: 1,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: Border.thick,
-    borderRadius: Radius.md - Spacing.one,
-  },
   showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   legal: { textAlign: 'center' },
   link: { textDecorationLine: 'underline', fontWeight: '700' },

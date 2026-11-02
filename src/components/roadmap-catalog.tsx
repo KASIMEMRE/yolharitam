@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { OptionCard } from '@/components/option-card';
+import { ListGroup, ListRow } from '@/components/list-row';
+import { SectionHeader } from '@/components/section-header';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { countTopics, DEV_ROADMAPS, KIND_LABEL } from '@/constants/dev-roadmaps';
@@ -30,57 +31,58 @@ export function RoadmapCatalog({ onSelect }: { onSelect: (mapId: string) => void
         hint={searching ? `${hits.length} harita bulundu` : 'Harita ya da konu adı yazabilirsin'}
       />
 
-      {/* Arama sonuçları: tek liste; eşleşme bir konudaysa hangi konu olduğu yazılır */}
+      {/* Arama sonuçları: tek liste; eşleşme bir konudaysa hangi konu olduğu yazılır.
+          Tekrar eden öğeler kart yığını değil tek ListGroup içinde satırlardır (sadelik ilkesi 3). */}
       {searching && (
         <View style={styles.list}>
           {hits.length === 0 && (
             <ThemedText themeColor="textSecondary">Sonuç bulunamadı. Daha kısa ya da farklı bir kelime dene.</ThemedText>
           )}
-          {hits.map(({ map: m, topicTitle }, index) => (
-            <OptionCard
-              key={m.id}
-              title={m.title}
-              description={topicTitle ? `${KIND_LABEL[m.kind]} · Konu: ${topicTitle}` : `${m.tagline} · ${countTopics(m).total} konu`}
-              icon={m.emoji}
-              hue={m.hue}
-              variant="list"
-              trailing="chevron"
-              hint="Bu yol haritasını seçmek için dokun"
-              index={index}
-              onPress={() => onSelect(m.id)}
-            />
-          ))}
+          {hits.length > 0 && (
+            <ListGroup>
+              {hits.map(({ map: m, topicTitle }) => (
+                <ListRow
+                  key={m.id}
+                  icon={m.emoji}
+                  iconTile={m.hue}
+                  title={m.title}
+                  subtitle={topicTitle ? `${KIND_LABEL[m.kind]} · Konu: ${topicTitle}` : `${m.tagline} · ${countTopics(m).total} konu`}
+                  chevron
+                  onPress={() => onSelect(m.id)}
+                />
+              ))}
+            </ListGroup>
+          )}
         </View>
       )}
 
-      {/* Harita listesi: önce roller, sonra beceriler (roadmap.sh'teki ayrım) */}
+      {/* Harita listesi: önce roller, sonra beceriler (roadmap.sh'teki ayrım). Her grup tek ListGroup. */}
       {!searching &&
         (['role', 'skill'] as const).map((kind) => (
           <View key={kind} style={styles.list}>
             <View style={styles.groupHead}>
-              <ThemedText type="cardTitle" accessibilityRole="header">
-                {KIND_LABEL[kind].replace('yol haritası', 'yol haritaları')}
-              </ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {kind === 'role'
-                  ? 'Bir meslek için baştan sona izlenecek yol.'
-                  : 'Tek bir dil ya da araçta ustalaşmak için.'}
-              </ThemedText>
-            </View>
-            {DEV_ROADMAPS.filter((m) => m.kind === kind).map((m, index) => (
-              <OptionCard
-                key={m.id}
-                title={m.title}
-                description={`${m.tagline} · ${countTopics(m).total} konu`}
-                icon={m.emoji}
-                hue={m.hue}
-                variant="list"
-                trailing="chevron"
-                hint="Bu yol haritasını seçmek için dokun"
-                index={index}
-                onPress={() => onSelect(m.id)}
+              <SectionHeader
+                title={KIND_LABEL[kind].replace('yol haritası', 'yol haritaları')}
+                subtitle={
+                  kind === 'role'
+                    ? 'Bir meslek için baştan sona izlenecek yol.'
+                    : 'Tek bir dil ya da araçta ustalaşmak için.'
+                }
               />
-            ))}
+            </View>
+            <ListGroup>
+              {DEV_ROADMAPS.filter((m) => m.kind === kind).map((m) => (
+                <ListRow
+                  key={m.id}
+                  icon={m.emoji}
+                  iconTile={m.hue}
+                  title={m.title}
+                  subtitle={`${m.tagline} · ${countTopics(m).total} konu`}
+                  chevron
+                  onPress={() => onSelect(m.id)}
+                />
+              ))}
+            </ListGroup>
           </View>
         ))}
     </View>
@@ -89,6 +91,6 @@ export function RoadmapCatalog({ onSelect }: { onSelect: (mapId: string) => void
 
 const styles = StyleSheet.create({
   root: { gap: Spacing.three },
-  groupHead: { gap: Spacing.one, marginTop: Spacing.two },
+  groupHead: { marginTop: Spacing.two },
   list: { gap: Spacing.three },
 });

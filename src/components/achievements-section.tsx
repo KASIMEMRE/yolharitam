@@ -9,8 +9,7 @@ import { SectionHeader } from '@/components/section-header';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { summaryText, type AchievementResult } from '@/constants/achievements';
-import { Border, Edge, Radius, Spacing } from '@/constants/theme';
-import { HUES } from '@/constants/visuals';
+import { Border, Radius, Spacing } from '@/constants/theme';
 import { useAchievements } from '@/hooks/use-achievements';
 import { useTheme } from '@/hooks/use-theme';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
@@ -148,7 +147,6 @@ export function AchievementsStrip() {
 
 function AchievementCard({ item }: { item: AchievementResult }) {
   const theme = useTheme();
-  const hue = HUES[item.hue];
   const { earned, hint } = item;
 
   // Ekran okuyucu: "Ad. Kazanıldı." ya da "Ad. Henüz kazanılmadı. Koşul. İlerleme: 2 / 3 adım."
@@ -163,9 +161,11 @@ function AchievementCard({ item }: { item: AchievementResult }) {
       accessibilityLabel={label}
       style={[
         styles.card,
+        // Sadelik: rozet kartları düz (ince kenar, 3D alt kenar yok). Renk kimliği yalnız simge kutusunda;
+        // kazanıldı bilgisi çip ve metinle verilir. 9 renkli 3D kart ekranı bağırtıyordu.
         earned
-          ? { backgroundColor: theme.card, borderColor: theme[hue.line], borderBottomColor: theme[hue.edge] }
-          : { backgroundColor: theme.backgroundElement, borderColor: theme.border, borderBottomColor: theme.borderEdge },
+          ? { backgroundColor: theme.card, borderColor: theme.border }
+          : { backgroundColor: theme.backgroundElement, borderColor: 'transparent' },
       ]}>
       {/* Kazanılmayanın simgesi soluk: "henüz senin değil" hissi; metin okunaklı kalsın diye yalnız simge solar */}
       <View style={earned ? undefined : styles.dimmed}>
@@ -220,8 +220,7 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
     padding: Spacing.three,
     borderRadius: Radius.lg,
-    borderWidth: Border.thick,
-    borderBottomWidth: Border.thick + Edge,
+    borderWidth: Border.thin,
   },
   stripRow: { flexDirection: 'row', gap: Spacing.three },
   chip: { width: 72, alignItems: 'center', gap: Spacing.one },

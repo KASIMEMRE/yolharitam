@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { IconTile } from '@/components/icon-tile';
 import { ThemedText } from '@/components/themed-text';
@@ -17,17 +17,24 @@ type ScreenHeaderProps = {
 };
 
 export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent', right }: ScreenHeaderProps) {
+  // Dar ekranda (320 px) 48'lik simge + 32 punto başlık + sağdaki "…" düğmesi yan yana sığmaz ve başlık
+  // iki satıra iner. Simge 40'a, başlık 28 puntoya iner; başlık tek satırda kalır.
+  const { width } = useWindowDimensions();
+  const narrow = width < 360;
   return (
     <View style={styles.wrapper}>
       <View style={styles.row}>
-        {emoji && <IconTile emoji={emoji} tone={hue} size={48} />}
+        {emoji && <IconTile emoji={emoji} tone={hue} size={narrow ? 40 : 48} />}
         <View style={styles.texts}>
           {eyebrow && (
             <ThemedText type="eyebrow" themeColor="textSecondary" numberOfLines={1}>
               {eyebrow}
             </ThemedText>
           )}
-          <ThemedText type="heading" accessibilityRole="header">
+          <ThemedText
+            type="heading"
+            accessibilityRole="header"
+            style={narrow && styles.headingNarrow}>
             {title}
           </ThemedText>
         </View>
@@ -44,5 +51,6 @@ const styles = StyleSheet.create({
   // ikonsuz başlık (Profil) da diğer sekmelerle aynı yükseklikte kalsın
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two, minHeight: 72 },
   texts: { flex: 1, minWidth: 0 },
+  headingNarrow: { fontSize: 28, lineHeight: 34 },
   right: { flexShrink: 0 },
 });

@@ -1,6 +1,6 @@
 import { Link, router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -490,6 +490,9 @@ function SummaryRow({
   const theme = useTheme();
   const xp = useXp();
   const [open, setOpen] = useState(false);
+  // 320 px'te üç istatistik tek satıra sığmaz: "gün seri" kısalır ("2 gün"), boşluk daralır.
+  const { width } = useWindowDimensions();
+  const narrow = width < 360;
 
   // Aktif gün: konu işaretlenen günler + XP kazanılan günler (quiz, soru, görev)
   const days = new Set([...(activity?.activeDays ?? []), ...xp.days]);
@@ -531,16 +534,18 @@ function SummaryRow({
           </View>
         </View>
         {activity && (
-          <View style={styles.stats}>
+          <View style={[styles.stats, narrow && styles.statsNarrow]}>
             <IconLabel
               emoji={streak > 0 ? '🔥' : '🌱'}
               type="smallBold"
               themeColor={streak > 0 ? 'coralInk' : 'textSecondary'}
               iconSize={16}>
-              {`${streak} gün seri`}
+              {narrow ? `${streak} gün` : `${streak} gün seri`}
             </IconLabel>
+            {/* Seviye adı özet satırında yer kaplayıp üçüncü istatistiği alt satıra itiyordu: yalnız XP kalır,
+                seviye adı Profil'de ve ayrıntıda ("… seviyesi için N XP kaldı") görünür */}
             <IconLabel emoji={level.emoji} type="small" iconSize={16}>
-              {`${level.title} · ${xp.total} XP`}
+              {`${xp.total} XP`}
             </IconLabel>
             {/* Hedef tamamsa kutlama simgesi */}
             <IconLabel
@@ -973,7 +978,8 @@ const styles = StyleSheet.create({
   summary: { gap: 0, overflow: 'hidden' },
   summaryMain: { gap: Spacing.two, padding: Spacing.three, minHeight: MinTouch },
   summaryTop: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  stats: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three, rowGap: Spacing.one },
+  stats: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three, rowGap: Spacing.one, alignItems: 'center' },
+  statsNarrow: { columnGap: Spacing.two },
   summaryDetail: { gap: Spacing.two, padding: Spacing.three, borderTopWidth: Border.thin },
   weekBlock: { gap: Spacing.one },
   weekRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

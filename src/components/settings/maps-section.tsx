@@ -137,7 +137,8 @@ function MapRow({
 
       {!confirming ? (
         <View style={styles.rowActions}>
-          {!active && <Button variant="secondary" label="Aç" onPress={onOpen} />}
+          {/* Satır eylemleri iki sessiz metin düğmesi: "Aç" 3D olunca satırda ve altındaki "Harita ekle" ile üçüncü 3D öğe olurdu */}
+          {!active && <Button variant="text" icon="›" label="Aç" onPress={onOpen} />}
           <Button variant="text" icon="🗑️" label="Kaldır" onPress={() => setConfirming(true)} />
         </View>
       ) : (

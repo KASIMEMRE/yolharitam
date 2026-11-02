@@ -174,7 +174,8 @@ function ProjectCard({
   return (
     <Surface tone="plain" style={styles.card}>
       <View style={styles.meta}>
-        <ThemedText type="eyebrow" themeColor="textSecondary" numberOfLines={1} style={styles.metaText}>
+        {/* numberOfLines yok: "@ad · Harita adı" dar ekranda kırpılmasın, gerekirse iki satıra insin */}
+        <ThemedText type="eyebrow" themeColor="textSecondary" style={styles.metaText}>
           {meta}
         </ThemedText>
         <RowMenu title={p.title} accessibilityLabel={`${p.title} için diğer eylemler`} actions={actions} />

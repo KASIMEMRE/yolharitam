@@ -12,12 +12,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 
 
-### SM-08 · Son kabul (ürün sorumlusu + testçi + tasarımcı)
-- Plan bölüm 5'teki **özellik envanterinin her maddesi** tek tek denenir; tablo halinde PR'a eklenir (✅/❌ + ekran görüntüsü).
-- Misafir akışı uçtan uca: aç → gez → harita seç → kayıt → onay → giriş → seviye adımı → harita hazır.
-- Tüm ekranlar açık/koyu, 390/320 px; konsolda hata yok; tasarımcı sadelik ilkelerine göre denetler.
-- Eksik/bozuk bulunan her şey aynı PR'da düzeltilir ya da yeni görev olarak eklenir.
-
 ### MAĞAZA-01 · Şifremi unuttum akışı
 - Giriş ekranında "Şifremi unuttum": e-postaya sıfırlama kodu/bağlantısı. Özel SMTP bağlandıktan sonra
   (OTP-01 ile birlikte) e-posta şablonuna kod eklenerek uygulama içinde tamamlanmalı.
@@ -38,6 +32,13 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### SM-08 · Son kabul (ürün sorumlusu + testçi + tasarımcı)
+- Plan bölüm 5'teki **özellik envanterinin her maddesi** tek tek denenir; tablo halinde PR'a eklenir (✅/❌ + ekran görüntüsü).
+- Misafir akışı uçtan uca: aç → gez → harita seç → kayıt → onay → giriş → seviye adımı → harita hazır.
+- Tüm ekranlar açık/koyu, 390/320 px; konsolda hata yok; tasarımcı sadelik ilkelerine göre denetler.
+- Eksik/bozuk bulunan her şey aynı PR'da düzeltilir ya da yeni görev olarak eklenir.
+- ✅ Son kabul tamamlandı: envanter 49/49 ✅ (web + taklit veri), misafir akışı uçtan uca 54/54 geçti, 116 ekran görüntüsü (390/320 px × açık/koyu) `pageerror` ve "Surface içinde Surface" uyarısı olmadan geçti. Düzeltilenler: Yol Haritam başlığı (320 px tek satır) ve özet istatistik satırı (tek satır), 320 px sekme etiketleri, Keşfet/Harita ekle kataloğu `ListRow` listesi, Başarımlar düz kartlar, Haritalarım "Aç" sessiz düğme, Giriş/Kayıt `Segmented`, Lig/Vitrin/destek e-postası kırpılmaları, "Projeni paylaş" web geri düğmesi. Rapor: `docs/plan/SM-08-kabul-raporu.md`.
 
 ### SM-04 · Yol Haritam sadeleştirme
 - Üstten aşağı hedef düzen: başlık (selam + harita değiştirici tek satır) → **tek birincil kart "Şimdi"**
@@ -243,6 +244,10 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 Sıraya konmadı; önceliği proje sahibi verir.
 
+- **Sihirbaz seçenek kartları** (SM-08'den): seviye ve 3 soru adımlarında her seçenek 3D `OptionCard`; "tek birincil öğe" ilkesine göre seçenekler düz olup yalnız seçili kart/birincil düğme 3D olabilir (ya da açıklamalı radyo `ListRow`). Tasarım kararı gerektirir.
+- **"Sonraki konu: <ad>" düğmesi** (SM-08'den): uzun konu adında etiket iki satıra iniyor (kırpılmıyor ama düğme şişiyor); etiket "Sonraki konu", ad ikinci satır/alt yazı olabilir.
+- **"+XP" bildirimi başlığa biniyor** (SM-08'den, web): konu ekranında üst başlık çubuğunun üstüne oturuyor; bildirimin üst payı başlık yüksekliğini hesaba katmalı.
+- **Otomatik uçtan uca test** (SM-08'den): bu denetimin Playwright + taklit Supabase betikleri repoda değil; "Surface içinde Surface" uyarısı yalnız geliştirmede çıktığı için bir CI adımı (geliştirme kipinde web) gerekir. Native cihaz (Expo Go) ve gerçek sunucuyla kayıt/e-posta onayı/hesap silme uçtan uca ayrıca denenmeli.
 - **Özel yuvarlak font (Nunito)** (tasarım yenilemesinden): Android'de başlıklar düz Roboto; `@expo-google-fonts/nunito` (yalnız JS, Expo Go uyumlu) ile oyunsu tipografi. Yeni bağımlılık + splash'te font yükleme gerektirir.
 - **Ağ hatası ile "kayıt yok" ayrımı**: `useLatestRoadmap` hata durumunu döndürmeli, ekranlar "Yüklenemedi, tekrar dene" göstermeli (Y-07 ile birlikte).
 - **Ortak `TopicCard` bileşeni**: Yol Haritam ve Profil'deki konu kartları benzer stil taşıyor.
