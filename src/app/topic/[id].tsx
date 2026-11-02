@@ -11,6 +11,7 @@ import { HeaderBackButton } from '@/components/header-back-button';
 import { StatusChip } from '@/components/level-badge';
 import { type Milestone, MilestoneCelebration } from '@/components/milestone-celebration';
 import { Skeleton } from '@/components/skeleton';
+import { Surface } from '@/components/surface';
 import { type AssistBlockId, TopicAssist } from '@/components/topic-assist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -55,12 +56,20 @@ export default function TopicScreen() {
   const params = useLocalSearchParams<{ id?: string; map?: string; roadmapId?: string }>();
   const map = getRoadmap(first(params.map));
   const found = map && params.id ? findTopic(map, first(params.id) ?? '') : undefined;
-  const roadmapId = first(params.roadmapId);
-  // Misafir (oturum yok): durum/ilerleme sorgusu atılmaz; işaretleme ve yapay zekâ yerine kayıt daveti gösterilir
+  const roadmapParam = first(params.roadmapId);
   const { requireAuth, isGuest } = useAuthGate();
-  const progress = useTopicProgress(isGuest ? undefined : roadmapId);
-  // Kişisel işaretler için kullanıcının yol haritası satırı (Yol Haritam ile aynı kaynak)
-  const { roadmap } = useLatestRoadmap();
+  // Kullanıcının yol haritası satırları (Yol Haritam ile aynı kaynak). Misafirde sorgu atılmaz.
+  const { roadmaps, loading: roadmapsLoading } = useLatestRoadmap();
+  // Konuya haritadan değil önizlemeden gelindiyse roadmapId yoktur; kullanıcı bu haritayı zaten takip
+  // ediyorsa satırını kendimiz buluruz. Bulunamazsa konu SALT OKUNUR açılır (durum/yapay zekâ yok).
+  const roadmapId = roadmapParam ?? (map ? roadmaps.find((r) => r.topic_path === map.id)?.id : undefined);
+  const roadmap = roadmaps.find((r) => r.id === roadmapId) ?? null;
+  // Salt okunur = misafir ya da bu haritayı takip etmeyen kullanıcı: işaretleme ve yapay zekâ yerine tek kayıt satırı
+  const readOnly = isGuest || !roadmapId;
+  // Takip satırı hâlâ aranıyorsa kayıt satırı yerine iskelet göster (yanlış "seç" çağrısı çıkmasın)
+  const lookingUp = !isGuest && !roadmapParam && roadmapsLoading;
+  // Durum/ilerleme sorgusu yalnız gerçekten takip edilen haritada atılır
+  const progress = useTopicProgress(readOnly ? undefined : roadmapId);
   // Bölüm/harita bitince açılan kutlama (hook erken return'lerden ÖNCE çağrılır)
   const [milestone, setMilestone] = useState<Milestone | null>(null);
   // Kaynak bağlantısı açılamadıysa true; opening çift dokunuşta tarayıcının iki kez açılmasını önler
@@ -98,8 +107,8 @@ export default function TopicScreen() {
     />
   );
 
-  // Oturumluda roadmapId şart (ilerleme hangi haritaya yazılacak?); misafir onsuz da konuyu okuyabilir
-  if (!map || !found || (!roadmapId && !isGuest)) {
+  // Harita ya da konu bilinmiyorsa (eski bağlantı, içerik değişmiş olabilir) düz bir hata göster
+  if (!map || !found) {
     return (
       <ThemedView style={styles.container}>
         {screenOptions}
@@ -116,8 +125,8 @@ export default function TopicScreen() {
   // Yol Haritam ekranıyla AYNI kural (kayıt yoksa seviye kuralları): "bölüm bitti" kararı iki ekranda tutarlı olsun
   const goal: GoalId = roadmap && isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
   const personalization =
-    // roadmap && …: misafirde ikisi de undefined olup eşit sayılırdı (roadmapId yok, kayıt yok)
-    roadmap && roadmap.id === roadmapId ? personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal) : null;
+    // roadmap yoksa (misafir ya da takip edilmeyen harita) kişisel işaret de yoktur
+    roadmap ? personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal) : null;
   const focusIndex = personalization?.focus.indexOf(topic.id) ?? -1;
   const skipHint = personalization?.skip.includes(topic.id) ?? false;
   const note = personalization?.notes[section.id];
@@ -276,26 +285,37 @@ export default function TopicScreen() {
               </View>
             )}
 
-            {/* MİSAFİR: durum seçici ve yapay zekâ yerine tek satır + kayıt kapısı (geçici; SM-03'te genişler) */}
-            {isGuest && (
-              <View style={styles.block}>
-                <ThemedText type="small" themeColor="textSecondary">
-                  İlerlemeni kaydetmek ve yapay zekâyı kullanmak için ücretsiz hesap oluştur.
-                </ThemedText>
-                <Button
-                  label="Ücretsiz hesap oluştur"
-                  onPress={() =>
-                    requireAuth(
-                      { type: 'open-topic', mapId: map.id, topicId: topic.id },
-                      'İlerlemeni kaydetmek ve yapay zekâyı kullanmak için ücretsiz hesap oluştur'
-                    )
-                  }
-                />
-              </View>
+            {/* SALT OKUNUR: durum seçici ve yapay zekâ yerine tek yumuşak satır + tek eylem.
+                Misafir kayıt kapısına, oturumlu ama haritayı takip etmeyen kişi seviye adımına gider. */}
+            {readOnly && (
+              lookingUp ? (
+                <Skeleton width="100%" height={52} radius={Radius.lg} />
+              ) : (
+                <Surface tone="soft">
+                  <ThemedText type="smallBold">
+                    {isGuest
+                      ? 'İlerlemeni kaydetmek ve yapay zekâ araçlarını kullanmak için ücretsiz hesap oluştur.'
+                      : 'İlerlemeni kaydetmek ve yapay zekâ araçlarını kullanmak için bu haritayı seç.'}
+                  </ThemedText>
+                  <Button
+                    label={isGuest ? 'Ücretsiz hesap oluştur' : 'Bu haritayı seç'}
+                    onPress={() => {
+                      if (!isGuest) {
+                        router.push({ pathname: '/onboarding', params: { map: map.id } });
+                        return;
+                      }
+                      requireAuth(
+                        { type: 'open-topic', mapId: map.id, topicId: topic.id },
+                        'İlerlemeni kaydetmek ve yapay zekâ araçlarını kullanmak için ücretsiz hesap oluştur'
+                      );
+                    }}
+                  />
+                </Surface>
+              )
             )}
 
-            {/* Durum (yalnız oturumlu) */}
-            {!isGuest && (
+            {/* Durum (yalnız takip edilen haritada) */}
+            {!readOnly && (
             <View style={styles.block}>
               <ThemedText type="cardTitle" accessibilityRole="header">
                 Durumun
@@ -353,7 +373,7 @@ export default function TopicScreen() {
             )}
 
             {/* Yapay zekâ kısayolları: araçlar sayfanın altında kaldığı için durumun yanında hızlı erişim */}
-            {!isGuest && (
+            {!readOnly && (
             <View style={styles.shortcuts} accessibilityRole="toolbar" accessibilityLabel="Yapay zekâ araçları">
               {ASSIST_SHORTCUTS.map((a) => (
                 <Pressable
@@ -387,21 +407,21 @@ export default function TopicScreen() {
             )}
 
             {/* Yapay zekâ araçları. key: "Sonraki konu"ya geçince önceki konunun cevapları kalmasın */}
-            {!isGuest && (
+            {!readOnly && (
               <View onLayout={(e) => (assistOffset.current.assist = e.nativeEvent.layout.y)}>
                 <TopicAssist
                   key={topic.id}
                   map={map}
                   section={section}
                   topic={topic}
-                  level={roadmap && roadmap.id === roadmapId ?toLevelId(roadmap.level) : undefined}
+                  level={roadmap ? toLevelId(roadmap.level) : undefined}
                   onBlockLayout={(id, y) => (blockY.current[id] = y)}
                 />
               </View>
             )}
 
             {/* Proje konularında: bitirdiğin projeyi Topluluk vitrinine ekleme bağlantısı (vitrin giriş ister) */}
-            {!isGuest && (topic.id.startsWith('project') || topic.id.startsWith('portfolio')) && (
+            {!readOnly && (topic.id.startsWith('project') || topic.id.startsWith('portfolio')) && (
               <Button
                 variant="text"
                 icon="🧩"

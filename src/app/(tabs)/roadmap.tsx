@@ -8,12 +8,12 @@ import { Segmented } from '@/components/segmented';
 import { MapPin } from '@/components/map-pin';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
-import { GuestPrompt } from '@/components/guest-prompt';
 import { FriendsTodayCard } from '@/components/community/friends-today-card';
 import { UsernameForm } from '@/components/community/username-gate';
 import { IconTile } from '@/components/icon-tile';
 import { LevelBadge } from '@/components/level-badge';
 import { ProgressSummary } from '@/components/progress-summary';
+import { RoadmapCatalog } from '@/components/roadmap-catalog';
 import { RoadmapTree, TreeLegend } from '@/components/roadmap-tree';
 import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
@@ -58,18 +58,18 @@ export default function RoadmapScreen() {
   return session ? <MemberRoadmapScreen /> : <GuestRoadmapScreen />;
 }
 
-// GEÇİCİ misafir görünümü (asıl "Keşfet" ekranı SM-03'te): katalog onboarding ekranında.
+// MİSAFİR: "Keşfet". Yol Haritam sekmesinin yerinde harita kataloğu durur; bir haritaya dokununca
+// herkese açık önizleme (/map/<id>) açılır. Kişisel veri sorgusu yok.
 function GuestRoadmapScreen() {
   return (
     <TabScreen>
-      <ScreenHeader title="Yol Haritam" emoji="🗺️" hue="accent" />
-      <GuestPrompt
-        emoji="🧭"
-        title="Haritaları keşfet"
-        text={`${DEV_ROADMAPS.length} yol haritasına hesap açmadan göz atabilirsin. Beğendiğini seçince ilerlemeni kaydetmek için ücretsiz hesap oluşturursun.`}
-        actionLabel="Haritaları keşfet"
-        onAction={() => router.push('/onboarding')}
-      />
+      <View style={{ gap: Spacing.one }}>
+        <ScreenHeader title="Keşfet" emoji="🧭" hue="accent" />
+        <ThemedText themeColor="textSecondary">
+          {`${DEV_ROADMAPS.length} yol haritasına hesap açmadan göz at.`}
+        </ThemedText>
+      </View>
+      <RoadmapCatalog onSelect={(id) => router.push({ pathname: '/map/[id]', params: { id } })} />
     </TabScreen>
   );
 }
