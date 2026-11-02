@@ -5,6 +5,95 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
+> **Aktif plan:** `docs/plan/SADELIK-VE-MISAFIR.md` — SM-01 … SM-08 bu sırayla yapılır. Her PR'da planın
+> "Sadelik ilkeleri" (bölüm 3) uygulanır ve "Özellik envanteri" (bölüm 5) ilgili maddeleri işaretlenir.
+> Hiçbir özellik kaldırılmaz; yalnız yeri ve görünümü değişir.
+
+### SM-01 · Ortak sade bileşenler ve kurallar
+- Yeni bileşenler (`src/components/`):
+  - `Surface`: tek seviye kart. `tone` (düz/hafif/birincil); yalnız `primary` 3D alt kenarlı. İç içe kullanılırsa
+    geliştirmede uyarı versin (context ile).
+  - `ListRow`: simge (Glyph veya IconTile 40) + başlık + alt satır + sağda ok/eylem/rozet; ayırıcılı liste; 44 pt+.
+  - `SectionHeader`: bölüm başlığı + isteğe bağlı sağ bağlantı ("Tümü", "Düzenle").
+  - `Segmented`: tek tip segment kontrolü (bugün Topluluk, ViewSwitch, Ayarlar Choice ve konu durumu ayrı ayrı yazılmış).
+- Mevcut tekrarlar bunlara taşınır, görünüm değişikliği bu PR'da sınırlı kalır (asıl ekran işleri SM-04…07).
+- AGENTS.md "Ortak bileşenler" listesine ekle ve sadelik ilkelerini (plan bölüm 3) kısa madde olarak yaz.
+- Kabul: tsc + lint temiz; dört bileşenin açık/koyu ekran görüntüsü; en az 3 ekranda tekrar eden kod bu bileşenlere geçti.
+
+### SM-02 · Misafir modu altyapısı 🗄️
+- `src/app/_layout.tsx`: `(tabs)`, `topic/[id]` ve keşif/önizleme ekranları oturumsuz da açılabilsin. Korumalı kalanlar:
+  `roadmap-questions`, `settings` (alt sayfalarıyla), `showcase-new`. `login` hem oturumsuzken açık kalsın.
+- `src/lib/auth-gate.ts` + `useAuthGate()`:
+  `requireAuth(intent, reason)` → oturum varsa `true`; yoksa login'i `mode=signup` ve `reason` ile açar, niyeti
+  AsyncStorage'a yazar (`yolharitam.pending-intent.v1`).
+  Niyet tipleri: `pick-map {mapId}`, `open-topic {mapId, topicId}`, `community {tab}`.
+- Girişten sonra (auth-context'te oturum oluşunca) bekleyen niyet okunur, tek seferlik uygulanır ve silinir:
+  `pick-map` → `/onboarding?map=…` (seviye adımı), `open-topic` → konu ekranı, `community` → Topluluk.
+- `login.tsx`: üstte `reason` satırı ("Frontend haritasını kaydetmek için ücretsiz hesap oluştur"); "Şimdilik gez" ile kapat.
+- Karşılama (`index.tsx`): birincil "Gezinmeye başla" → sekmeler (misafir), ikincil "Giriş yap". Gördü bilgisi
+  cihazda saklanır (bir kez gösterilir; çıkış yapınca yeniden gösterilebilir).
+- Migration: `news_items` ve `news_sources` için `anon` SELECT politikası ve grant (yalnız okuma). `database.types.ts` değişmez.
+- Kabul: oturumsuz açılışta formsuz gezilebiliyor; "Bu haritayı seç" → kayıt → (onay sonrası) ilk girişte seviye
+  adımına düşüyor; niyet bir kez uygulanıyor; oturumlu kullanıcının akışı bozulmadı; ağ hatasında yönlendirme döngüsü yok.
+
+### SM-03 · Misafir ekranları: Keşfet, harita önizleme, salt okunur konu
+- **Keşfet** (misafirde "Yol Haritam" sekmesinin yerine, adı "Keşfet"): onboarding'deki katalog + arama bileşen
+  olarak ayrıştırılır (`RoadmapCatalog`), hem burada hem "Harita ekle"de kullanılır.
+- **Harita önizleme** (yeni rota `map/[id]`): başlık, kısa açıklama, bölüm/konu sayısı, toplam süre; bölümler
+  açılır liste ya da ağaç (salt okunur, `RoadmapTree` yeniden kullanılır); altta tek birincil düğme
+  "Bu haritayı seç" (misafirde kayıt kapısı, oturumluda seviye adımı).
+- **Konu (salt okunur):** özet, seviye/süre, kaynaklar misafire açık. Durum seçici ve yapay zekâ blokları yerine
+  tek satır: "İlerlemeni kaydetmek ve yapay zekâyı kullanmak için ücretsiz hesap oluştur" + düğme (kayıt kapısı,
+  niyet `open-topic`).
+- **Topluluk (misafir):** kısa tanıtım (lig, arkadaşlar, vitrin ne işe yarar) + "Katılmak için kayıt ol". RPC çağrılmaz.
+- **Profil (misafir):** "Hesap oluştur / Giriş yap" kartı; Görünüm (tema) ve Hakkında/yasal bağlantıları.
+- **Gelişmeler:** misafirde de çalışır (filtre: tüm haritalar).
+- Kabul: misafir dört sekmede de hata/iskelet takılması görmeden geziyor; hiçbir ekranda RLS hatası yok;
+  32 haritanın önizlemesi açılıyor; açık/koyu, 320 px görüntüler.
+
+### SM-04 · Yol Haritam sadeleştirme
+- Üstten aşağı hedef düzen: başlık (selam + harita değiştirici tek satır) → **tek birincil kart "Şimdi"**
+  (Sıradaki konu; günün görevi aynı konuysa rozet olarak, farklıysa kartın altında ikinci satır) → düz özet
+  satırı (ilerleme çubuğu + seri + XP + haftalık hedef; dokununca ayrıntı alt sayfası) → "Harita" bölümü
+  (SectionHeader + Segmented ağaç/liste) → bölümler.
+- Yolculuk kartı ayrı bir kart olmaktan çıkar: harita adı/kimliği başlığa, "Planımı güncelle" ve harita
+  ayarları başlıktaki "…" menüsüne ya da Ayarlar › Haritalarım'a taşınır.
+- Bölüm kartları: kart içinde kart yok; bölüm başlığı + ayırıcılı konu satırları (`ListRow`).
+- Kişisel not ve kullanıcı adı kartları en fazla bir satır bilgi şeridi.
+- Kabul: ilk ekranda en fazla 1 birincil (3D) öğe; iç içe kenarlıklı kutu yok; envanterdeki Haritalar ve
+  İlerleme maddelerinin hepsine hâlâ ulaşılıyor; önce/sonra görüntüler.
+
+### SM-05 · Konu ekranı sadeleştirme
+- Düzen: başlık alanı (harita · bölüm, konu adı, tek satır meta: seviye · süre · işaret; çerçevesiz) → durum
+  `Segmented` (birincil) → "Sonraki konu" → **Kaynaklar** (ListRow listesi) → **Yapay zekâ** bölümü: üç sekmeli
+  tek alan (Alt konular / Quiz / Soru sor) — üç ayrı kutu yerine tek kutu, sekmeyle içerik değişir.
+- Kişisel odak/atla bilgisi başlığın altında tek satır rozet; ayrı kutu değil.
+- Kısayol çipleri kaldırılabilir (yapay zekâ alanı artık tek ve görünür), ama "aşağı kaydırmadan bulunabilir"
+  şartı korunur.
+- Kabul: kart içinde kart yok; XP/kutlama/ilerleme davranışı aynı; misafir sürümü (SM-03) bozulmadı.
+
+### SM-06 · Profil ve Ayarlar sadeleştirme
+- **Profil:** kimlik (avatar, @kullanıcı adı) → düz seviye/XP satırı → rozetler (yatay şerit, "Tümü" ile tam liste)
+  → ListRow'lar: Haritalarım, Ayarlar. Ayrı kartlar azaltılır.
+- **Ayarlar** alt sayfalara: `settings/index` (ListRow listesi) → `settings/maps`, `settings/appearance`,
+  `settings/account` (kullanıcı adı, şifre, çıkış, en altta hesap silme), `settings/blocked`, `settings/about`
+  (sürüm, yapay zekâ notu, gizlilik, koşullar, destek). Mevcut bileşenler taşınır, mantık değişmez.
+- Kabul: envanterdeki Hesap ve Ayarlar maddelerinin hepsi alt sayfalarda; hesap silme akışı aynen çalışıyor;
+  geri gezinme web ve native'de doğru.
+
+### SM-07 · Topluluk ve Gelişmeler sadeleştirme
+- Topluluk: `Segmented` (Lig · Arkadaşlar · Vitrin) → her sekmede tek liste. Lig ve arkadaş satırları `ListRow`;
+  onay kutuları satırın içinde değil alt sayfada/diyalogda. Vitrin kartlarında eylemler (Bildir, Engelle, Sil)
+  "…" menüsüne toplanır; kartta yalnız başlık, açıklama, sahibi ve bağlantılar.
+- Gelişmeler: haber kartları düz liste (başlık, kaynak · zaman, kısa özet); filtre çipleri tek satır yatay kaydırma.
+- Kabul: envanterdeki Topluluk ve Gelişmeler maddelerinin hepsi çalışıyor; kart içinde kart yok.
+
+### SM-08 · Son kabul (ürün sorumlusu + testçi + tasarımcı)
+- Plan bölüm 5'teki **özellik envanterinin her maddesi** tek tek denenir; tablo halinde PR'a eklenir (✅/❌ + ekran görüntüsü).
+- Misafir akışı uçtan uca: aç → gez → harita seç → kayıt → onay → giriş → seviye adımı → harita hazır.
+- Tüm ekranlar açık/koyu, 390/320 px; konsolda hata yok; tasarımcı sadelik ilkelerine göre denetler.
+- Eksik/bozuk bulunan her şey aynı PR'da düzeltilir ya da yeni görev olarak eklenir.
+
 ### MAĞAZA-01 · Şifremi unuttum akışı
 - Giriş ekranında "Şifremi unuttum": e-postaya sıfırlama kodu/bağlantısı. Özel SMTP bağlandıktan sonra
   (OTP-01 ile birlikte) e-posta şablonuna kod eklenerek uygulama içinde tamamlanmalı.
