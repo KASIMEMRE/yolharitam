@@ -1,30 +1,25 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
-import { IconTile } from '@/components/icon-tile';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
-import type { Hue } from '@/constants/visuals';
 
-// Sekme ekranlarının ortak başlığı: ikon + küçük üst yazı + büyük başlık .
+// Sekme ekranlarının ortak başlığı: isteğe bağlı küçük üst satır (ör. "Merhaba, @ad") + Bricolage 32/700 başlık
+// + isteğe bağlı sağ eylem. Başlığın yanında simge kutusu yok.
 type ScreenHeaderProps = {
   title: string;
   eyebrow?: string;
-  emoji?: string;
-  hue?: Hue;
-  // İsteğe bağlı sağ eylem alanı (ör. Profil'de Ayarlar düğmesi). Verilmezse başlık eskisi gibi görünür.
+  // İsteğe bağlı sağ eylem alanı (ör. "…" menüsü, Profil'de Ayarlar düğmesi).
   right?: ReactNode;
 };
 
-export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent', right }: ScreenHeaderProps) {
-  // Dar ekranda (320 px) 48'lik simge + 32 punto başlık + sağdaki "…" düğmesi yan yana sığmaz ve başlık
-  // iki satıra iner. Simge 40'a, başlık 28 puntoya iner; başlık tek satırda kalır.
+export function ScreenHeader({ title, eyebrow, right }: ScreenHeaderProps) {
+  // Dar ekranda (320 px) 32 punto başlık + sağdaki "…" düğmesi yan yana sığmayabilir: başlık 28 puntoya iner.
   const { width } = useWindowDimensions();
   const narrow = width < 360;
   return (
     <View style={styles.wrapper}>
       <View style={styles.row}>
-        {emoji && <IconTile emoji={emoji} tone={hue} size={narrow ? 40 : 48} />}
         <View style={styles.texts}>
           {eyebrow && (
             <ThemedText type="eyebrow" themeColor="textSecondary" numberOfLines={1}>
@@ -47,9 +42,9 @@ export function ScreenHeader({ title, eyebrow, emoji, hue = 'accent', right }: S
 
 const styles = StyleSheet.create({
   wrapper: { gap: Spacing.two },
-  // minHeight 72 (48 ikon + dikey boşluk + eyebrow payı): eyebrow ('Merhaba, ad') gelip gidince başlık zıplamasın;
-  // ikonsuz başlık (Profil) da diğer sekmelerle aynı yükseklikte kalsın
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.two, minHeight: 72 },
+  // minHeight 60: eyebrow ('Merhaba, ad') gelip gidince başlık zıplamasın; eyebrow'suz başlıklar
+  // (Profil, Topluluk) da diğer sekmelerle aynı yükseklikte kalsın
+  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingVertical: Spacing.one, minHeight: 60 },
   texts: { flex: 1, minWidth: 0 },
   headingNarrow: { fontSize: 28, lineHeight: 34 },
   right: { flexShrink: 0 },

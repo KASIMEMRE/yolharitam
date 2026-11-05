@@ -99,7 +99,7 @@ export function MilestoneCelebration({
               {`Yolun %${milestone.percent}'i geride`}
             </ThemedText>
             {milestone.xp > 0 && (
-              <View style={[styles.xpPill, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge }]}>
+              <View style={[styles.xpPill, { backgroundColor: theme.markerSoft, borderColor: theme.marker }]}>
                 <IconLabel emoji="⭐" type="smallBold" themeColor="markerInk">
                   {`+${milestone.xp} XP`}
                 </IconLabel>

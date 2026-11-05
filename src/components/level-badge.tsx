@@ -31,14 +31,14 @@ export function LevelBadge({ levelId, size = 'sm' }: LevelBadgeProps) {
       style={[
         styles.chip,
         {
-          backgroundColor: theme.card,
-          borderColor: theme.borderStrong,
+          backgroundColor: theme.backgroundElement,
+          borderColor: 'transparent',
           paddingVertical: md ? Spacing.two : Spacing.one,
           paddingHorizontal: md ? Spacing.three : Spacing.two,
         },
       ]}>
       <Glyph emoji={style.emoji} size={md ? 18 : 14} color={theme.textSecondary} strokeWidth={2.25} />
-      <ThemedText type="chip" maxFontSizeMultiplier={1.3}>
+      <ThemedText type="chip" themeColor="textSecondary" maxFontSizeMultiplier={1.3}>
         {title}
       </ThemedText>
     </View>
@@ -63,8 +63,8 @@ export function StatusChip({ label, emoji, tone, align = 'start' }: StatusChipPr
         styles.chip,
         {
           alignSelf: align === 'center' ? 'center' : 'flex-start',
-          backgroundColor: marker ? theme.markerSoft : accent ? theme.accentSoft : theme.backgroundSelected,
-          borderColor: marker ? theme.markerEdge : accent ? theme.accent : theme.borderStrong,
+          backgroundColor: marker ? theme.markerSoft : accent ? theme.accentSoft : theme.backgroundElement,
+          borderColor: 'transparent',
           paddingVertical: Spacing.one,
           paddingHorizontal: Spacing.two,
         },
@@ -73,11 +73,11 @@ export function StatusChip({ label, emoji, tone, align = 'start' }: StatusChipPr
         <Glyph
           emoji={emoji}
           size={14}
-          color={marker ? theme.markerInk : accent ? theme.accentInk : theme.text}
+          color={marker ? theme.markerInk : accent ? theme.accentInk : theme.textSecondary}
           strokeWidth={2.25}
         />
       )}
-      <ThemedText type="chip" themeColor={marker ? 'markerInk' : accent ? 'accentInk' : 'text'} maxFontSizeMultiplier={1.3}>
+      <ThemedText type="chip" themeColor={marker ? 'markerInk' : accent ? 'accentInk' : 'textSecondary'} maxFontSizeMultiplier={1.3}>
         {label}
       </ThemedText>
     </View>
@@ -90,7 +90,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     alignSelf: 'flex-start',
     gap: Spacing.one,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
+    borderRadius: Radius.sm,
+    borderWidth: Border.thin,
   },
 });

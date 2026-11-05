@@ -26,7 +26,7 @@ export function Banner({ tone, children }: BannerProps) {
         styles.box,
         {
           backgroundColor: warning ? theme.warningBackground : theme.accentSoft,
-          borderColor: warning ? theme.markerEdge : theme.accent,
+          borderColor: warning ? theme.marker : theme.accent,
         },
       ]}>
       {/* Simge süs: ekran okuyucu "uyarı işareti" diye okumasın (Glyph kendini gizler) */}
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     padding: Spacing.three,
     borderRadius: Radius.md,
-    borderWidth: Border.thick,
+    borderWidth: Border.thin,
   },
   icon: { paddingTop: 1 },
   text: { flex: 1, minWidth: 0 },

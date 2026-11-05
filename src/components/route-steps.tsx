@@ -174,14 +174,14 @@ function VerticalTrail({ stops, current, showDone }: { stops: TrailStop[]; curre
                     style={[
                       styles.stop,
                       { width: STOP, height: STOP },
-                      isCurrent && { backgroundColor: theme.marker, borderColor: theme.markerEdge },
-                      isDone && { backgroundColor: theme.accent, borderColor: theme.accentEdge },
+                      isCurrent && { backgroundColor: theme.marker, borderColor: theme.marker },
+                      isDone && { backgroundColor: theme.accent, borderColor: theme.accent },
                       !isCurrent && !isDone && { backgroundColor: theme.card, borderColor: theme.borderStrong },
                     ]}>
                     <Glyph
                       emoji={isDone ? '✓' : stop.emoji}
                       size={emojiSize}
-                      color={isDone ? theme.onAccent : isCurrent ? theme.markerInk : theme.textSecondary}
+                      color={isDone ? theme.onAccent : isCurrent ? theme.onMarker : theme.textSecondary}
                       strokeWidth={isDone ? 3 : 2}
                     />
                   </View>
@@ -275,8 +275,8 @@ function HorizontalTrail({
                     height: STOP,
                     borderRadius: Radius.pill,
                     backgroundColor: theme.marker,
-                    borderWidth: Border.chunky,
-                    borderColor: theme.markerEdge,
+                    borderWidth: Border.thick,
+                    borderColor: theme.marker,
                   }}
                 />
               </Animated.View>
@@ -314,13 +314,13 @@ function HorizontalTrail({
                       styles.stopSmall,
                       { left: xs[i], top: HALO, width: STOP, height: STOP },
                       isCurrent && { borderColor: 'transparent' },
-                      isDone && { backgroundColor: theme.accent, borderColor: theme.accentEdge },
+                      isDone && { backgroundColor: theme.accent, borderColor: theme.accent },
                       !isCurrent && !isDone && { backgroundColor: theme.card, borderColor: theme.borderStrong },
                     ]}>
                     <Glyph
                       emoji={isDone ? '✓' : stop.emoji}
                       size={18}
-                      color={isDone ? theme.onAccent : isCurrent ? theme.markerInk : theme.textSecondary}
+                      color={isDone ? theme.onAccent : isCurrent ? theme.onMarker : theme.textSecondary}
                       strokeWidth={isDone ? 3 : 2}
                     />
                   </Animated.View>
@@ -343,7 +343,7 @@ function HorizontalTrail({
 
 const styles = StyleSheet.create({
   vertical: { alignSelf: 'center', width: '100%', maxWidth: 360 },
-  stop: { borderRadius: Radius.pill, borderWidth: Border.chunky, alignItems: 'center', justifyContent: 'center' },
+  stop: { borderRadius: Radius.pill, borderWidth: Border.thick, alignItems: 'center', justifyContent: 'center' },
   halo: { position: 'absolute', borderRadius: Radius.pill },
   dot8: { position: 'absolute', width: 8, height: 8, borderRadius: 4 },
   vLabel: { position: 'absolute', minHeight: 44, justifyContent: 'center' },
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
   stopSmall: {
     position: 'absolute',
     borderRadius: Radius.pill,
-    borderWidth: Border.chunky,
+    borderWidth: Border.thick,
     alignItems: 'center',
     justifyContent: 'center',
   },

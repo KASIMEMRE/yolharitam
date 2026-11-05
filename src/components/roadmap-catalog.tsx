@@ -43,8 +43,7 @@ export function RoadmapCatalog({ onSelect }: { onSelect: (mapId: string) => void
               {hits.map(({ map: m, topicTitle }) => (
                 <ListRow
                   key={m.id}
-                  icon={m.emoji}
-                  iconTile={m.hue}
+                  dot={m.hue}
                   title={m.title}
                   subtitle={topicTitle ? `${KIND_LABEL[m.kind]} · Konu: ${topicTitle}` : `${m.tagline} · ${countTopics(m).total} konu`}
                   chevron
@@ -61,21 +60,13 @@ export function RoadmapCatalog({ onSelect }: { onSelect: (mapId: string) => void
         (['role', 'skill'] as const).map((kind) => (
           <View key={kind} style={styles.list}>
             <View style={styles.groupHead}>
-              <SectionHeader
-                title={KIND_LABEL[kind].replace('yol haritası', 'yol haritaları')}
-                subtitle={
-                  kind === 'role'
-                    ? 'Bir meslek için baştan sona izlenecek yol.'
-                    : 'Tek bir dil ya da araçta ustalaşmak için.'
-                }
-              />
+              <SectionHeader title={KIND_LABEL[kind].replace('yol haritası', 'yol haritaları')} />
             </View>
             <ListGroup>
               {DEV_ROADMAPS.filter((m) => m.kind === kind).map((m) => (
                 <ListRow
                   key={m.id}
-                  icon={m.emoji}
-                  iconTile={m.hue}
+                  dot={m.hue}
                   title={m.title}
                   subtitle={`${m.tagline} · ${countTopics(m).total} konu`}
                   chevron

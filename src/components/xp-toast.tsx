@@ -39,7 +39,7 @@ export function XpToast() {
         accessible
         accessibilityLiveRegion="polite"
         accessibilityLabel={`${visible.amount} XP kazandın. ${visible.label ?? XP_LABEL[visible.kind]}`}
-        style={[styles.toast, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge }]}>
+        style={[styles.toast, { backgroundColor: theme.markerSoft, borderColor: theme.marker }]}>
         <Glyph emoji="⭐" size={16} color={theme.markerInk} fill={theme.marker} strokeWidth={2} />
         <ThemedText type="smallBold" themeColor="markerInk">
           +{visible.amount} XP · {visible.label ?? XP_LABEL[visible.kind]}
@@ -58,6 +58,6 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.pill,
-    borderWidth: Border.thick,
+    borderWidth: Border.thin,
   },
 });

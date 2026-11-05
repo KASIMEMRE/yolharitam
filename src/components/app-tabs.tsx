@@ -1,9 +1,10 @@
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 
+import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 
-// Alt sekme çubuğu (iOS/Android yerel sekmeleri). Renkler temadan gelir, aktif sekme yeşil.
+// Alt sekme çubuğu (iOS/Android yerel sekmeleri). Renkler temadan gelir; seçili sekmenin simgesi ve etiketi accent (mürekkep) renginde, arkasında hap yok.
 // İkonlar: iOS'ta SF Symbols (`sf`), Android'de Material Symbols (`md`). İkisi de ek dosya istemez.
 export default function AppTabs() {
   const theme = useTheme();
@@ -13,12 +14,12 @@ export default function AppTabs() {
   return (
     <NativeTabs
       backgroundColor={theme.card}
-      indicatorColor={theme.accentSoft}
+      indicatorColor="transparent"
       tintColor={theme.accent}
-      iconColor={{ default: theme.textSecondary, selected: theme.accentInk }}
+      iconColor={{ default: theme.textSecondary, selected: theme.accent }}
       labelStyle={{
-        default: { color: theme.textSecondary, fontSize: 13, fontWeight: '700' },
-        selected: { color: theme.accentInk, fontSize: 13, fontWeight: '900' },
+        default: { color: theme.textSecondary, fontSize: 11, fontFamily: Fonts.sansMedium },
+        selected: { color: theme.accent, fontSize: 11, fontFamily: Fonts.sansSemiBold },
       }}>
       <NativeTabs.Trigger name="roadmap">
         <NativeTabs.Trigger.Label>{session ? 'Yol Haritam' : 'Keşfet'}</NativeTabs.Trigger.Label>

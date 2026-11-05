@@ -84,7 +84,7 @@ function GuestRoadmapScreen() {
   return (
     <TabScreen>
       <View style={{ gap: Spacing.one }}>
-        <ScreenHeader title="Keşfet" emoji="🧭" hue="accent" />
+        <ScreenHeader title="Keşfet" />
         <ThemedText themeColor="textSecondary">
           {`${DEV_ROADMAPS.length} yol haritasına hesap açmadan göz at.`}
         </ThemedText>
@@ -192,8 +192,6 @@ function RoadmapHeader({
       <ScreenHeader
         title="Yol Haritam"
         eyebrow={greeting}
-        emoji="🗺️"
-        hue="accent"
         right={
           menu ? (
             <Pressable
@@ -247,7 +245,7 @@ function MapMenu({
         />
         <View style={[styles.sheet, { backgroundColor: theme.card, paddingBottom: insets.bottom + Spacing.three }]}>
           <View style={styles.sheetIdentity}>
-            <IconTile emoji={map.emoji} tone={map.hue} size={48} />
+            <View style={[styles.sheetDot, { backgroundColor: theme[hue.line] }]} />
             <View style={styles.flex1}>
               <ThemedText type="eyebrow" themeColor={hue.ink}>
                 {KIND_LABEL[map.kind]}
@@ -967,6 +965,7 @@ const styles = StyleSheet.create({
     paddingTop: Spacing.three,
   },
   sheetIdentity: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, paddingHorizontal: Spacing.three },
+  sheetDot: { width: 10, height: 10, borderRadius: 5 },
   sheetMeta: { paddingHorizontal: Spacing.three, paddingVertical: Spacing.two },
   divider: { height: Border.thin },
   // Bilgi şeridi (kullanıcı adı): tek satır, dokununca açılır

@@ -9,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
-import { Border, Radius, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // Etiketli metin alanı. TextInput'un tüm özelliklerini alır (...rest),
@@ -101,13 +101,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     minHeight: 56,
     borderRadius: Radius.md,
-    borderWidth: Border.thick,
+    borderWidth: 1.5,
     paddingLeft: Spacing.three,
     paddingRight: Spacing.two, // sağdaki "Göster" kenara yapışmasın
   },
   // minWidth: 0 -> web'de <input>'un varsayılan genişliği (≈20 karakter) yüzünden alan daralamıyordu;
   // dar ekranda "Göster" taşıyıp sayfa yatay kayıyordu.
-  input: { flex: 1, minWidth: 0, paddingVertical: Spacing.three, fontSize: 17 },
+  input: { flex: 1, minWidth: 0, paddingVertical: Spacing.three, fontSize: 16, fontFamily: Fonts.sans },
   // Sağdaki öğe (örn. "Göster") küçülmesin; yer kıt kalırsa daralan şey metin alanı olur.
   rightSlot: { flexShrink: 0 },
 });

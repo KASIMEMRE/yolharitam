@@ -53,13 +53,13 @@ export function StepIndicator({ current }: StepIndicatorProps) {
   const pop2Style = useAnimatedStyle(() => ({ transform: [{ scale: pop2.value }] }));
   const pop3Style = useAnimatedStyle(() => ({ transform: [{ scale: pop3.value }] }));
 
-  // Bir dairenin görünümü: etkin = sarı (marker), bitmiş = yeşil ✓, bekleyen = nötr
+  // Bir dairenin görünümü: etkin = mercan (marker), bitmiş = mürekkep ✓, bekleyen = nötr
   function dotLook(index: number) {
     if (index === current) {
-      return { backgroundColor: theme.marker, borderColor: theme.markerEdge, text: String(index + 1), color: 'onMarker' as const };
+      return { backgroundColor: theme.marker, borderColor: theme.marker, text: String(index + 1), color: 'onMarker' as const };
     }
     if (index < current) {
-      return { backgroundColor: theme.accent, borderColor: theme.accentEdge, text: '✓', color: 'onAccent' as const };
+      return { backgroundColor: theme.accent, borderColor: theme.accent, text: '✓', color: 'onAccent' as const };
     }
     return { backgroundColor: theme.card, borderColor: theme.borderStrong, text: String(index + 1), color: 'textSecondary' as const };
   }
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  dotText: { fontSize: 14, lineHeight: 16, fontWeight: 900 },
+  dotText: { fontSize: 14, lineHeight: 16 },
   link: { height: 4, borderRadius: Radius.pill, overflow: 'hidden' },
   linkFill: { height: 4 },
 });

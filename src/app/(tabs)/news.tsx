@@ -40,7 +40,7 @@ export default function NewsScreen() {
 
   return (
     <TabScreen onRefresh={refresh} refreshing={refreshing}>
-      <ScreenHeader title="Gelişmeler" emoji="📰" hue="sky" />
+      <ScreenHeader title="Gelişmeler" />
 
       {mapsStatus === 'error' && <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>}
       {mapsStatus === 'ready' && maps.length === 0 && (

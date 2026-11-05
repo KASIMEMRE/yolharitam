@@ -47,7 +47,7 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
                 accessibilityLabel={`Bölüm ${sIndex + 1}: ${section.title}. ${section.topics.length} konunun ${done} tanesi bitti.`}
                 style={[
                   styles.sectionBox,
-                  { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge, borderBottomColor: theme.markerEdge },
+                  { backgroundColor: theme.markerSoft, borderColor: theme.marker },
                 ]}>
                 <Glyph emoji={section.emoji} size={20} color={theme.markerInk} strokeWidth={2} />
                 <ThemedText type="smallBold" themeColor="markerInk" style={styles.sectionTitle}>
@@ -129,7 +129,7 @@ function TopicNode({
     : status === 'done'
       ? theme.accent
       : status === 'in_progress'
-        ? theme.markerEdge
+        ? theme.marker
         : topic.marker === 'optional'
           ? theme.border
           : theme.borderStrong;
@@ -155,7 +155,7 @@ function TopicNode({
           backgroundColor: bg,
           borderColor: border,
           borderStyle: topic.marker === 'alt' ? 'dashed' : 'solid',
-          borderWidth: isNext ? Border.chunky : topic.marker === 'optional' && !status ? Border.thin : Border.thick,
+          borderWidth: isNext ? Border.thick : topic.marker === 'optional' && !status ? Border.thin : Border.thick,
           opacity: faded ? 0.55 : 1,
         },
         pressed && { transform: [{ scale: 0.97 }] },
@@ -200,7 +200,7 @@ function TopicNode({
             styles.dot,
             {
               backgroundColor: status === 'done' ? theme.accent : theme.card,
-              borderColor: status === 'done' ? theme.accentEdge : theme.borderStrong,
+              borderColor: status === 'done' ? theme.accent : theme.borderStrong,
             },
           ]}
         />
@@ -221,7 +221,7 @@ export function TreeLegend() {
     { label: 'İsteğe bağlı', style: { borderWidth: Border.thin, borderColor: theme.border } },
     { label: 'Alternatif', style: { borderWidth: Border.thick, borderColor: theme.borderStrong, borderStyle: 'dashed' } },
     { label: 'Bitti', style: { borderWidth: Border.thick, borderColor: theme.accent, backgroundColor: theme.accentSoft } },
-    { label: 'Çalışıyorum', style: { borderWidth: Border.thick, borderColor: theme.markerEdge, backgroundColor: theme.markerSoft } },
+    { label: 'Çalışıyorum', style: { borderWidth: Border.thick, borderColor: theme.marker, backgroundColor: theme.markerSoft } },
   ];
   return (
     <View style={styles.legend} accessibilityLabel="Harita açıklaması: kalın kenarlık önerilen, ince isteğe bağlı, kesik çizgi alternatif; yeşil bitti, sarı çalışıyorum.">
@@ -255,7 +255,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.md,
     borderWidth: Border.thick,
-    borderBottomWidth: Border.thick + 2,
     maxWidth: '90%',
   },
   sectionTitle: { flexShrink: 1 },

@@ -464,7 +464,7 @@ export default function RoadmapQuestionsScreen() {
               accessibilityLiveRegion="polite"
               accessibilityLabel={`Haritan hazırlanıyor. ${lines.join('. ')}.`}
               style={styles.preparingInner}>
-              <View style={[shadow('lifted'), { borderRadius: Radius.xl }]}>
+              <View style={[shadow('lifted'), { borderRadius: Radius.lg }]}>
                 <IconTile emoji={info.category.emoji} tone={info.category.hue} size={height < 700 ? 64 : 96} />
               </View>
               <View style={styles.center}>

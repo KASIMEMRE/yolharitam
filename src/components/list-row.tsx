@@ -2,19 +2,18 @@ import { Children, Fragment, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Glyph } from '@/components/icon';
-import { IconTile } from '@/components/icon-tile';
-import { Surface } from '@/components/surface';
 import { ThemedText } from '@/components/themed-text';
-import { Border, MinTouch, Spacing } from '@/constants/theme';
-import type { Hue } from '@/constants/visuals';
+import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { HUES, type Hue } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 
 // Liste satırı: tekrar eden öğeler (ayarlar, haritalarım, kaynaklar) kart yığını yerine bu satırla dizilir.
-// `icon` emoji adıdır (icon.tsx). Düz simge Glyph ile; `iconTile` verilirse renkli IconTile (40) ile çizilir.
+// Solda isteğe bağlı: `icon` (emoji adı, icon.tsx) kutusuz 20px textSecondary çizgi simge,
+// ya da `dot` (harita rengi) 10px nokta. Renkli kutulu simge YOK.
 type ListRowProps = {
   left?: ReactNode; // solda özel öğe (ör. lig sırası/madalya); simge yerine geçer
   icon?: string;
-  iconTile?: Hue | 'neutral';
+  dot?: Hue; // harita kimliği için 10px renk noktası
   title: string;
   subtitle?: string;
   subtitleLines?: number; // uzun, boşluksuz alt yazı (e-posta) için: orta kısaltma ile tek satır
@@ -28,7 +27,7 @@ type ListRowProps = {
 export function ListRow({
   left,
   icon,
-  iconTile,
+  dot,
   title,
   subtitle,
   subtitleLines,
@@ -42,16 +41,12 @@ export function ListRow({
   const ink = destructive ? 'coralInk' : 'text';
 
   const body = (pressed: boolean) => (
-    <View style={[styles.row, pressed && { backgroundColor: theme.backgroundElement }]}>
+    <View style={[styles.row, pressed && { backgroundColor: theme.backgroundElement, borderRadius: Radius.sm }]}>
       {left}
-      {icon &&
-        (iconTile ? (
-          <IconTile emoji={icon} tone={iconTile} size={40} />
-        ) : (
-          <Glyph emoji={icon} size={22} color={destructive ? theme.coralInk : theme.accentInk} />
-        ))}
+      {dot && <View style={[styles.dot, { backgroundColor: theme[HUES[dot].line] }]} />}
+      {icon && !dot && <Glyph emoji={icon} size={20} color={destructive ? theme.coralInk : theme.textSecondary} />}
       <View style={styles.texts}>
-        <ThemedText type="smallBold" themeColor={ink}>
+        <ThemedText type="defaultSemiBold" themeColor={ink} style={styles.title}>
           {title}
         </ThemedText>
         {subtitle ? (
@@ -76,19 +71,19 @@ export function ListRow({
   );
 }
 
-// Satırları tek bir düz kartın içinde, ince ayırıcıyla dizer. Ayırıcı ilk satırda yok.
+// Satırları kutusuz, ince ayırıcı çizgilerle dizer. Ayırıcı ilk satırda yok.
 export function ListGroup({ children }: { children: ReactNode }) {
   const theme = useTheme();
   const rows = Children.toArray(children);
   return (
-    <Surface tone="plain" padded={false} style={styles.group}>
+    <View>
       {rows.map((row, i) => (
         <Fragment key={i}>
           {i > 0 && <View style={[styles.divider, { backgroundColor: theme.border }]} />}
           {row}
         </Fragment>
       ))}
-    </Surface>
+    </View>
   );
 }
 
@@ -98,11 +93,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
-    paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
+  title: { fontSize: 15, lineHeight: 22 },
+  dot: { width: 10, height: 10, borderRadius: 5 },
   texts: { flex: 1, minWidth: 0, gap: Spacing.half, minHeight: MinTouch, justifyContent: 'center' },
-  divider: { height: Border.thin, marginLeft: Spacing.three },
-  // Satır basılı zemini köşelerden taşmasın
-  group: { gap: 0, overflow: 'hidden' },
+  divider: { height: Border.thin },
 });

@@ -5,14 +5,21 @@ import { ThemedText } from '@/components/themed-text';
 import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// Tek tip segment kontrolü (Topluluk, Harita görünümü, Ayarlar ve konu durumu ayrı ayrı yazılmıştı).
-// Görünüm: kapsül iz + seçili parça kart zemini ve vurgu kenarı. Kenar HER ZAMAN 2px (şeffaf/vurgu),
-// böylece seçince parça zıplamaz. Ekran okuyucuda radiogroup/radio.
+// Tek tip seçim kontrolü (Topluluk, Harita görünümü, Ayarlar, giriş/kayıt, yapay zekâ sekmeleri, konu durumu).
+// İki görünümü var, API aynı:
+//  - variant="tabs" (varsayılan): ALTI ÇİZİLİ SEKME. Seçili olan ağırlıklı yazı + 2px accent alt çizgi,
+//    diğerleri textSecondary; altta tam genişlik 1px border çizgisi.
+//  - variant="buttons": eşit genişlikte düğmeler (konu durumu: Çalışıyorum / Bitti / Atladım), 44px.
+//    Seçili düğmenin rengi seçeneğin `tone` değerinden gelir.
+// Ekran okuyucuda radiogroup/radio.
 export type SegmentedOption<T extends string> = {
   id: T;
   label: string;
   icon?: string; // emoji adı (icon.tsx)
   accessibilityLabel?: string; // etiketten farklı okunacaksa
+  // yalnız variant="buttons": seçiliyken görünüm. marker = mercan (çalışıyorum), accent = mürekkep dolgu (bitti),
+  // neutral (varsayılan) = nötr
+  tone?: 'marker' | 'accent' | 'neutral';
 };
 
 type SegmentedProps<T extends string> = {
@@ -21,6 +28,7 @@ type SegmentedProps<T extends string> = {
   onChange: (id: T) => void; // seçili olana tekrar dokununca da çağrılır; kaldırma kararı üstte
   size?: 'md' | 'sm';
   fill?: boolean; // true: tüm genişliği eşit paylaş; false: içeriği kadar yer kapla
+  variant?: 'tabs' | 'buttons';
   label?: string; // radiogroup'un ekran okuyucu adı
   allowDeselect?: boolean; // seçili olana tekrar dokunmak seçimi kaldırır (ekran okuyucuya ipucu verir)
 };
@@ -31,6 +39,7 @@ export function Segmented<T extends string>({
   onChange,
   size = 'md',
   fill = true,
+  variant = 'tabs',
   label,
   allowDeselect = false,
 }: SegmentedProps<T>) {
@@ -38,19 +47,36 @@ export function Segmented<T extends string>({
   const { width } = useWindowDimensions();
   // Dar ekranda (<360) 3+ parçada simge atılır ki etiket sığsın
   const hideIcons = fill && options.length > 2 && width < 360;
+  const buttons = variant === 'buttons';
 
   return (
     <View
       accessibilityRole="radiogroup"
       accessibilityLabel={label}
       style={[
-        styles.track,
-        !fill && styles.trackHug,
-        { backgroundColor: theme.backgroundSelected, borderColor: theme.border },
+        buttons ? styles.buttonsRow : styles.track,
+        !buttons && { borderBottomColor: theme.border },
+        !fill && !buttons && styles.trackHug,
       ]}>
       {options.map((o) => {
         const selected = o.id === value;
-        const color = selected ? 'accentInk' : 'textSecondary';
+
+        // Düğme görünümü: seçili/seçili değil renkleri
+        let btnStyle: object = { borderColor: theme.borderEdge, borderWidth: Border.thin };
+        let color: 'accentInk' | 'textSecondary' | 'markerInk' | 'onAccent' | 'text' = 'text';
+        if (buttons && selected) {
+          if (o.tone === 'accent') {
+            btnStyle = { backgroundColor: theme.accent, borderColor: theme.accent, borderWidth: 1.5 };
+            color = 'onAccent';
+          } else if (o.tone === 'marker') {
+            btnStyle = { backgroundColor: theme.markerSoft, borderColor: theme.marker, borderWidth: 1.5 };
+            color = 'markerInk';
+          } else {
+            btnStyle = { backgroundColor: theme.backgroundSelected, borderColor: theme.borderStrong, borderWidth: 1.5 };
+          }
+        }
+        if (!buttons) color = selected ? 'accentInk' : 'textSecondary';
+
         return (
           <Pressable
             key={o.id}
@@ -59,17 +85,26 @@ export function Segmented<T extends string>({
             accessibilityState={{ selected }}
             accessibilityLabel={o.accessibilityLabel ?? o.label}
             accessibilityHint={allowDeselect && selected ? 'Seçimi kaldırmak için tekrar dokun' : undefined}
-            style={[
-              styles.item,
+            style={({ pressed }) => [
+              buttons ? styles.button : styles.item,
               fill && styles.itemFill,
-              size === 'sm' && styles.itemSm,
-              selected && { backgroundColor: theme.card, borderColor: theme.accent },
+              !buttons && size === 'sm' && styles.itemSm,
+              // Seçili sekmenin alt çizgisi: her sekmede 2px sabit yer (şeffaf/accent), seçince zıplamasın.
+              // marginBottom -1: çizgi, kapsayıcının 1px border çizgisinin üstüne biner.
+              !buttons && { borderBottomColor: selected ? theme.accent : 'transparent' },
+              buttons && btnStyle,
+              pressed && styles.pressed,
             ]}>
             {o.icon && !hideIcons && (
-              <Glyph emoji={o.icon} size={size === 'sm' ? 14 : 16} color={theme[color]} strokeWidth={2.25} />
+              <Glyph
+                emoji={o.icon}
+                size={size === 'sm' ? 14 : 16}
+                color={color === 'onAccent' ? theme.onAccent : theme[color]}
+                strokeWidth={2.25}
+              />
             )}
             <ThemedText
-              type="smallBold"
+              type={selected || buttons ? 'smallBold' : 'small'}
               themeColor={color}
               numberOfLines={1}
               adjustsFontSizeToFit
@@ -85,19 +120,31 @@ export function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  track: { flexDirection: 'row', borderRadius: Radius.pill, borderWidth: Border.thin, padding: 2 },
-  trackHug: { alignSelf: 'flex-start' },
+  // Sekme satırı: altta tam genişlik 1px çizgi
+  track: { flexDirection: 'row', borderBottomWidth: Border.thin },
+  trackHug: { alignSelf: 'flex-start', gap: Spacing.three },
   item: {
     minHeight: MinTouch, // dokunma hedefi: sm'de de 44
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-    borderColor: 'transparent',
+    paddingHorizontal: Spacing.two,
+    borderBottomWidth: 2,
+    marginBottom: -1,
   },
-  itemFill: { flex: 1, minWidth: 0, paddingHorizontal: Spacing.one },
-  itemSm: { paddingHorizontal: Spacing.two },
+  itemFill: { flex: 1, minWidth: 0 },
+  itemSm: { paddingHorizontal: Spacing.one },
+  pressed: { opacity: 0.7 },
+  // Düğme görünümü (konu durumu)
+  buttonsRow: { flexDirection: 'row', gap: Spacing.two },
+  button: {
+    minHeight: MinTouch,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.two,
+    borderRadius: Radius.md,
+  },
 });

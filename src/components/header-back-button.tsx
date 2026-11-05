@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text } from 'react-native';
 
+import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // Üst çubuktaki özel geri düğmesi. Varsayılan geri oku web'de 30x30 kadar küçüktü;
@@ -38,5 +39,5 @@ export function webHeaderLeft(fallback: '/profile' | '/settings' | '/community')
 
 const styles =StyleSheet.create({
   button: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
-  text: { fontSize: 32, lineHeight: 36, fontWeight: '900' },
+  text: { fontSize: 32, lineHeight: 36, fontFamily: Fonts.sansBold },
 });

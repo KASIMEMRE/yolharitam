@@ -1,16 +1,16 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Border, Edge, Radius, Spacing } from '@/constants/theme';
+import { Border, Radius, Spacing } from '@/constants/theme';
 import { HUES, type Hue } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 
-// Tek seviye kart. Sadelik kuralı: kartın içinde başka kart olmaz; iç gruplama boşluk,
-// ince ayırıcı ya da başlıkla yapılır. Üç ton:
-//  - plain: kart zemini + ince kenar (varsayılan)
-//  - soft: yalnız yumuşak zemin, kenar yok
-//  - primary: renkli zemin + kalın alt kenar ("3D"); ekranda TEK birincil öğe için
-// `hue` verilirse renk ailesi (harita kimliği) kullanılır; verilmezse marka yeşili / nötr.
+// Tek seviye kart (14 köşe). Sadelik kuralı: kartın içinde başka kart olmaz; iç gruplama boşluk,
+// ince ayırıcı ya da başlıkla yapılır. Üç ton, hepsi DÜZ (alt kenar / gölge yok):
+//  - plain: kart zemini + 1px kenar (varsayılan)
+//  - soft: yalnız yumuşak zemin (backgroundElement), kenarlıksız
+//  - primary: soft ile aynı görünüm; ekranda TEK birincil öğe (örn. "Şimdi" kartı) için işaret
+// `hue` verilirse o harita renginin soluk zemini kullanılır; verilmezse nötr.
 export type SurfaceTone = 'plain' | 'soft' | 'primary';
 
 type SurfaceProps = {
@@ -46,24 +46,15 @@ export function Surface({
   const family = hue ? HUES[hue] : null;
   let backgroundColor: string = theme.card;
   let borderColor: string = theme.border;
-  let edgeColor: string = theme.borderEdge;
-  if (tone === 'soft') {
+  if (tone === 'soft' || tone === 'primary') {
     backgroundColor = family ? theme[family.soft] : theme.backgroundElement;
     borderColor = 'transparent';
-  } else if (tone === 'primary') {
-    // Mevcut 3D kartlarla (OptionCard seçili hali) aynı kalıp: yumuşak zemin + renkli kenar + alt plaka
-    backgroundColor = family ? theme[family.soft] : theme.accentSoft;
-    borderColor = family ? theme[family.line] : theme.accent;
-    edgeColor = family ? theme[family.edge] : theme.accentEdge;
-  } else if (family) {
-    borderColor = theme[family.line];
   }
 
   const face: StyleProp<ViewStyle> = [
     styles.face,
     padded && styles.padded,
     { backgroundColor, borderColor },
-    tone === 'primary' && { borderWidth: Border.thick, borderBottomWidth: Edge, borderBottomColor: edgeColor },
     style,
   ];
 
@@ -78,7 +69,7 @@ export function Surface({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
-      // Basınca hafif aşağı kayma: mevcut kartlardaki kalıp
+      // Basınca hafif opaklık (kayma yok)
       style={({ pressed }) => [face, pressed && styles.pressed]}>
       {content}
     </Pressable>
@@ -88,5 +79,5 @@ export function Surface({
 const styles = StyleSheet.create({
   face: { borderRadius: Radius.lg, borderWidth: Border.thin, gap: Spacing.three },
   padded: { padding: Spacing.three },
-  pressed: { transform: [{ translateY: 2 }] },
+  pressed: { opacity: 0.75 },
 });

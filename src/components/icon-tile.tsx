@@ -2,11 +2,12 @@ import { StyleSheet, View } from 'react-native';
 
 import { Glyph } from '@/components/icon';
 
-import { Border } from '@/constants/theme';
+import { Border, Radius } from '@/constants/theme';
 import { HUES, type Hue } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 
-// Renkli kutu içinde çizgi simge: kategori, konu ve seviye simgelerinin hepsi bu bileşenle çizilir.
+// Soluk zeminli küçük kutu içinde çizgi simge. Yeni görünümde başlıklarda ve liste satırlarında KULLANILMAZ
+// (kutusuz çizgi simge ya da hue noktası kullan); yalnız büyük sahne simgelerinde (karşılama, boş durum) kalır.
 // İçerik "emoji" adıyla hangi simgenin çizileceğini söyler; çevirme tablosu icon.tsx içinde.
 type IconTileProps = {
   emoji: string;
@@ -27,11 +28,12 @@ export function IconTile({ emoji, tone = 'accent', size = 48, locked = false }: 
     ink = theme.textSecondary;
   } else if (tone === 'neutral') {
     backgroundColor = theme.backgroundElement;
-    borderColor = theme.border;
-    ink = theme.text;
+    borderColor = 'transparent';
+    ink = theme.textSecondary;
   } else {
+    // Düz soluk zemin, kenarlıksız
     backgroundColor = theme[HUES[tone].soft];
-    borderColor = theme[HUES[tone].line];
+    borderColor = 'transparent';
     ink = theme[HUES[tone].ink];
   }
 
@@ -45,7 +47,7 @@ export function IconTile({ emoji, tone = 'accent', size = 48, locked = false }: 
         {
           width: size,
           height: size,
-          borderRadius: size * 0.28,
+          borderRadius: size >= 64 ? Radius.lg : Radius.sm,
           backgroundColor,
           borderColor,
           borderStyle: locked ? 'dashed' : 'solid',
@@ -64,7 +66,7 @@ export function IconTile({ emoji, tone = 'accent', size = 48, locked = false }: 
 }
 
 const styles = StyleSheet.create({
-  tile: { alignItems: 'center', justifyContent: 'center', borderWidth: Border.thick },
+  tile: { alignItems: 'center', justifyContent: 'center', borderWidth: Border.thin },
   lock: {
     position: 'absolute',
     right: -6,
@@ -72,7 +74,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
-    borderWidth: Border.thick,
+    borderWidth: Border.thin,
     alignItems: 'center',
     justifyContent: 'center',
   },

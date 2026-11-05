@@ -186,6 +186,8 @@ export default function TopicScreen() {
   const statusOptions: SegmentedOption<TopicStatus>[] = STATUS_OPTIONS.map((o) => ({
     id: o.id,
     label: STATUS_STYLE[o.id].label,
+    // Seçili görünüm: çalışıyorum = mercan, bitti = mürekkep dolgu, atladım = nötr
+    tone: o.id === 'in_progress' ? 'marker' : o.id === 'done' ? 'accent' : 'neutral',
     // Simge yok: "Çalışıyorum" 390pt genişlikte simgeyle sığmıyor, kesiliyordu
     accessibilityLabel: `${STATUS_STYLE[o.id].label}. ${o.description}`,
   }));
@@ -260,6 +262,7 @@ export default function TopicScreen() {
                   <>
                     <Segmented
                       label="Konu durumu"
+                      variant="buttons"
                       options={statusOptions}
                       value={current ?? null}
                       allowDeselect
@@ -289,7 +292,7 @@ export default function TopicScreen() {
             {/* Kaynaklar: kart yığını değil tek liste; dokununca adı + konu başlığı tarayıcıda aranır */}
             {topic.resources.length > 0 && (
               <View style={styles.block}>
-                <SectionHeader title="Kaynaklar" subtitle="Dokununca kaynak tarayıcıda aranır." />
+                <SectionHeader title="Kaynaklar" />
                 <ListGroup>
                   {topic.resources.map((r) => (
                     <ListRow
