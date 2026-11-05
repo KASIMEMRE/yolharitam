@@ -5,9 +5,26 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-> **Aktif plan:** `docs/plan/SADELIK-VE-MISAFIR.md` — SM-01 … SM-08 bu sırayla yapılır. Her PR'da planın
-> "Sadelik ilkeleri" (bölüm 3) uygulanır ve "Özellik envanteri" (bölüm 5) ilgili maddeleri işaretlenir.
-> Hiçbir özellik kaldırılmaz; yalnız yeri ve görünümü değişir.
+> **Aktif plan:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti).
+> TS-01 önce; TS-02 ve TS-03 paralel; TS-04 son. Hiçbir özellik kaldırılmaz (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
+
+### TS-01 · Temel: renkler, yazı tipleri, ortak bileşenler
+- `theme.ts` renk jetonları plan bölüm 3'teki tabloya göre (açık + koyu); `Radius` küçülür; 3D `Edge` hiçbir yerde çizilmez.
+- Bricolage Grotesque + Figtree (`npx expo install @expo-google-fonts/bricolage-grotesque @expo-google-fonts/figtree`), kök `_layout.tsx`'te yüklenir; `ThemedText` türleri ve `Fonts` yeni ailelere eşlenir.
+- Ortak bileşenler yeni dile geçer: `Button` (düz dolgu), `Surface`, `ListRow` (kutulu simge yok), `ScreenHeader` (simge kutusu yok), `SectionHeader` (alt yazı yok), `Segmented` → altı çizili sekme, `OptionCard`, `FilterChipRow`, rozetler, `IconTile` kullanımı kaldırılır.
+- `AGENTS.md`: "Sadelik kuralları"na plan bölüm 5–6 (biçim + metin kuralları) eklenir.
+- Kabul: tsc + lint temiz; uygulama açık/koyu temada açılıyor; hiçbir ekranda 3D kenar ve simge kutusu kalmadı.
+
+### TS-02 · Ana akış ekranları (Yol Haritam, Konu, Keşfet, Harita önizleme)
+- Plan bölüm 7'deki tarif + metin diyeti (bölüm 6). Ağaç görünümü (`roadmap-tree`) yeni renklere uyar.
+- Kabul: tarifteki yerleşim; gereksiz açıklama satırı yok; envanterin ilgili maddeleri çalışıyor.
+
+### TS-03 · Diğer ekranlar
+- Gelişmeler, Topluluk (+vitrin paylaş), Profil, Başarımlar, Ayarlar + 5 alt sayfa, Karşılama, Giriş/Kayıt, Onboarding: aynı dil + metin diyeti.
+- Kabul: tarifteki dil; gereksiz açıklama satırı yok; envanterin ilgili maddeleri çalışıyor.
+
+### TS-04 · Son kabul (yeni görünüm)
+- Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
 
 
 
