@@ -239,9 +239,6 @@ function MapMenu({
                 {KIND_LABEL[map.kind]}
               </ThemedText>
               <ThemedText type="cardTitle">{map.title}</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {map.tagline}
-              </ThemedText>
             </View>
           </View>
           <View style={styles.sheetMeta}>
@@ -732,6 +729,7 @@ function Sections({
           map={map}
           statuses={statuses}
           personalization={personalization}
+          planIds={planIds}
           nextId={nextId}
           onOpenTopic={(id) => openTopic(roadmap, id)}
         />
@@ -803,9 +801,9 @@ function SectionBlock({
       {open && (
         <Animated.View entering={FadeIn.duration(150)} style={styles.blockBody}>
           {inPlan.length > 0 && <ProgressBar ratio={done / inPlan.length} />}
-          {/* Kişisel bölüm notu: kutusuz, simgesiz tek satır */}
+          {/* Kişisel bölüm notu: kutusuz, simgesiz, nötr küçük yazı (mercan yalnız durum/XP içindir) */}
           {note && (
-            <ThemedText type="small" themeColor="markerInk">
+            <ThemedText type="small" themeColor="textSecondary">
               {note}
             </ThemedText>
           )}

@@ -238,7 +238,7 @@ export default function TopicScreen() {
                   </ThemedText>
                 )}
                 {skipHint && (
-                  <ThemedText type="smallBold" themeColor="markerInk">
+                  <ThemedText type="smallBold" themeColor="textSecondary">
                     Biliyorsan atlayabilirsin
                   </ThemedText>
                 )}

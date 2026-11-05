@@ -6,7 +6,7 @@ export const CYBER_SECURITY: DevRoadmap = {
   title: 'Siber Güvenlik Uzmanı',
   tagline: 'Sistemleri saldırılara karşı koru, tehditleri tespit et ve müdahale et.',
   emoji: '🛡️',
-  hue: 'marker',
+  hue: 'berry',
   sections: [
     {
       id: 'it-basics',

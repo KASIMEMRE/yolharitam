@@ -6,7 +6,7 @@ export const JAVASCRIPT: DevRoadmap = {
   title: 'JavaScript',
   tagline: 'Webin dilini temelden öğren; DOM, asenkron kod ve modern ES.',
   emoji: '⚡',
-  hue: 'marker',
+  hue: 'coral',
   sections: [
     {
       id: 'basics',

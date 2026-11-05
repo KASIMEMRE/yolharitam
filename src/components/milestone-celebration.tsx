@@ -77,8 +77,8 @@ export function MilestoneCelebration({
           entering={ZoomIn.springify().damping(12)}
           accessibilityViewIsModal
           style={[styles.sheet, { backgroundColor: theme.background, borderColor: theme.border }]}>
-          {/* Paylaşılabilir kart: düz zemin; harita rengi yalnız simgede */}
-          <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+          {/* Kutlama içeriği: sheet zaten tek kart; içinde ikinci bir zemin yok (kart içinde kart olmaz). Harita rengi yalnız simgede */}
+          <View style={styles.card}>
             <Glyph emoji={isRoadmap ? '🏆' : milestone.emoji} size={48} color={theme[hue.ink]} strokeWidth={1.5} />
             <View style={styles.eyebrowRow}>
               <Glyph emoji={map.emoji} size={14} color={theme[hue.ink]} strokeWidth={2.25} />
@@ -130,7 +130,7 @@ function ProgressRing({ percent }: { percent: number }) {
     <View
       accessibilityRole="progressbar"
       accessibilityValue={{ min: 0, max: 100, now: percent }}
-      style={[styles.track, { backgroundColor: theme.card, borderColor: theme.border }]}>
+      style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
       <Animated.View style={[styles.fill, { backgroundColor: theme.accent }, style]} />
     </View>
   );
@@ -189,14 +189,13 @@ const styles = StyleSheet.create({
   card: {
     alignItems: 'center',
     gap: Spacing.two,
-    padding: Spacing.four,
-    borderRadius: Radius.lg,
+    paddingVertical: Spacing.three,
   },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   pieceStrip: { width: 8, height: 16, borderRadius: 2 },
   pieceDot: { width: 10, height: 10, borderRadius: 5 },
   center: { textAlign: 'center' },
-  track: { width: '100%', height: 8, borderRadius: Radius.pill, borderWidth: Border.thin, overflow: 'hidden' },
+  track: { width: '100%', height: 8, borderRadius: Radius.pill, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: Radius.pill },
   piece: { position: 'absolute', top: 0 },
 });

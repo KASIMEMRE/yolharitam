@@ -50,7 +50,8 @@ export function UsernameForm({ onSaved, submitLabel = 'Kaydet' }: { onSaved?: ()
   const taken = needsCheck && checked === false;
   const checking = needsCheck && checked === undefined;
 
-  let hint = '3-20 karakter: küçük harf (a-z), rakam ve _';
+  // Kural yalnız yanlış yazılınca söylenir; boşken açıklama satırı yok
+  let hint: string | undefined;
   let hintTone: 'neutral' | 'good' = 'neutral';
   let invalid = false;
   if (typed.length > 0 && !formatOk) {

@@ -56,14 +56,16 @@ Kural: **Bir ana renk (mürekkep) + tek vurgu (mercan) + nötrler.**
 | marker (mercan) | `#E4572E` | `#F06A42` |
 | markerEdge | `#B8401F` | `#B8502F` |
 | markerSoft | `#FBE3DA` | `#3A1F17` |
-| markerInk | `#C2401C` | `#FF8A66` |
-| onMarker | `#FFFFFF` | `#141316` |
+| markerInk | `#B73A17` | `#FF8A66` |
+| onMarker | `#1C1B1F` | `#141316` |
 | sky / skySoft / skyInk / skyEdge | `#8C9AAD` / `#ECEFF3` / `#46566B` / `#6F7D90` | `#8C9AAD` / `#1E2229` / `#B4C0CF` / `#6F7D90` |
 | violet / Soft / Ink / Edge | `#A497B0` / `#EFECF2` / `#5A4C6A` / `#85789A` | `#A497B0` / `#231F28` / `#C7BCD3` / `#85789A` |
 | coral / Soft / Ink / Edge | `#C4917F` / `#F5ECE8` / `#7A4A3A` / `#A37564` | `#C4917F` / `#2A201C` / `#E0B9AA` / `#A37564` |
 | berry / Soft / Ink / Edge | `#B8919F` / `#F4ECEF` / `#74485A` / `#977381` | `#B8919F` / `#281E22` / `#DDBCC8` / `#977381` |
 | leaf / Soft / Ink / Edge | `#93A585` / `#EEF1EA` / `#4B5C3F` / `#76876A` | `#93A585` / `#1E231B` / `#BCCBB0` / `#76876A` |
 | warningBackground / warningInk | değişmez | değişmez |
+
+Not (TS-04, kontrast): açık temada `markerInk` `#C2401C` → `#B73A17` (yumuşak zeminlerde 4.2–4.5 kalıyordu), `onMarker` `#FFFFFF` → `#1C1B1F` (beyaz mercan üstünde 3.7:1 idi). Oranlar: `docs/plan/TS-04-kabul-raporu.md`.
 
 Not: `accent` artık "harita yeşili" değil, "mürekkep"tir. Yeşil zemin beklenen yerler (ör. "Bitti" rozetleri) mürekkep ya da nötr olur. `theme.ts` başındaki yorumları buna göre güncelle.
 
@@ -79,7 +81,7 @@ Not: `accent` artık "harita yeşili" değil, "mürekkep"tir. Yeşil zemin bekle
 ## 5. Biçim kuralları
 
 - **Köşeler:** `Radius = { sm: 8, md: 10, lg: 14, xl: 18, pill: 999 }`. Kartlar 14, butonlar 10, giriş alanları 10. Hap (pill) yalnız küçük etiketlerde.
-- **3D kenar yok:** `Edge` alt kenarı hiçbir bileşende çizilmez (`Button`, `Surface tone="primary"`, `OptionCard`, rozetler, `RouteSteps`…). Birincil butonun farkı dolgu rengiyle gelir (`accent` zemin + `onAccent` yazı).
+- **3D kenar yok:** `Edge` alt kenarı hiçbir bileşende çizilmez (`Button`, `Surface tone="primary"`, `OptionCard`, rozetler…). Birincil butonun farkı dolgu rengiyle gelir (`accent` zemin + `onAccent` yazı).
 - **Gölge yok** (ya da çok hafif). Ayrım için ince 1 px `border` çizgisi ve boşluk kullanılır.
 - **Seçim kontrolleri:**
   - İki-üç seçenekli görünüm anahtarları ve sekmeler (harita sekmeleri, Roller/Beceriler, Lig/Arkadaşlar/Vitrin, Yapay zekâ sekmeleri): **altı çizili sekme**. Seçili olan 600 ağırlık + 2 px `accent` alt çizgi; diğerleri `textSecondary`; altta tam genişlik 1 px `border`.

@@ -147,7 +147,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingHorizontal: Spacing.two,
+    // Dar ekranda (320) üç eşit düğmede "Çalışıyorum" kısalmasın diye yan boşluk küçük
+    paddingHorizontal: Spacing.one,
     borderRadius: Radius.md,
   },
 });

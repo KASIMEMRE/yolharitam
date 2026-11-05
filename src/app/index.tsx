@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/button';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { TrailMark } from '@/components/trail-mark';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { markWelcomeSeen, readWelcomeSeen } from '@/lib/welcome-seen';
@@ -42,8 +43,11 @@ export default function WelcomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        {/* Sade karşılama: büyük Bricolage başlık + tek kısa cümle; süs illüstrasyonu yok */}
+        {/* Sade karşılama: üstte tek renkli patika çizimi, altta büyük Bricolage başlık + tek kısa cümle */}
         <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: gutter }]}>
+          <Animated.View entering={enter(0)} style={styles.art}>
+            <TrailMark width={Math.min(width - gutter * 2, 320)} />
+          </Animated.View>
           <Animated.View entering={enter(0)}>
             <ThemedText type="display" accessibilityRole="header" style={narrow ? styles.titleNarrow : styles.title}>
               Yol Haritam
@@ -91,6 +95,8 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'flex-end', gap: Spacing.three, paddingTop: Spacing.five, paddingBottom: Spacing.five },
   title: { fontSize: 52, lineHeight: 56, letterSpacing: -1 },
   titleNarrow: { fontSize: 42, lineHeight: 46, letterSpacing: -0.8 },
+  // Çizim, başlıktan önceki boş alanı doldurur ve orada ortalanır
+  art: { flex: 1, justifyContent: 'center', alignItems: 'flex-start', minHeight: 160 },
   lead: { maxWidth: 320 },
   footer: { gap: Spacing.two, paddingTop: Spacing.two, paddingBottom: Spacing.three },
 });

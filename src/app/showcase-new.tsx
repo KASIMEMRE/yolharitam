@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner } from '@/components/banner';
@@ -24,6 +24,8 @@ export default function ShowcaseNewScreen() {
   const params = useLocalSearchParams<{ map?: string }>();
   const mapParam = Array.isArray(params.map) ? params.map[0] : params.map;
   const { roadmaps, status: mapsStatus, retry } = useLatestRoadmap();
+  // Dar ekranda (320) yan boşluk 16: diğer ekranlarla aynı
+  const gutter = useWindowDimensions().width < 360 ? Spacing.three : Spacing.four;
 
   const maps = roadmaps.flatMap((r) => {
     const m = getRoadmap(r.topic_path);
@@ -91,7 +93,7 @@ export default function ShowcaseNewScreen() {
           style={styles.flex}
           keyboardShouldPersistTaps="handled"
           automaticallyAdjustKeyboardInsets
-          contentContainerStyle={styles.content}>
+          contentContainerStyle={[styles.content, { padding: gutter }]}>
           <View style={styles.inner}>
             {mapsStatus === 'loading' && <Skeleton height={MinTouch} radius={Radius.sm} />}
             {mapsStatus === 'error' && (

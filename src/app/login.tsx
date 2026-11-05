@@ -131,7 +131,8 @@ export default function LoginScreen() {
     };
   }, [mode, handle, handleFormatOk]);
 
-  let usernameHint = '3-20 karakter: küçük harf (a-z), rakam ve _';
+  // Kural yalnız yanlış yazılınca söylenir (boşken açıklama satırı yok); müsaitlik sonucu her zaman görünür.
+  let usernameHint: string | undefined;
   let usernameHintTone: 'neutral' | 'good' = 'neutral';
   if (username.length > 0 && !handleFormatOk) {
     usernameHint = 'Yalnız küçük harf (a-z), rakam ve _ kullan; 3 ile 20 karakter arası olmalı.';

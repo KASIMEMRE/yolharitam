@@ -45,45 +45,6 @@ export function LevelBadge({ levelId, size = 'sm' }: LevelBadgeProps) {
   );
 }
 
-// "Yakında" gibi durum etiketleri için küçük çip (LevelBadge ile aynı biçim).
-type StatusChipProps = {
-  label: string;
-  emoji?: string;
-  tone: 'marker' | 'neutral' | 'accent'; // accent = başarı/tamamlandı
-  align?: 'start' | 'center'; // ortalı kartlarda 'center'
-};
-
-export function StatusChip({ label, emoji, tone, align = 'start' }: StatusChipProps) {
-  const theme = useTheme();
-  const marker = tone === 'marker';
-  const accent = tone === 'accent';
-  return (
-    <View
-      style={[
-        styles.chip,
-        {
-          alignSelf: align === 'center' ? 'center' : 'flex-start',
-          backgroundColor: marker ? theme.markerSoft : accent ? theme.accentSoft : theme.backgroundElement,
-          borderColor: 'transparent',
-          paddingVertical: Spacing.one,
-          paddingHorizontal: Spacing.two,
-        },
-      ]}>
-      {emoji && (
-        <Glyph
-          emoji={emoji}
-          size={14}
-          color={marker ? theme.markerInk : accent ? theme.accentInk : theme.textSecondary}
-          strokeWidth={2.25}
-        />
-      )}
-      <ThemedText type="chip" themeColor={marker ? 'markerInk' : accent ? 'accentInk' : 'textSecondary'} maxFontSizeMultiplier={1.3}>
-        {label}
-      </ThemedText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
