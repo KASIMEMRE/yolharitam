@@ -2,7 +2,6 @@ import type { ErrorBoundaryProps } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/button';
-import { IconTile } from '@/components/icon-tile';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -14,14 +13,13 @@ export function AppErrorScreen({ error, retry }: ErrorBoundaryProps) {
   if (__DEV__) console.warn('Ekran hatası:', error);
   return (
     <View style={[styles.wrap, { backgroundColor: theme.background }]}>
-      <IconTile emoji="⚠️" tone="marker" size={64} />
       <ThemedText type="heading" style={styles.center} accessibilityRole="header">
         Bir şeyler ters gitti
       </ThemedText>
       <ThemedText themeColor="textSecondary" style={styles.center}>
-        Bu ekran açılırken beklenmedik bir sorun oluştu. İlerlemen güvende; tekrar denemen yeterli.
+        İlerlemen güvende. Tekrar dene.
       </ThemedText>
-      <Button icon="🔄" label="Tekrar dene" onPress={retry} />
+      <Button label="Tekrar dene" onPress={retry} />
     </View>
   );
 }

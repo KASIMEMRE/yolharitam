@@ -180,5 +180,5 @@ const styles = StyleSheet.create({
   titleColumn: { gap: Spacing.three, alignItems: 'flex-start' },
   titleText: { flex: 1, minWidth: 0 },
   list: { gap: Spacing.three },
-  footer: { gap: Spacing.three, paddingVertical: Spacing.three, borderTopWidth: 2 },
+  footer: { gap: Spacing.three, paddingVertical: Spacing.three, borderTopWidth: 1 },
 });

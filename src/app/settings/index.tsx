@@ -12,21 +12,18 @@ export default function SettingsIndexScreen() {
         <ListRow
           icon="🗺"
           title="Haritalarım"
-          subtitle="Haritaları aç, kaldır ya da yeni ekle"
           chevron
           onPress={() => router.push('/settings/maps')}
         />
         <ListRow
           icon="🎨"
           title="Görünüm"
-          subtitle="Tema ve haritanın varsayılan görünümü"
           chevron
           onPress={() => router.push('/settings/appearance')}
         />
         <ListRow
           icon="👤"
           title="Hesap ve güvenlik"
-          subtitle="Kullanıcı adı, şifre, çıkış, hesabı silme"
           chevron
           onPress={() => router.push('/settings/account')}
         />
@@ -39,7 +36,6 @@ export default function SettingsIndexScreen() {
         <ListRow
           icon="ℹ"
           title="Hakkında ve yasal"
-          subtitle="Sürüm, gizlilik, koşullar, destek"
           chevron
           onPress={() => router.push('/settings/about')}
         />

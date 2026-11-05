@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { IconLabel } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Skeleton } from '@/components/skeleton';
@@ -51,7 +50,7 @@ export function UsernameForm({ onSaved, submitLabel = 'Kaydet' }: { onSaved?: ()
   const taken = needsCheck && checked === false;
   const checking = needsCheck && checked === undefined;
 
-  let hint = 'Küçük harf, rakam ve alt çizgi (_). 3-20 karakter. Türkçe karakter (ç, ğ, ı, ö, ş, ü) kullanılamaz.';
+  let hint = '3-20 karakter: küçük harf (a-z), rakam ve _';
   let hintTone: 'neutral' | 'good' = 'neutral';
   let invalid = false;
   if (typed.length > 0 && !formatOk) {
@@ -144,14 +143,11 @@ export function UsernameGate({ children }: { children: ReactNode }) {
   }
 
   if (!username) {
-    // Düz düzen: kutu/kart yok; başlık + kısa açıklama + form doğrudan zeminde
+    // Düz düzen: kutu/kart yok; başlık + form doğrudan zeminde
     return (
       <View style={styles.wrap}>
-        <IconLabel emoji="🏷️" type="cardTitle" iconSize={18}>
+        <ThemedText type="cardTitle" accessibilityRole="header">
           Bir kullanıcı adı seç
-        </IconLabel>
-        <ThemedText themeColor="textSecondary">
-          Diğer kullanıcılar seni bu adla görür, arkadaşların seni bu adla bulur. Sonradan Ayarlar&apos;dan değiştirebilirsin.
         </ThemedText>
         {/* Kapı ile form ayrı useUsername örnekleri; kayıttan sonra kapı kendi okumasını tazeler ve açılır */}
         <UsernameForm onSaved={retry} />

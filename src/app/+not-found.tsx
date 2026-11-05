@@ -20,9 +20,6 @@ export default function NotFoundScreen() {
     <ThemedView style={styles.container}>
       <Stack.Screen options={{ title: '' }} />
       <View style={styles.inner}>
-        <ThemedText type="display" style={styles.center}>
-          🧭
-        </ThemedText>
         <ThemedText type="heading" style={styles.center}>
           Bu sayfa bulunamadı
         </ThemedText>

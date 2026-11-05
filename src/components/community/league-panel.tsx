@@ -4,8 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { FilterChipRow } from '@/components/filter-chips';
-import { Glyph, IconLabel } from '@/components/icon';
-import { IconTile } from '@/components/icon-tile';
+import { Glyph } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list-row';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
@@ -28,7 +27,7 @@ export function LeaguePanel() {
 
   const maps = roadmaps.flatMap((r) => {
     const m = getRoadmap(r.topic_path);
-    return m ? [{ id: m.id, emoji: m.emoji, title: m.title }] : [];
+    return m ? [{ id: m.id, emoji: m.emoji, hue: m.hue, title: m.title }] : [];
   });
   // Seçili harita silindiyse ya da hiç seçilmediyse ilk haritaya düş (lig "Tümü" olamaz)
   const active = maps.find((m) => m.id === selected)?.id ?? maps[0]?.id ?? null;
@@ -47,34 +46,35 @@ export function LeaguePanel() {
   }
 
   if (mapsStatus === 'ready' && maps.length === 0) {
-    return <Banner tone="info">Lige katılmak için önce bir yol haritası seç. Sıralama aynı haritayı takip edenler arasındadır.</Banner>;
+    return <Banner tone="info">Lige katılmak için önce bir yol haritası seç.</Banner>;
   }
 
   return (
     <View style={styles.list}>
       {mapsLoading ? (
-        <Skeleton height={MinTouch} radius={Radius.pill} />
+        <Skeleton height={MinTouch} radius={Radius.sm} />
       ) : (
         active && (
           <FilterChipRow
             role="radio"
+            variant="tabs"
             label="Harita"
-            options={maps.map((m) => ({ id: m.id, label: m.title, icon: m.emoji }))}
+            options={maps.map((m) => ({ id: m.id, label: m.title, dot: m.hue }))}
             value={active}
             onChange={setSelected}
           />
         )
       )}
 
-      {/* Hafta bitimi + puanın ne olduğu. Dar ekranda (320 px) kırpılmasın diye gerekirse alt satıra iner. */}
-      <IconLabel emoji="⏳" type="small" themeColor="textSecondary">
-        {`${weekEndText()} · Puan: bu haftaki XP`}
-      </IconLabel>
+      {/* Hafta bitimi (veri taşıyan tek satır). Dar ekranda kırpılmasın diye gerekirse alt satıra iner. */}
+      <ThemedText type="small" themeColor="textSecondary">
+        {weekEndText()}
+      </ThemedText>
 
       {leagueLoading && rows.length === 0 && (
         <View style={styles.list}>
           {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} height={56} radius={Radius.lg} />
+            <Skeleton key={i} height={56} radius={Radius.md} />
           ))}
         </View>
       )}
@@ -88,9 +88,8 @@ export function LeaguePanel() {
 
       {!leagueLoading && status === 'ready' && rows.length === 0 && (
         <View style={styles.empty}>
-          <IconTile emoji="🏆" tone="marker" size={64} />
           <ThemedText themeColor="textSecondary" style={styles.center}>
-            Bu haritada bu hafta henüz kimse puan kazanmadı. İlk sen ol!
+            Bu haritada bu hafta henüz puan kazanan yok.
           </ThemedText>
         </View>
       )}
@@ -118,7 +117,7 @@ function LeagueRowView({ row }: { row: LeagueRow }) {
     <View
       accessible
       accessibilityLabel={`${row.rank}. sıra, ${title}${row.is_me ? ', sen' : ''}, ${row.xp} XP`}
-      style={row.is_me ? { backgroundColor: theme.accentSoft } : undefined}>
+      style={row.is_me ? { backgroundColor: theme.backgroundElement, borderRadius: Radius.sm } : undefined}>
       <ListRow
         left={
           <View style={styles.rank}>
@@ -133,7 +132,7 @@ function LeagueRowView({ row }: { row: LeagueRow }) {
         }
         title={row.is_me ? `${title} (sen)` : title}
         right={
-          <ThemedText type="smallBold" themeColor={row.is_me ? 'accentInk' : 'text'}>
+          <ThemedText type="smallBold" themeColor="markerInk">
             {row.xp} XP
           </ThemedText>
         }

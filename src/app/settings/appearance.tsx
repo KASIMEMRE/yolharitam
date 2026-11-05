@@ -50,9 +50,6 @@ export default function SettingsAppearanceScreen() {
         ]}
         onChange={(mapView) => setPreferences({ mapView })}
       />
-      <ThemedText type="small" themeColor="textSecondary">
-        Bu tercihler yalnız bu cihazda saklanır.
-      </ThemedText>
     </SettingsPage>
   );
 }

@@ -44,10 +44,10 @@ export function MilestoneCelebration({
 
   if (!milestone) return null;
   const isRoadmap = milestone.kind === 'roadmap';
-  const headline = isRoadmap ? 'Haritayı tamamladın!' : 'Bölüm tamam!';
+  const headline = isRoadmap ? 'Haritayı tamamladın' : 'Bölüm tamam';
   const message = isRoadmap
-    ? `${map.title} yol haritasını baştan sona tamamladım! 🏁`
-    : `${map.title} yol haritasında “${milestone.title}” bölümünü bitirdim. Yolun %${milestone.percent}'i geride! 🚀`;
+    ? `${map.title} yol haritasını baştan sona tamamladım.`
+    : `${map.title} yol haritasında “${milestone.title}” bölümünü bitirdim. Yolun %${milestone.percent}'i geride.`;
 
   async function share() {
     const text = `${message}\n\nYol Haritam ile öğreniyorum.`;
@@ -76,15 +76,13 @@ export function MilestoneCelebration({
         <Animated.View
           entering={ZoomIn.springify().damping(12)}
           accessibilityViewIsModal
-          style={[styles.sheet, { backgroundColor: theme.background, borderColor: theme[hue.line] }]}>
-          {/* Paylaşılabilir kart */}
-          <View style={[styles.card, { backgroundColor: theme[hue.soft], borderColor: theme[hue.line] }]}>
-            <View style={[styles.bigIcon, { backgroundColor: theme.card, borderColor: theme[hue.line] }]}>
-              <Glyph emoji={isRoadmap ? '🏆' : milestone.emoji} size={44} color={theme[hue.ink]} strokeWidth={1.75} />
-            </View>
+          style={[styles.sheet, { backgroundColor: theme.background, borderColor: theme.border }]}>
+          {/* Paylaşılabilir kart: düz zemin; harita rengi yalnız simgede */}
+          <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
+            <Glyph emoji={isRoadmap ? '🏆' : milestone.emoji} size={48} color={theme[hue.ink]} strokeWidth={1.5} />
             <View style={styles.eyebrowRow}>
               <Glyph emoji={map.emoji} size={14} color={theme[hue.ink]} strokeWidth={2.25} />
-              <ThemedText type="eyebrow" themeColor={hue.ink}>
+              <ThemedText type="eyebrow" themeColor="textSecondary">
                 {map.title}
               </ThemedText>
             </View>
@@ -95,15 +93,11 @@ export function MilestoneCelebration({
               <ThemedText style={styles.center}>“{milestone.title}” bölümünü bitirdin.</ThemedText>
             )}
             <ProgressRing percent={milestone.percent} />
-            <ThemedText type="smallBold" themeColor={hue.ink}>
-              {`Yolun %${milestone.percent}'i geride`}
-            </ThemedText>
+            <ThemedText type="smallBold">{`Yolun %${milestone.percent}'i geride`}</ThemedText>
             {milestone.xp > 0 && (
-              <View style={[styles.xpPill, { backgroundColor: theme.markerSoft, borderColor: theme.marker }]}>
-                <IconLabel emoji="⭐" type="smallBold" themeColor="markerInk">
-                  {`+${milestone.xp} XP`}
-                </IconLabel>
-              </View>
+              <IconLabel emoji="⭐" type="smallBold" themeColor="markerInk">
+                {`+${milestone.xp} XP`}
+              </IconLabel>
             )}
             <ThemedText type="small" themeColor="textSecondary">
               Yol Haritam
@@ -115,7 +109,7 @@ export function MilestoneCelebration({
               {shareNote}
             </ThemedText>
           )}
-          <Button icon="📣" label="Paylaş" onPress={share} />
+          <Button label="Paylaş" onPress={share} />
           <Button variant="text" label="Devam et" onPress={onClose} />
         </Animated.View>
       </View>
@@ -189,30 +183,20 @@ const styles = StyleSheet.create({
     maxWidth: 380,
     gap: Spacing.three,
     padding: Spacing.three,
-    borderRadius: Radius.xl,
-    borderWidth: Border.thick,
+    borderRadius: Radius.lg,
+    borderWidth: Border.thin,
   },
   card: {
     alignItems: 'center',
     gap: Spacing.two,
     padding: Spacing.four,
     borderRadius: Radius.lg,
-    borderWidth: Border.thick,
-  },
-  bigIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 28,
-    borderWidth: Border.thick,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   eyebrowRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
   pieceStrip: { width: 8, height: 16, borderRadius: 2 },
   pieceDot: { width: 10, height: 10, borderRadius: 5 },
   center: { textAlign: 'center' },
-  track: { width: '100%', height: 14, borderRadius: Radius.pill, borderWidth: Border.thin, overflow: 'hidden' },
+  track: { width: '100%', height: 8, borderRadius: Radius.pill, borderWidth: Border.thin, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: Radius.pill },
-  xpPill: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.three, borderRadius: Radius.pill, borderWidth: Border.thick },
   piece: { position: 'absolute', top: 0 },
 });

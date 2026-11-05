@@ -97,11 +97,8 @@ function RootStack() {
 
       {/* Yalnız GİRİŞ YAPMAMIŞ kullanıcının görebileceği ekran: oturum açılınca kapanır */}
       <Stack.Protected guard={!session}>
-        {/* Giriş ekranının üst "sahnesi" accentSoft olduğu için başlık çubuğu da aynı renk (kesintisiz görünsün) */}
-        <Stack.Screen
-          name="login"
-          options={{ title: '', headerStyle: { backgroundColor: theme.accentSoft } }}
-        />
+        {/* Giriş ekranı sade: başlık çubuğu boş, zemin rengi sayfayla aynı */}
+        <Stack.Screen name="login" options={{ title: '' }} />
       </Stack.Protected>
 
       {/* Yalnız GİRİŞ YAPMIŞ kullanıcının görebileceği ekranlar */}

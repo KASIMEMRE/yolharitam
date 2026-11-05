@@ -3,8 +3,8 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
-import { IconTile } from '@/components/icon-tile';
-import { StatusChip } from '@/components/level-badge';
+import { Glyph } from '@/components/icon';
+import { ListGroup } from '@/components/list-row';
 import { SectionHeader } from '@/components/section-header';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
@@ -14,17 +14,14 @@ import { useAchievements } from '@/hooks/use-achievements';
 import { useTheme } from '@/hooks/use-theme';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
 
-// Profil'deki "Başarımlar" bölümü: durum (yükleniyor/hata/hazır) burada, hesap constants/achievements.ts'te.
-// Kazanılan rozet renkli + "Kazanıldı" çipi; kazanılmayan soluk + NASIL kazanılacağı + varsa gerçek ilerleme.
-// Durum yalnız renkle değil çip ve metinle de anlatılır (renk körlüğü / ekran okuyucu için).
+// Tüm başarımlar ekranının gövdesi: durum (yükleniyor/hata/hazır) burada, hesap constants/achievements.ts'te.
+// Sade rozet görünümü: renkli kutu yok; kazanılan rozet mürekkep halkalı, kazanılmayan soluk. Satırlar ince çizgiyle ayrılır.
+// Durum yalnız renkle değil metinle de anlatılır (renk körlüğü / ekran okuyucu için).
 export function AchievementsSection() {
   const { status, achievements, earnedCount, hasRoadmap, retrying, retry } = useAchievements();
 
   // Kazanılanlar önce; kendi içinde tanım sırası korunur (sort kararlıdır)
   const ordered = [...achievements].sort((a, b) => Number(b.earned) - Number(a.earned));
-  // 2 sütun: satırlara böleriz, her kart flex:1 → dar ekranda (320 px) de taşmaz
-  const rows: AchievementResult[][] = [];
-  for (let i = 0; i < ordered.length; i += 2) rows.push(ordered.slice(i, i + 2));
 
   const failed = status === 'schema' || status === 'network' || status === 'error';
   const errorText =
@@ -32,24 +29,26 @@ export function AchievementsSection() {
 
   return (
     <View style={styles.section}>
-      <View style={styles.header}>
-        <ThemedText type="eyebrow" themeColor="textSecondary">
-          Başarımlar
-        </ThemedText>
-        {status === 'ready' && (
-          <ThemedText type="smallBold" accessibilityLiveRegion="polite">
-            {summaryText(earnedCount, achievements.length)}
+      {/* Kazanılan / toplam: ekran başlığının (üst çubuk) altında sade bir sayı */}
+      {status === 'ready' && (
+        <View
+          accessible
+          accessibilityLiveRegion="polite"
+          accessibilityLabel={summaryText(earnedCount, achievements.length)}
+          style={styles.count}>
+          <ThemedText type="display" style={styles.countNumber}>
+            {earnedCount}
           </ThemedText>
-        )}
-      </View>
+          <ThemedText type="cardTitle" themeColor="textSecondary">
+            {`/ ${achievements.length}`}
+          </ThemedText>
+        </View>
+      )}
 
       {status === 'loading' && (
         <View accessible accessibilityLabel="Başarımlar yükleniyor" accessibilityState={{ busy: true }} style={styles.grid}>
-          {[0, 1].map((row) => (
-            <View key={row} style={styles.row}>
-              <Skeleton width="48%" height={132} radius={Radius.lg} />
-              <Skeleton width="48%" height={132} radius={Radius.lg} />
-            </View>
+          {[0, 1, 2].map((row) => (
+            <Skeleton key={row} height={64} radius={Radius.md} />
           ))}
         </View>
       )}
@@ -69,20 +68,11 @@ export function AchievementsSection() {
               Rozet kazanmak için önce bir yol haritası seç.
             </ThemedText>
           )}
-          <View style={styles.grid}>
-            {rows.map((row) => (
-              <View key={row[0].id} style={styles.row}>
-                {row.map((a) => (
-                  <AchievementCard key={a.id} item={a} />
-                ))}
-                {/* Tek kalan kart varsa yarım genişlikte kalsın diye boş yer tutucu */}
-                {row.length === 1 && <View style={styles.spacer} />}
-              </View>
+          <ListGroup>
+            {ordered.map((a) => (
+              <AchievementRow key={a.id} item={a} />
             ))}
-          </View>
-          <ThemedText type="small" themeColor="textSecondary">
-            Rozetler bitirdiğin konulardan hesaplanır. Bir konunun işaretini kaldırırsan rozet de değişebilir.
-          </ThemedText>
+          </ListGroup>
         </>
       )}
     </View>
@@ -94,7 +84,7 @@ export function AchievementsSection() {
 const STRIP_COUNT = 5;
 
 export function AchievementsStrip() {
-  const { status, achievements, retrying, retry } = useAchievements();
+  const { status, achievements, earnedCount, retrying, retry } = useAchievements();
   const ordered = [...achievements].sort((a, b) => Number(b.earned) - Number(a.earned));
   const failed = status === 'schema' || status === 'network' || status === 'error';
   const errorText =
@@ -105,6 +95,7 @@ export function AchievementsStrip() {
     <View style={styles.section}>
       <SectionHeader
         title="Başarımlar"
+        count={status === 'ready' ? `${earnedCount} / ${achievements.length}` : undefined}
         action={status === 'ready' ? { label: 'Tümü', onPress: openAll } : undefined}
       />
       {status === 'loading' && (
@@ -130,9 +121,7 @@ export function AchievementsStrip() {
               accessibilityLabel={`${a.title}. ${a.earned ? 'Kazanıldı' : 'Henüz kazanılmadı'}. Tüm başarımları aç`}
               style={styles.chip}>
               {/* Kazanılmayan soluk; renk tek başına anlam taşımasın diye erişilebilirlik etiketi durumu da söyler */}
-              <View style={a.earned ? undefined : styles.dimmed}>
-                <IconTile emoji={a.emoji} tone={a.earned ? a.hue : 'neutral'} size={48} />
-              </View>
+              <Badge emoji={a.emoji} earned={a.earned} size={48} />
               <ThemedText type="small" themeColor={a.earned ? 'text' : 'textSecondary'} numberOfLines={2} style={styles.chipText}>
                 {a.title}
               </ThemedText>
@@ -144,7 +133,31 @@ export function AchievementsStrip() {
   );
 }
 
-function AchievementCard({ item }: { item: AchievementResult }) {
+// Sade rozet: yuvarlak halka içinde çizgi simge. Kazanılan = mürekkep halka + koyu simge; kazanılmayan = ince halka + soluk simge.
+function Badge({ emoji, earned, size }: { emoji: string; earned: boolean; size: number }) {
+  const theme = useTheme();
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[
+        styles.badge,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: earned ? 1.5 : Border.thin,
+          borderColor: earned ? theme.accent : theme.borderEdge,
+        },
+      ]}>
+      <View style={earned ? undefined : styles.dimmed}>
+        <Glyph emoji={emoji} size={Math.round(size * 0.45)} color={earned ? theme.text : theme.textSecondary} strokeWidth={2} />
+      </View>
+    </View>
+  );
+}
+
+function AchievementRow({ item }: { item: AchievementResult }) {
   const theme = useTheme();
   const { earned, hint } = item;
 
@@ -154,54 +167,31 @@ function AchievementCard({ item }: { item: AchievementResult }) {
     : `${item.title}. Henüz kazanılmadı. ${item.howTo}${hint ? ` İlerleme: ${hint.label}.` : ''}`;
 
   return (
-    <View
-      accessible
-      accessibilityRole="text"
-      accessibilityLabel={label}
-      style={[
-        styles.card,
-        // Sadelik: rozet kartları düz (ince kenar, 3D alt kenar yok). Renk kimliği yalnız simge kutusunda;
-        // kazanıldı bilgisi çip ve metinle verilir. 9 renkli 3D kart ekranı bağırtıyordu.
-        earned
-          ? { backgroundColor: theme.card, borderColor: theme.border }
-          : { backgroundColor: theme.backgroundElement, borderColor: 'transparent' },
-      ]}>
-      {/* Kazanılmayanın simgesi soluk: "henüz senin değil" hissi; metin okunaklı kalsın diye yalnız simge solar */}
-      <View style={earned ? undefined : styles.dimmed}>
-        <IconTile emoji={item.emoji} tone={earned ? item.hue : 'neutral'} size={48} />
-      </View>
-      <ThemedText type="smallBold" themeColor={earned ? 'text' : 'textSecondary'}>
-        {item.title}
-      </ThemedText>
-      {earned ? (
-        <>
-          <ThemedText type="small" themeColor="textSecondary">
-            {item.description}
-          </ThemedText>
-          <StatusChip label="Kazanıldı" emoji="✓" tone="accent" />
-        </>
-      ) : (
-        <>
-          <ThemedText type="small" themeColor="textSecondary">
-            {item.howTo}
-          </ThemedText>
-          {hint && (
-            <View style={styles.hintBlock}>
-              <ThemedText type="chip" themeColor="textSecondary">
-                {hint.label}
-              </ThemedText>
-              {/* Çubuk yalnız süs; asıl bilgi yukarıdaki sayı metni */}
-              <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
-                <View
-                  style={[
-                    styles.fill,
-                    { backgroundColor: theme.accent, width: `${Math.round((hint.current / hint.target) * 100)}%` },
-                  ]}
-                />
-              </View>
+    <View accessible accessibilityRole="text" accessibilityLabel={label} style={styles.achRow}>
+      <Badge emoji={item.emoji} earned={earned} size={44} />
+      <View style={styles.achTexts}>
+        <ThemedText type="defaultSemiBold" themeColor={earned ? 'text' : 'textSecondary'} style={styles.achTitle}>
+          {item.title}
+        </ThemedText>
+        <ThemedText type="small" themeColor="textSecondary">
+          {earned ? item.description : item.howTo}
+        </ThemedText>
+        {!earned && hint && (
+          <View style={styles.hintBlock}>
+            <ThemedText type="chip" themeColor="textSecondary">
+              {hint.label}
+            </ThemedText>
+            {/* Çubuk yalnız süs; asıl bilgi yukarıdaki sayı metni */}
+            <View style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
+              <View style={[styles.fill, { backgroundColor: theme.accent, width: `${Math.round((hint.current / hint.target) * 100)}%` }]} />
             </View>
-          )}
-        </>
+          </View>
+        )}
+      </View>
+      {earned && (
+        <ThemedText type="smallBold" themeColor="accentInk">
+          Kazanıldı
+        </ThemedText>
       )}
     </View>
   );
@@ -209,23 +199,18 @@ function AchievementCard({ item }: { item: AchievementResult }) {
 
 const styles = StyleSheet.create({
   section: { gap: Spacing.two },
-  header: { gap: Spacing.one },
   grid: { gap: Spacing.two },
-  row: { flexDirection: 'row', gap: Spacing.two },
-  spacer: { flex: 1 },
-  card: {
-    flex: 1,
-    minWidth: 0, // dar ekranda uzun metin kartı taşırmasın
-    gap: Spacing.one,
-    padding: Spacing.three,
-    borderRadius: Radius.lg,
-    borderWidth: Border.thin,
-  },
+  count: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.two },
+  countNumber: { fontSize: 40, lineHeight: 46 },
+  badge: { alignItems: 'center', justifyContent: 'center' },
+  achRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three, paddingVertical: Spacing.three },
+  achTexts: { flex: 1, minWidth: 0, gap: Spacing.half },
+  achTitle: { fontSize: 15, lineHeight: 22 },
   stripRow: { flexDirection: 'row', gap: Spacing.three },
   chip: { width: 72, alignItems: 'center', gap: Spacing.one },
   chipText: { textAlign: 'center' },
-  dimmed: { opacity: 0.5, alignSelf: 'flex-start' },
+  dimmed: { opacity: 0.55 },
   hintBlock: { gap: Spacing.one, marginTop: Spacing.one },
-  track: { height: 6, borderRadius: Radius.pill, overflow: 'hidden' },
-  fill: { height: 6, borderRadius: Radius.pill },
+  track: { height: 4, borderRadius: Radius.pill, overflow: 'hidden' },
+  fill: { height: 4, borderRadius: Radius.pill },
 });

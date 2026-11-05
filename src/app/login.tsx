@@ -10,17 +10,15 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
-import { TrailMap } from '@/components/route-steps';
 import { Segmented } from '@/components/segmented';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Fonts, Radius, Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { normalizeUsername, USERNAME_PATTERN } from '@/hooks/use-username';
 import { clearPendingIntent } from '@/lib/auth-gate';
@@ -35,14 +33,6 @@ type Mode = 'login' | 'signup';
 
 // Yeni şifre kuralı tek yerde (auth-rules): Ayarlar'daki şifre değiştirme de aynı sayıyı kullanır
 const MIN_NEW_PASSWORD = MIN_PASSWORD;
-
-const STEPS = [
-  { emoji: '🔑', label: 'Hesabını oluştur' },
-  { emoji: '🧭', label: 'Yol haritanı ve seviyeni seç' },
-  { emoji: '🗺️', label: 'Kişisel yol haritanı al' },
-];
-// Giriş modunda ilk durak "hesap oluştur" değil "giriş yap" (etiketler benzersiz kalmalı: React key)
-const LOGIN_STEPS = [{ ...STEPS[0], label: 'Giriş yap' }, ...STEPS.slice(1)];
 
 // Supabase'in İngilizce hata mesajlarını kullanıcının anlayacağı Türkçeye çevir
 // Ağ hatası tarayıcıya göre farklı yazılır: Chrome "Failed to fetch", Safari "Load failed",
@@ -77,9 +67,8 @@ export default function LoginScreen() {
   const theme = useTheme();
   const { width, height } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
-  // Kısa ekranda (örn. 320x568) sahne daha az boşluk bıraksın ki şifre alanı ilk ekranda görünsün
+  // Kısa ekranda (örn. 320x568) başlık küçülsün ki şifre alanı ilk ekranda görünsün
   const short = height < 700;
-  const stagePad = short ? Spacing.two : undefined;
   // Karşılama ekranı ?mode=signup ile gelirse kayıt sekmesi açık başlar. Yalnız BAŞLANGIÇ değeri:
   // sonradan sekmeyi elle değiştirmek parametreyle çakışmasın diye useEffect ile senkronlamıyoruz.
   const params = useLocalSearchParams<{ mode?: string | string[]; reason?: string | string[] }>();
@@ -142,7 +131,7 @@ export default function LoginScreen() {
     };
   }, [mode, handle, handleFormatOk]);
 
-  let usernameHint = 'Diğer kullanıcılar seni bu adla görür · küçük harf (a-z), rakam ve _ · 3-20 karakter';
+  let usernameHint = '3-20 karakter: küçük harf (a-z), rakam ve _';
   let usernameHintTone: 'neutral' | 'good' = 'neutral';
   if (username.length > 0 && !handleFormatOk) {
     usernameHint = 'Yalnız küçük harf (a-z), rakam ve _ kullan; 3 ile 20 karakter arası olmalı.';
@@ -151,7 +140,7 @@ export default function LoginScreen() {
   } else if (handleFormatOk && checked === undefined) {
     usernameHint = 'Denetleniyor…';
   } else if (handleFormatOk && checked === true) {
-    usernameHint = '✓ Bu ad müsait · sonradan Ayarlar’dan değiştirebilirsin';
+    usernameHint = '✓ Bu ad müsait';
     usernameHintTone = 'good';
   }
 
@@ -205,34 +194,14 @@ export default function LoginScreen() {
           // 'height' sabit alt butonun klavyenin altında kalmasını önler.
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <ScrollView ref={scrollRef} style={styles.flex} keyboardShouldPersistTaps="handled">
-            {/* SAHNE: kenarlara taşan yumuşak yeşil blok. İçinde başlık ve küçük yatay patika;
-                mod değişince sarı aktif durak yeni adıma kayar. */}
-            <View
-              style={[
-                styles.stage,
-                {
-                  backgroundColor: theme.accentSoft,
-                  paddingHorizontal: gutter,
-                  ...(stagePad && { paddingTop: stagePad, paddingBottom: stagePad }),
-                },
-              ]}>
-              <Animated.View key={mode} entering={FadeIn.duration(150)}>
-                <ThemedText
-                  type="heading"
-                  accessibilityRole="header"
-                  style={short && { fontSize: 28, lineHeight: 34 }}>
-                  {mode === 'login' ? 'Rotana devam et' : 'Rotanı oluşturalım'}
-                </ThemedText>
-              </Animated.View>
-              {/* Kullanıcı bu ekranda hesap adımındadır: aktif durak hep ilk durak.
-                  (Önceden girişte 2. durak vurgulanıyor ve "Konunu ve seviyeni seç" yazıyordu;
-                  o sırada e-posta/şifre girildiği için yanlış yönlendiriyordu.) */}
-              <TrailMap
-                stops={mode === 'login' ? LOGIN_STEPS : STEPS}
-                current={0}
-                variant="horizontal"
-                showDone={false}
-              />
+            {/* Sade başlık: renkli sahne ve patika yok; yalnız Bricolage başlık */}
+            <View style={[styles.head, { paddingHorizontal: gutter }, short && styles.headShort]}>
+              <ThemedText
+                type="heading"
+                accessibilityRole="header"
+                style={short && { fontSize: 28, lineHeight: 34 }}>
+                {mode === 'login' ? 'Giriş yap' : 'Hesap oluştur'}
+              </ThemedText>
             </View>
 
             <View style={[styles.form, { padding: gutter }]}>
@@ -369,16 +338,11 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   flex: { flex: 1 },
-  stage: {
-    gap: Spacing.three,
-    paddingTop: Spacing.four,
-    paddingBottom: Spacing.five,
-    borderBottomLeftRadius: Radius.xl,
-    borderBottomRightRadius: Radius.xl,
-  },
+  head: { paddingTop: Spacing.four },
+  headShort: { paddingTop: Spacing.two },
   form: { gap: Spacing.four },
   showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   legal: { textAlign: 'center' },
   link: { textDecorationLine: 'underline', fontFamily: Fonts.sansBold },
-  footer: { gap: Spacing.one, paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
+  footer: { gap: Spacing.one, paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 1 },
 });

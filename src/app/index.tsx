@@ -1,23 +1,15 @@
 import { Redirect, router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
-import { TrailMap } from '@/components/route-steps';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/lib/auth-context';
 import { markWelcomeSeen, readWelcomeSeen } from '@/lib/welcome-seen';
-
-// Üç gerçek adım: misafir akışı (gez, seç, kaydet)
-const STOPS = [
-  { emoji: '🧭', label: 'Haritaları keşfet' },
-  { emoji: '🗺️', label: 'Bir yol seç' },
-  { emoji: '🔑', label: 'Hesabınla ilerlemeni kaydet' },
-];
 
 // Karşılama ekranı: uygulama açılınca ilk görünen sayfa ("/")
 export default function WelcomeScreen() {
@@ -30,7 +22,7 @@ export default function WelcomeScreen() {
   const { width } = useWindowDimensions();
   const reduceMotion = useReducedMotion();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
-  // Dar ekranda 48pt başlık (≈290pt geniş) sığmaz; küçült
+  // Dar ekranda büyük başlık sığmaz; küçült
   const narrow = width < 360;
 
   // Hareketi azalt açıksa yalnız yumuşak belirme; kayma/yay yok
@@ -50,23 +42,18 @@ export default function WelcomeScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
+        {/* Sade karşılama: büyük Bricolage başlık + tek kısa cümle; süs illüstrasyonu yok */}
         <ScrollView contentContainerStyle={[styles.scroll, { paddingHorizontal: gutter }]}>
           <Animated.View entering={enter(0)}>
-            <ThemedText
-              type="display"
-              style={[styles.center, narrow && { fontSize: 40, lineHeight: 44 }]}>
+            <ThemedText type="display" accessibilityRole="header" style={narrow ? styles.titleNarrow : styles.title}>
               Yol Haritam
             </ThemedText>
           </Animated.View>
           <Animated.View entering={enter(100)}>
-            <ThemedText themeColor="textSecondary" style={[styles.center, styles.lead]}>
-              Frontend’den yapay zekâya: sana uyan yazılımcı yol haritasını seç, konu konu ilerle.
+            <ThemedText themeColor="textSecondary" style={styles.lead}>
+              Sana uyan yazılımcı yol haritasını seç, konu konu ilerle.
             </ThemedText>
           </Animated.View>
-
-          <View style={styles.trail}>
-            <TrailMap stops={STOPS} current={0} variant="vertical" />
-          </View>
         </ScrollView>
 
         {/* Buton ScrollView'un dışında, altta sabit: küçük ekranda da hep görünür.
@@ -100,10 +87,10 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center' },
   safeArea: { flex: 1, width: '100%', maxWidth: MaxContentWidth },
-  scroll: { flexGrow: 1, paddingTop: Spacing.five, paddingBottom: Spacing.three },
-  center: { textAlign: 'center' },
-  lead: { alignSelf: 'center', maxWidth: 320, marginTop: Spacing.two },
-  // Kalan alanda dikey ortala: uzun ekranda patika üstte yapışık kalmasın
-  trail: { flex: 1, justifyContent: 'center', marginTop: Spacing.four },
+  // İçerik alta yakın, sola yaslı: butonlara doğru okunur
+  scroll: { flexGrow: 1, justifyContent: 'flex-end', gap: Spacing.three, paddingTop: Spacing.five, paddingBottom: Spacing.five },
+  title: { fontSize: 52, lineHeight: 56, letterSpacing: -1 },
+  titleNarrow: { fontSize: 42, lineHeight: 46, letterSpacing: -0.8 },
+  lead: { maxWidth: 320 },
   footer: { gap: Spacing.two, paddingTop: Spacing.two, paddingBottom: Spacing.three },
 });
