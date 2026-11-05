@@ -1,17 +1,18 @@
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { HeaderBackButton } from '@/components/header-back-button';
 import { ListGroup, ListRow } from '@/components/list-row';
-import { SectionHeader } from '@/components/section-header';
+import { Glyph } from '@/components/icon';
+import { StatusDot } from '@/components/status-dot';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { allTopics, countTopics, getRoadmap } from '@/constants/dev-roadmaps';
-import { MaxContentWidth, Spacing } from '@/constants/theme';
-import { MARKER_STYLE } from '@/constants/visuals';
+import { allTopics, countTopics, getRoadmap, KIND_LABEL } from '@/constants/dev-roadmaps';
+import { Border, MaxContentWidth, Spacing } from '@/constants/theme';
+import { HUES, MARKER_STYLE } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuthGate } from '@/lib/auth-gate';
@@ -101,48 +102,68 @@ export default function MapPreviewScreen() {
       <SafeAreaView style={styles.flex} edges={['bottom']}>
         <ScrollView style={styles.flex} contentContainerStyle={[styles.content, { padding: gutter }]}>
           <View style={styles.inner}>
-            {/* Harita kimliği: çerçevesiz (kart içinde kart olmasın) */}
+            {/* Harita kimliği: çerçevesiz; renk yalnız küçük nokta. Başlık, tek paragraf açıklama, tek satır meta */}
             <View style={styles.identity}>
-              <View style={styles.identityTexts}>
-                <ThemedText type="heading" accessibilityRole="header">
-                  {map.title}
+              <View style={styles.kindLine}>
+                <View style={[styles.kindDot, { backgroundColor: theme[HUES[map.hue].line] }]} />
+                <ThemedText type="eyebrow" themeColor={HUES[map.hue].ink}>
+                  {KIND_LABEL[map.kind]}
                 </ThemedText>
-                <ThemedText themeColor="textSecondary">{map.tagline}</ThemedText>
               </View>
+              <ThemedText type="heading" accessibilityRole="header">
+                {map.title}
+              </ThemedText>
+              <ThemedText>{map.tagline}</ThemedText>
+              <ThemedText type="small" themeColor="textSecondary">
+                {`${map.sections.length} bölüm · ${counts.total} konu · ~${hours} saat`}
+              </ThemedText>
             </View>
 
-            {/* Tek satır meta */}
-            <ThemedText type="smallBold" themeColor="textSecondary">
-              {`${map.sections.length} bölüm · ${counts.total} konu · ~${hours} saat`}
-            </ThemedText>
-
-            {/* Bölümler: başlık + (açıksa) ayırıcılı konu satırları. Konuya dokununca salt okunur konu ekranı. */}
-            {map.sections.map((section, index) => {
-              const open = (index === 0) !== flipped.has(section.id);
-              return (
-                <View key={section.id} style={styles.section}>
-                  <SectionHeader
-                    title={section.title}
-                    action={{ label: open ? 'Gizle' : 'Göster', onPress: () => toggle(section.id) }}
-                  />
-                  {open && (
-                    <ListGroup>
-                      {section.topics.map((topic) => (
-                        <ListRow
-                          key={topic.id}
-                          title={topic.title}
-                          subtitle={`${MARKER_STYLE[topic.marker].label} · ${topic.hours} saat`}
-                          chevron
-                          onPress={() =>
-                            router.push({ pathname: '/topic/[id]', params: { id: topic.id, map: map.id } })
-                          }
-                        />
-                      ))}
-                    </ListGroup>
-                  )}
-                </View>
-              );
-            })}
+            {/* Bölümler: ince çizgili satırlar. Açık bölümde konu satırları; konuya dokununca salt okunur konu ekranı. */}
+            <View>
+              {map.sections.map((section, index) => {
+                const open = (index === 0) !== flipped.has(section.id);
+                return (
+                  <View key={section.id} style={[styles.section, { borderTopColor: theme.border }]}>
+                    <Pressable
+                      onPress={() => toggle(section.id)}
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: open }}
+                      accessibilityLabel={`${section.title}, ${section.topics.length} konu. ${open ? 'Gizlemek' : 'Göstermek'} için dokun.`}
+                      style={styles.sectionHead}>
+                      <ThemedText type="defaultSemiBold" style={styles.sectionTitle}>
+                        {section.title}
+                      </ThemedText>
+                      <ThemedText type="small" themeColor="textSecondary">
+                        {`${section.topics.length} konu`}
+                      </ThemedText>
+                      <View style={open ? styles.chevronOpen : undefined}>
+                        <Glyph emoji="›" size={18} color={theme.textSecondary} />
+                      </View>
+                    </Pressable>
+                    {open && (
+                      <ListGroup>
+                        {section.topics.map((topic) => (
+                          <ListRow
+                            key={topic.id}
+                            left={<StatusDot kind={topic.marker === 'core' ? 'todo' : 'optional'} />}
+                            title={topic.title}
+                            subtitle={
+                              topic.marker === 'core'
+                                ? `${topic.hours} saat`
+                                : `${MARKER_STYLE[topic.marker].label} · ${topic.hours} saat`
+                            }
+                            onPress={() =>
+                              router.push({ pathname: '/topic/[id]', params: { id: topic.id, map: map.id } })
+                            }
+                          />
+                        ))}
+                      </ListGroup>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
           </View>
         </ScrollView>
 
@@ -166,10 +187,14 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { alignItems: 'center' },
   inner: { width: '100%', maxWidth: MaxContentWidth, gap: Spacing.three },
-  identity: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
-  identityTexts: { flex: 1, minWidth: 0, gap: Spacing.half },
-  section: { gap: Spacing.one },
-  footer: { paddingVertical: Spacing.three, borderTopWidth: 2, alignItems: 'center' },
+  identity: { gap: Spacing.two },
+  kindLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  kindDot: { width: 8, height: 8, borderRadius: 4 },
+  section: { borderTopWidth: Border.thin },
+  sectionHead: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three, minHeight: 52 },
+  sectionTitle: { flex: 1, minWidth: 0 },
+  chevronOpen: { transform: [{ rotate: '90deg' }] },
+  footer: { paddingVertical: Spacing.three, borderTopWidth: Border.thin, alignItems: 'center' },
   footerInner: { width: '100%', maxWidth: MaxContentWidth },
   problem: { flex: 1, justifyContent: 'center', gap: Spacing.three },
 });

@@ -17,6 +17,7 @@ type ListRowProps = {
   title: string;
   subtitle?: string;
   subtitleLines?: number; // uzun, boşluksuz alt yazı (e-posta) için: orta kısaltma ile tek satır
+  subtitleEllipsize?: 'tail' | 'middle'; // kısaltma yeri; varsayılan middle (e-posta), cümle için tail
   right?: ReactNode; // sağda rozet / değer / düğme
   chevron?: boolean; // sağda ">" oku
   onPress?: () => void;
@@ -31,6 +32,7 @@ export function ListRow({
   title,
   subtitle,
   subtitleLines,
+  subtitleEllipsize = 'middle',
   right,
   chevron = false,
   onPress,
@@ -50,7 +52,7 @@ export function ListRow({
           {title}
         </ThemedText>
         {subtitle ? (
-          <ThemedText type="small" themeColor="textSecondary" numberOfLines={subtitleLines} ellipsizeMode="middle">
+          <ThemedText type="small" themeColor="textSecondary" numberOfLines={subtitleLines} ellipsizeMode={subtitleEllipsize}>
             {subtitle}
           </ThemedText>
         ) : null}

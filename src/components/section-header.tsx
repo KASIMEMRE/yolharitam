@@ -8,7 +8,7 @@ import { MinTouch, Spacing } from '@/constants/theme';
 type SectionHeaderProps = {
   title: string;
   count?: string; // isteğe bağlı sade sayı, başlığın yanında ("3 / 9")
-  action?: { label: string; onPress: () => void };
+  action?: { label: string; onPress: () => void; underline?: boolean }; // underline: altı çizili metin bağlantısı
 };
 
 export function SectionHeader({ title, count, action }: SectionHeaderProps) {
@@ -26,7 +26,10 @@ export function SectionHeader({ title, count, action }: SectionHeaderProps) {
       </View>
       {action && (
         <Pressable onPress={action.onPress} accessibilityRole="button" accessibilityLabel={action.label} style={styles.action}>
-          <ThemedText type="smallBold" themeColor="accentInk">
+          <ThemedText
+            type="smallBold"
+            themeColor="accentInk"
+            style={action.underline ? styles.underline : undefined}>
             {action.label}
           </ThemedText>
         </Pressable>
@@ -39,5 +42,6 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   texts: { flex: 1, minWidth: 0 },
   // Metin bağlantısı küçük olsa da dokunma alanı 44pt
+  underline: { textDecorationLine: 'underline' },
   action: { minHeight: MinTouch, justifyContent: 'center', paddingLeft: Spacing.two },
 });

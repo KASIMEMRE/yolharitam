@@ -8,9 +8,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 > **Aktif plan:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti).
 > TS-01 önce; TS-02 ve TS-03 paralel; TS-04 son. Hiçbir özellik kaldırılmaz (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
 
-### TS-02 · Ana akış ekranları (Yol Haritam, Konu, Keşfet, Harita önizleme)
-- Plan bölüm 7'deki tarif + metin diyeti (bölüm 6). Ağaç görünümü (`roadmap-tree`) yeni renklere uyar.
-- Kabul: tarifteki yerleşim; gereksiz açıklama satırı yok; envanterin ilgili maddeleri çalışıyor.
 
 ### TS-04 · Son kabul (yeni görünüm)
 - Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
@@ -38,6 +35,12 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### TS-02 · Ana akış ekranları (Yol Haritam, Konu, Keşfet, Harita önizleme)
+- Plan bölüm 7'deki tarif + metin diyeti (bölüm 6). Ağaç görünümü (`roadmap-tree`) yeni renklere uyar.
+- Kabul: tarifteki yerleşim; gereksiz açıklama satırı yok; envanterin ilgili maddeleri çalışıyor.
+
+- ✅ Yol Haritam: altı çizili harita sekmeleri (hue noktası + kısa ad + "+ Ekle"), "Şimdi" kartı (mercan noktalı etiket, mürekkep "Konuya devam et", çizgili "Günün görevi" satırı), kutusuz 3 istatistik (ayrıntı dokununca), "Ağaç/Liste görünümü" tek bağlantı-geçiş, çizgili bölüm satırları + 4px çubuk + noktalı konu satırları; ağaç düğümleri düz 1px, bölüm başlıkları nötr, ✨ yerine mercan nokta. Konu: geri bağlantısı, durum seçici açıklamasız, çizgili Kaynaklar, altı çizili yapay zekâ sekmeleri (panel alt yazıları yok), "Sonraki konu" en altta çizgili satır (konu Bitti ise birincil düğme). Keşfet/katalog: dolgulu arama alanı, "Roller · 14 / Beceriler · 18", tek satır tagline + "N konu". Harita önizleme: çizgili bölüm satırları + tek birincil düğme. Ortak bileşenlere yalnız ekleme: `ProgressBar`, `StatusDot`, `Segmented fullRule`, `SectionHeader` action `underline`, `ListRow subtitleEllipsize`.
 
 ### TS-01 · Temel: renkler, yazı tipleri, ortak bileşenler
 - `theme.ts` renk jetonları plan bölüm 3'teki tabloya göre (açık + koyu); `Radius` küçülür; 3D `Edge` hiçbir yerde çizilmez.

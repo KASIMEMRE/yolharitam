@@ -3,10 +3,10 @@ import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
-import { Border, Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
-// İlerleme özeti: "N / M konu tamamlandı" + ince çubuk + kalan süre.
+// İlerleme çubuğu (4px, düz) ve özeti: "N / M konu tamamlandı" + çubuk + kalan süre.
 // Tüm sayılar GERÇEK veriden gelir (adımlar ve step_progress); burada hiçbir şey saklanmaz/uydurulmaz.
 type Props = {
   done: number;
@@ -24,18 +24,43 @@ export function remainingLabel(done: number, total: number, remainingHours: numb
   return `Kalan süre: yaklaşık ${hours} saat${weeks ? ` · plan yaklaşık ${weeks} hafta` : ''}`;
 }
 
-export function ProgressSummary({ done, total, remainingHours, weeks, compact = false }: Props) {
+// 4px ince ilerleme çubuğu: bölüm satırları, haftalık hedef, seviye ve özet aynı çubuğu kullanır.
+// `accessibilityLabel` verilmezse çubuk süstür (yanındaki metin zaten söylüyor) ve ekran okuyucudan gizlenir.
+export function ProgressBar({
+  ratio,
+  color,
+  accessibilityLabel,
+  accessibilityValue,
+}: {
+  ratio: number; // 0-1
+  color?: string; // verilmezse mürekkep (accent)
+  accessibilityLabel?: string;
+  accessibilityValue?: { min: number; max: number; now: number; text: string };
+}) {
   const theme = useTheme();
   const reduceMotion = useReducedMotion();
-  const ratio = total > 0 ? done / total : 0;
+  const clamped = Math.max(0, Math.min(1, ratio));
 
   // Çubuk genişliği yumuşakça değişir; reduce motion açıksa anında
-  const fill = useSharedValue(ratio);
+  const fill = useSharedValue(clamped);
   useEffect(() => {
-    fill.set(reduceMotion ? ratio : withTiming(ratio, { duration: 300 }));
-  }, [ratio, reduceMotion, fill]);
+    fill.set(reduceMotion ? clamped : withTiming(clamped, { duration: 300 }));
+  }, [clamped, reduceMotion, fill]);
   const fillStyle = useAnimatedStyle(() => ({ width: `${fill.value * 100}%` }));
 
+  const a11y = accessibilityLabel
+    ? { accessible: true, accessibilityRole: 'progressbar' as const, accessibilityLabel, accessibilityValue }
+    : { accessible: false, importantForAccessibility: 'no-hide-descendants' as const };
+
+  return (
+    <View {...a11y} style={[styles.track, { backgroundColor: theme.backgroundSelected }]}>
+      <Animated.View style={[styles.fill, { backgroundColor: color ?? theme.accent }, fillStyle]} />
+    </View>
+  );
+}
+
+export function ProgressSummary({ done, total, remainingHours, weeks, compact = false }: Props) {
+  const ratio = total > 0 ? done / total : 0;
   const remainingText = remainingLabel(done, total, remainingHours, weeks);
 
   return (
@@ -49,18 +74,13 @@ export function ProgressSummary({ done, total, remainingHours, weeks, compact = 
           {done} / {total} konu tamamlandı
         </ThemedText>
       )}
-      {/* Çubuk ekran okuyucuya sayısal değer verir; metin zaten yukarıda olduğu için ayrıca okunmaz */}
-      <View
-        accessible
-        accessibilityRole="progressbar"
+      <ProgressBar
+        ratio={ratio}
         accessibilityLabel="İlerleme"
         accessibilityValue={{ min: 0, max: total, now: done, text: `${total} konunun ${done} tanesi tamamlandı` }}
-        style={[styles.track, compact && styles.trackThin, { backgroundColor: theme.backgroundSelected, borderColor: theme.border }]}>
-        <Animated.View style={[styles.fill, { backgroundColor: theme.accent }, fillStyle]} />
-      </View>
+      />
       {!compact && (
         <ThemedText type="small" themeColor="textSecondary">
-          {done === 0 ? 'İlk konuyu bitirince çubuğun dolmaya başlar. ' : ''}
           {remainingText}
         </ThemedText>
       )}
@@ -70,7 +90,6 @@ export function ProgressSummary({ done, total, remainingHours, weeks, compact = 
 
 const styles = StyleSheet.create({
   box: { gap: Spacing.two },
-  track: { height: 12, borderRadius: Radius.pill, borderWidth: Border.thin, overflow: 'hidden' },
-  trackThin: { height: 8 },
-  fill: { height: '100%', borderRadius: Radius.pill },
+  track: { height: 4, borderRadius: 2, overflow: 'hidden' },
+  fill: { height: '100%', borderRadius: 2 },
 });

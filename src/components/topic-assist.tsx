@@ -33,10 +33,10 @@ type Quiz = { questions: { question: string; options: string[]; answer: number; 
 // Sekmeler: tek alanda Alt konular / Quiz / Soru sor; seçili sekmenin içeriği görünür.
 type AssistTab = 'explain' | 'quiz' | 'ask';
 
-const TABS: { id: AssistTab; label: string; icon: string }[] = [
-  { id: 'explain', label: 'Alt konular', icon: '🧩' },
-  { id: 'quiz', label: 'Quiz', icon: '📝' },
-  { id: 'ask', label: 'Soru sor', icon: '💬' },
+const TABS: { id: AssistTab; label: string }[] = [
+  { id: 'explain', label: 'Alt konular' },
+  { id: 'quiz', label: 'Quiz' },
+  { id: 'ask', label: 'Soru sor' },
 ];
 
 type Props = {
@@ -100,14 +100,13 @@ export function TopicAssist({ map, section, topic, level }: Props) {
   return (
     <View style={styles.wrap}>
       <SectionHeader title="Yapay zekâ ile çalış" />
-      <Segmented label="Yapay zekâ aracı" options={TABS} value={tab} onChange={setTab} />
+      <Segmented label="Yapay zekâ aracı" fill={false} fullRule options={TABS} value={tab} onChange={setTab} />
 
       <View style={show('explain')}>
         <Panel
           reportTopic={`${topic.title} - alt konular`}
-          subtitle="Alt konular, kısa bir örnek, sık yapılan hatalar ve bir mini alıştırma."
           load={explain}
-          actionLabel="Alt konuları göster"
+          actionLabel="Alt konuları getir"
           onLoad={loadExplain}>
           {explain.data && <ExplainView data={explain.data} />}
         </Panel>
@@ -116,7 +115,6 @@ export function TopicAssist({ map, section, topic, level }: Props) {
       <View style={show('quiz')}>
         <Panel
           reportTopic={`${topic.title} - quiz`}
-          subtitle="Kısa quiz: konuyu gerçekten anladın mı?"
           load={quiz}
           actionLabel="Quiz'i başlat"
           onLoad={loadQuiz}>
@@ -131,16 +129,14 @@ export function TopicAssist({ map, section, topic, level }: Props) {
   );
 }
 
-// Sekme paneli: kısa açıklama, yükle düğmesi, hata ve hazır içerik. Kendi kutusu yok (üst alan düz).
+// Sekme paneli: yükle düğmesi, hata ve hazır içerik. Kendi kutusu ve açıklama satırı yok (üst alan düz).
 function Panel({
-  subtitle,
   reportTopic,
   load,
   actionLabel,
   onLoad,
   children,
 }: {
-  subtitle: string;
   reportTopic: string; // "Bildir" e-postasına giden konu adı
   load: Load<unknown>;
   actionLabel: string;
@@ -149,11 +145,6 @@ function Panel({
 }) {
   return (
     <View style={styles.panel}>
-      {load.state !== 'ready' && (
-        <ThemedText type="small" themeColor="textSecondary">
-          {subtitle}
-        </ThemedText>
-      )}
       {load.state === 'error' && <Banner tone="warning">{load.error ?? ERRORS.default}</Banner>}
       {load.state !== 'ready' && (
         <Button
@@ -165,7 +156,7 @@ function Panel({
       )}
       {load.state === 'loading' && (
         <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
-          Yapay zekâ hazırlıyor, ilk açılışta birkaç saniye sürebilir…
+          Hazırlanıyor, ilk açılışta birkaç saniye sürebilir…
         </ThemedText>
       )}
       {load.state === 'ready' && (
@@ -228,9 +219,6 @@ function ExplainView({ data }: { data: Explain }) {
           </ThemedText>
         </View>
       )}
-      <ThemedText type="small" themeColor="textSecondary">
-        Yapay zekâ ile üretildi; hata içerebilir, önerilen kaynaklarla doğrula.
-      </ThemedText>
     </View>
   );
 }
@@ -294,7 +282,7 @@ function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId
             </View>
             {done && (
               <ThemedText type="small" themeColor="textSecondary">
-                {choice === q.answer ? 'Doğru! ' : 'Olmadı. '}
+                {choice === q.answer ? 'Doğru. ' : 'Olmadı. '}
                 {q.why}
               </ThemedText>
             )}
@@ -305,7 +293,7 @@ function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId
         <Banner tone={correct === data.questions.length ? 'success' : 'info'}>
           {`${data.questions.length} sorudan ${correct} doğru. ` +
             (correct === data.questions.length
-              ? 'Harika, bu konuyu "Bitti" olarak işaretleyebilirsin.'
+              ? 'Bu konuyu "Bitti" olarak işaretleyebilirsin.'
               : 'Yanlışların açıklamalarına göz at, sonra tekrar dene.')}
         </Banner>
       )}
@@ -341,9 +329,6 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
 
   return (
     <View style={styles.panel}>
-      <ThemedText type="small" themeColor="textSecondary">
-        Bu konuda takıldığın yeri sor; cevap bu konuya göre verilir.
-      </ThemedText>
       <TextField
         label="Sorun"
         value={question}
@@ -360,7 +345,6 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
       <Button
         variant="secondary"
         label="Sor"
-        icon="✨"
         loading={state.state === 'loading'}
         disabled={question.trim().length < 3}
         onPress={ask}
@@ -369,7 +353,7 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
       {state.state === 'ready' && state.data && (
         <Animated.View
           entering={FadeIn.duration(200)}
-          style={[styles.answer, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
+          style={[styles.answer, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
           <ThemedText type="smallBold" themeColor="accentInk">
             Soru: {state.asked}
           </ThemedText>
@@ -401,16 +385,16 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    borderWidth: Border.thick,
+    borderWidth: Border.thin,
     alignItems: 'center',
     justifyContent: 'center',
   },
   code: { borderRadius: Radius.sm, borderWidth: Border.thin, padding: Spacing.two },
   codeText: { fontFamily: Fonts.mono, fontSize: 13, lineHeight: 19 },
-  exercise: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thick },
+  exercise: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thin },
   options: { gap: Spacing.two },
-  option: { minHeight: MinTouch, justifyContent: 'center', padding: Spacing.two, borderRadius: Radius.sm, borderWidth: Border.thick },
-  answer: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thick },
+  option: { minHeight: MinTouch, justifyContent: 'center', padding: Spacing.two, borderRadius: Radius.sm, borderWidth: Border.thin },
+  answer: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thin },
 });
 
 // Yapay zekâ yanıtlarının altındaki not: hata payı uyarısı + hatalı yanıtı bildirme yolu (mağaza politikası)
