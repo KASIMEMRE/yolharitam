@@ -51,7 +51,7 @@ export function BlockedUsersList() {
         </ThemedText>
       ) : list.length === 0 ? (
         <ThemedText type="small" themeColor="textSecondary">
-          Kimseyi engellemedin. Toplulukta rahatsız eden birini kartındaki “Engelle” ile engelleyebilirsin.
+          Kimseyi engellemedin.
         </ThemedText>
       ) : (
         <ListGroup>

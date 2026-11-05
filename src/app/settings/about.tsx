@@ -34,15 +34,14 @@ export default function SettingsAboutScreen() {
         <ListRow
           icon="✉"
           title="Destek ve geri bildirim"
+          subtitle={SUPPORT_EMAIL}
+          subtitleLines={1}
           right={external}
           onPress={() =>
             Linking.openURL(`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent('Yol Haritam destek')}`).catch(() => {})
           }
         />
       </ListGroup>
-      <ThemedText type="small" themeColor="textSecondary">
-        Soru, öneri ya da uygunsuz içerik bildirimi için: {SUPPORT_EMAIL}
-      </ThemedText>
     </SettingsPage>
   );
 }

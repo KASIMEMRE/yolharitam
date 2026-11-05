@@ -1,9 +1,9 @@
 import { StyleSheet, View } from 'react-native';
 
-import { IconTile } from '@/components/icon-tile';
+import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import { Border } from '@/constants/theme';
-import type { Hue } from '@/constants/visuals';
+import { HUES, type Hue } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 
 // E-postanın baş harfinden avatar. (Görünen ad özelliği henüz yok: Y-02.)
@@ -31,7 +31,7 @@ export function Avatar({ email, size = 96, badgeEmoji, badgeHue }: AvatarProps) 
             height: size,
             borderRadius: size / 2,
             backgroundColor: theme.accentSoft,
-            // Avatar basılabilir değil: 3D alt kenar yok, düz 3pt halka
+            // Avatar basılabilir değil: düz, ince (2pt) halka
             borderColor: theme.accent,
           },
         ]}>
@@ -44,8 +44,9 @@ export function Avatar({ email, size = 96, badgeEmoji, badgeHue }: AvatarProps) 
         </ThemedText>
       </View>
       {badgeEmoji && (
-        <View style={styles.badge}>
-          <IconTile emoji={badgeEmoji} tone={badgeHue} size={40} />
+        // Rozet: kutu yok; zeminle aynı renkli küçük halka içinde çizgi simge (harita rengi yalnız simgede)
+        <View style={[styles.badge, { backgroundColor: theme.background, borderColor: theme.borderEdge }]}>
+          <Glyph emoji={badgeEmoji} size={18} color={badgeHue ? theme[HUES[badgeHue].ink] : theme.textSecondary} strokeWidth={2.25} />
         </View>
       )}
     </View>
@@ -53,7 +54,17 @@ export function Avatar({ email, size = 96, badgeEmoji, badgeHue }: AvatarProps) 
 }
 
 const styles = StyleSheet.create({
-  circle: { alignItems: 'center', justifyContent: 'center', borderWidth: Border.chunky },
+  circle: { alignItems: 'center', justifyContent: 'center', borderWidth: Border.thick },
   // Rozet harfi kapatmasın diye avatarın sağ alt köşesinden dışarı taşar
-  badge: { position: 'absolute', right: -10, bottom: -6 },
+  badge: {
+    position: 'absolute',
+    right: -6,
+    bottom: -4,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: Border.thin,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

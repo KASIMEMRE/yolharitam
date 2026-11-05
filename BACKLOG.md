@@ -12,10 +12,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Plan bölüm 7'deki tarif + metin diyeti (bölüm 6). Ağaç görünümü (`roadmap-tree`) yeni renklere uyar.
 - Kabul: tarifteki yerleşim; gereksiz açıklama satırı yok; envanterin ilgili maddeleri çalışıyor.
 
-### TS-03 · Diğer ekranlar
-- Gelişmeler, Topluluk (+vitrin paylaş), Profil, Başarımlar, Ayarlar + 5 alt sayfa, Karşılama, Giriş/Kayıt, Onboarding: aynı dil + metin diyeti.
-- Kabul: tarifteki dil; gereksiz açıklama satırı yok; envanterin ilgili maddeleri çalışıyor.
-
 ### TS-04 · Son kabul (yeni görünüm)
 - Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
 
@@ -50,6 +46,11 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - `AGENTS.md`: "Sadelik kuralları"na plan bölüm 5–6 (biçim + metin kuralları) eklenir.
 - Kabul: tsc + lint temiz; uygulama açık/koyu temada açılıyor; hiçbir ekranda 3D kenar ve simge kutusu kalmadı.
 - ✅ Mürekkep+mercan renk jetonları (açık/koyu), Bricolage Grotesque + Figtree (`useFonts`, `ThemedText`/`Fonts` yeni ailelerde), `Radius` küçüldü, 3D `Edge` kaldırıldı; `Button`, `Surface`, `ListRow` (kutusuz simge / `dot`), `ScreenHeader`, `SectionHeader` (alt yazısız), `Segmented` (altı çizili + `variant="buttons"`), `OptionCard`, `FilterChipRow`, rozetler ve sekme çubuğu düz yeni dile geçti.
+
+### TS-03 · Diğer ekranlar
+- Gelişmeler, Topluluk (+vitrin paylaş), Profil, Başarımlar, Ayarlar + 5 alt sayfa, Karşılama, Giriş/Kayıt, Onboarding: aynı dil + metin diyeti.
+- Kabul: tarifteki dil; gereksiz açıklama satırı yok; envanterin ilgili maddeleri çalışıyor.
+- ✅ Gelişmeler/Topluluk/Vitrin filtreleri altı çizili sekme (`FilterChipRow variant="tabs"`, hue noktası), haber ve vitrin satırları çizgili liste, boş durumlar simgesiz tek cümle; Profil (üye + misafir) tek mürekkep buton, ince halkalı `Avatar` + sade rozet, Başarımlar sade rozetli satırlar + "N / M" sayısı (`SectionHeader count`); Ayarlar satır alt yazıları ve tanıtım cümleleri kalktı; Karşılama yalnız büyük başlık + tek cümle + iki buton; Giriş/Kayıt renkli sahne ve patikasız; Onboarding soru ekranı kutusuz bağlam satırı, hazırlanıyor/kutlama/hata ekranlarında simge kutusu ve gökkuşağı konfeti yok. Mantık ve veri akışı değişmedi.
 
 ### SM-08 · Son kabul (ürün sorumlusu + testçi + tasarımcı)
 - Plan bölüm 5'teki **özellik envanterinin her maddesi** tek tek denenir; tablo halinde PR'a eklenir (✅/❌ + ekran görüntüsü).

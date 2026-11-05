@@ -40,14 +40,13 @@ function GuestProfileScreen() {
     <TabScreen>
       <ScreenHeader title="Profil" />
 
-      {/* Ekrandaki tek birincil (3D) öğe */}
+      {/* Ekrandaki tek birincil öğe: mürekkep "Kayıt ol"; tanıtım cümlesi yok */}
       <Surface tone="primary">
         <ThemedText type="cardTitle" accessibilityRole="header">
           Hesap oluştur
         </ThemedText>
-        <ThemedText>Haritanı kaydet, konuları işaretle, XP ve rozet kazan. İlerlemen hesabında saklanır.</ThemedText>
         <View style={styles.guestActions}>
-          <Button variant="secondary" label="Kayıt ol" onPress={() => router.push({ pathname: '/login', params: { mode: 'signup' } })} />
+          <Button label="Kayıt ol" onPress={() => router.push({ pathname: '/login', params: { mode: 'signup' } })} />
           <Button variant="text" label="Giriş yap" onPress={() => router.push({ pathname: '/login', params: { mode: 'login' } })} />
         </View>
       </Surface>
@@ -97,13 +96,8 @@ function MemberProfileScreen() {
   const { title: topicTitle, category, hasTopic } = describeTopic(roadmap?.topic_path);
 
   // "Şu anki haritan" artık ayrı kart değil, Haritalarım satırının alt yazısı
-  const mapsSubtitle = loading
-    ? 'Yükleniyor…'
-    : failed
-      ? undefined
-      : hasTopic && roadmap
-        ? `Şu an: ${topicTitle}`
-        : 'Henüz bir yol haritası seçmedin';
+  // Harita adı veriyse "Şu an: …" kalır; yükleniyor / harita yok durumlarında alt yazı yazılmaz
+  const mapsSubtitle = !loading && !failed && hasTopic && roadmap ? `Şu an: ${topicTitle}` : undefined;
 
   return (
     <TabScreen>
@@ -119,8 +113,8 @@ function MemberProfileScreen() {
             style={({ pressed }) => [
               styles.gear,
               {
-                backgroundColor: pressed ? theme.backgroundSelected : theme.card,
-                borderColor: theme.borderStrong,
+                backgroundColor: pressed ? theme.backgroundSelected : 'transparent',
+                borderColor: theme.borderEdge,
               },
             ]}>
             {({ pressed }) => <Glyph emoji="⚙️" size={22} color={pressed ? theme.text : theme.textSecondary} />}
@@ -199,9 +193,7 @@ function LevelRow() {
         <View style={[styles.levelFill, { width: `${Math.round(level.progress * 100)}%`, backgroundColor: theme.marker }]} />
       </View>
       <ThemedText type="small" themeColor="textSecondary">
-        {level.next
-          ? `${level.next.title} seviyesine ${level.next.remaining} XP kaldı. Konu bitir (+20), quiz çöz, günün görevini yap (+30).`
-          : 'En yüksek seviyedesin. Efsane!'}
+        {level.next ? `${level.next.title} seviyesine ${level.next.remaining} XP kaldı.` : 'En yüksek seviyedesin.'}
       </ThemedText>
     </View>
   );
@@ -211,19 +203,19 @@ const styles = StyleSheet.create({
   gear: {
     width: MinTouch,
     height: MinTouch,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
+    borderRadius: Radius.md,
+    borderWidth: Border.thin,
     alignItems: 'center',
     justifyContent: 'center',
   },
   levelBox: { gap: Spacing.two },
   levelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  levelTrack: { height: 10, borderRadius: Radius.pill, overflow: 'hidden' },
+  levelTrack: { height: 6, borderRadius: Radius.pill, overflow: 'hidden' },
   levelFill: { height: '100%', borderRadius: Radius.pill },
   identity: { alignItems: 'center', gap: Spacing.two },
   email: { alignSelf: 'stretch', textAlign: 'center' },
   center: { textAlign: 'center' },
   errorBox: { gap: Spacing.three },
   guestActions: { gap: Spacing.one },
-  themeRow: { gap: Spacing.two, padding: Spacing.three },
+  themeRow: { gap: Spacing.two, paddingVertical: Spacing.three },
 });

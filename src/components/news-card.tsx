@@ -2,7 +2,8 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
-import { Border, Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { HUES, type Hue } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 import type { NewsItem } from '@/hooks/use-news';
 import { openExternalUrl } from '@/lib/open-url';
@@ -11,7 +12,7 @@ import { relativeTime } from '@/lib/relative-time';
 type NewsCardProps = {
   item: NewsItem;
   // Kullanıcının haritalarıyla kesişen etiketler (en çok 2 gösterilir; belirli bir harita seçiliyken boş verilir)
-  tags: { id: string; emoji: string; title: string }[];
+  tags: { id: string; hue: Hue; title: string }[];
 };
 
 // Haber satırı: kendi kartı yoktur; Gelişmeler ekranında `ListGroup` içinde ince ayırıcılarla dizilir
@@ -34,7 +35,7 @@ export function NewsCard({ item, tags }: NewsCardProps) {
           {meta}
         </ThemedText>
         {/* "Kaynağa git" yazısı yerine simge: tüm satır dokunulabilir, ok bunu anlatır */}
-        <Glyph emoji="↗" size={16} color={theme.accentInk} strokeWidth={2.25} />
+        <Glyph emoji="↗" size={16} color={theme.textSecondary} strokeWidth={2.25} />
       </View>
       <ThemedText type="cardTitle" numberOfLines={3}>
         {item.title}
@@ -47,10 +48,10 @@ export function NewsCard({ item, tags }: NewsCardProps) {
       {tags.length > 0 && (
         <View style={styles.tags}>
           {tags.slice(0, 2).map((t) => (
-            // Küçük etiket: yumuşak zemin + ince kenar (çok dikkat çekmesin)
-            <View key={t.id} style={[styles.tag, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-              <Glyph emoji={t.emoji} size={13} color={theme.textSecondary} strokeWidth={2.25} />
-              <ThemedText type="chip" maxFontSizeMultiplier={1.3} numberOfLines={1}>
+            // Etiket kutusuz: harita rengi noktası + ad
+            <View key={t.id} style={styles.tag}>
+              <View style={[styles.dot, { backgroundColor: theme[HUES[t.hue].line] }]} />
+              <ThemedText type="small" themeColor="textSecondary" maxFontSizeMultiplier={1.3} numberOfLines={1}>
                 {t.title}
               </ThemedText>
             </View>
@@ -62,17 +63,10 @@ export function NewsCard({ item, tags }: NewsCardProps) {
 }
 
 const styles = StyleSheet.create({
-  row: { gap: Spacing.one, padding: Spacing.three },
+  row: { gap: Spacing.one, paddingVertical: Spacing.three },
   metaLine: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   meta: { flex: 1, minWidth: 0 },
-  tags: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.one, paddingTop: Spacing.one },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    paddingVertical: Spacing.half,
-    paddingHorizontal: Spacing.two,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thin,
-  },
+  tags: { flexDirection: 'row', flexWrap: 'wrap', columnGap: Spacing.three, rowGap: Spacing.half, paddingTop: Spacing.one },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
 });

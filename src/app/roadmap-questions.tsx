@@ -22,12 +22,10 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Celebration } from '@/components/celebration';
 import { HeaderBackButton } from '@/components/header-back-button';
-import { IconTile } from '@/components/icon-tile';
 import { LevelBadge } from '@/components/level-badge';
 import { OptionCard } from '@/components/option-card';
 import { Skeleton } from '@/components/skeleton';
@@ -46,9 +44,9 @@ import {
 import { getRoadmap } from '@/constants/dev-roadmaps';
 import { computeProgress } from '@/constants/dev-roadmaps/personalize';
 import { toLevelId } from '@/constants/plan';
-import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { describeTopic } from '@/constants/visuals';
-import { useShadow, useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 import { useAuth } from '@/lib/auth-context';
 import { personalizeRoadmap } from '@/lib/personalize-roadmap';
 import { supabase } from '@/lib/supabase';
@@ -158,7 +156,6 @@ export default function RoadmapQuestionsScreen() {
   const notReady = Boolean(roadmapId) && existingState !== 'ready';
   const question = QUESTIONS[step];
   const selectedId = answers[question.key];
-  const answeredCount = Object.keys(answers).length;
 
   // Android donanım geri tuşu: sorular arasında bir önceki soruya döner, kayıt sürerken hiçbir şey yapmaz.
   // (Native üst "‹" ve kaydırma hareketi için aşağıda Stack.Screen ayarları var.)
@@ -304,9 +301,7 @@ export default function RoadmapQuestionsScreen() {
       // Kutlama özeti planın kendisinden türetilir (kendi başına bir sayı uydurmayız)
       const sum = computeProgress(map, new Map(), personalization, final.weeklyHours);
       return {
-        summary:
-          `${sum.total} konu · yaklaşık ${sum.totalHours} saat · yaklaşık ${sum.weeks} hafta` +
-          (personalization.source === 'ai' ? '\nYapay zekâ haritanı sana göre işaretledi.' : ''),
+        summary: `${sum.total} konu · yaklaşık ${sum.totalHours} saat · yaklaşık ${sum.weeks} hafta`,
       };
     } catch {
       return { message: ERROR_TEXT.other };
@@ -371,17 +366,14 @@ export default function RoadmapQuestionsScreen() {
 
   // --- Görünüm -----------------------------------------------------------------------------
   const theme = useTheme();
-  const shadow = useShadow();
   const { width, height, fontScale } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
   const info = describeTopic(topicPath);
   const levelTitle = LEVELS.find((l) => l.id === level)?.title;
   // Geniş ekranda varsayılan notu alt çubukta göster; küçük ekran / büyük yazıda içeriğin sonuna al
   const roomyFooter = height >= 700 && fontScale <= 1.15;
-  // Tek açıklama: önerilen değerler (varsayılan tablosundan türetilir) + gerekirse "korunur" cümlesi
-  const note =
-    `Önerilen: ${describeDefaults()}.` +
-    (answeredCount > 0 ? ' Yanıtladıkların korunur; kalanlar önerilenle dolar.' : '');
+  // Tek not: "Soruları atla"nın ne doldurduğu (kararı etkiler); önerilen değerler varsayılan tablosundan türetilir
+  const note = `Önerilen: ${describeDefaults()}.`;
   const isLast = step === QUESTIONS.length - 1;
   const primaryLabel = error !== null ? 'Tekrar dene' : isLast ? 'Haritamı hazırla' : 'Devam et';
   const primaryDisabled = notReady || (error === null && selectedId === undefined);
@@ -436,7 +428,7 @@ export default function RoadmapQuestionsScreen() {
       visible={celebrating}
       emoji={info.category.emoji}
       hue={info.category.hue}
-      title="Yol haritan hazır!"
+      title="Yol haritan hazır"
       subtitle={celebrationSubtitle}
       levelId={level ?? ''}
       onDone={goToRoadmap}
@@ -446,7 +438,7 @@ export default function RoadmapQuestionsScreen() {
   // "Haritan hazırlanıyor…" anı (kayıt süresince). Satırlar cevapların GERÇEK etkisini anlatır.
   if (preparing || celebrating) {
     const lines = [
-      'Yapay zekâ haritanı seviyene göre işaretliyor',
+      'Harita seviyene göre işaretleniyor',
       `${tempoWord(answers.weeklyHours) ?? 'Seçtiğin'} tempona göre süre hesaplanıyor`,
       `Öncelikler ${findOption('goal', answers.goal)?.title ?? 'seçtiğin'} hedefine göre belirleniyor`,
     ];
@@ -464,13 +456,13 @@ export default function RoadmapQuestionsScreen() {
               accessibilityLiveRegion="polite"
               accessibilityLabel={`Haritan hazırlanıyor. ${lines.join('. ')}.`}
               style={styles.preparingInner}>
-              <View style={[shadow('lifted'), { borderRadius: Radius.lg }]}>
-                <IconTile emoji={info.category.emoji} tone={info.category.hue} size={height < 700 ? 64 : 96} />
-              </View>
               <View style={styles.center}>
-                <ThemedText type="cardTitle" style={styles.centerText}>
-                  {info.title}
-                </ThemedText>
+                <View style={styles.topicLine}>
+                  <View style={[styles.dot, { backgroundColor: theme[info.hue.line] }]} />
+                  <ThemedText type="cardTitle" style={styles.centerText}>
+                    {info.title}
+                  </ThemedText>
+                </View>
                 {/* LevelBadge kendi hizasını başlangıca sabitler; ortalamak için sarmalayıcı gerekir */}
                 <View style={styles.centerSelf}>
                   <LevelBadge levelId={level} size="sm" />
@@ -546,13 +538,10 @@ export default function RoadmapQuestionsScreen() {
                 accessible
                 accessibilityLabel={`Konu: ${info.title}.${levelTitle ? ` Seviye: ${levelTitle}.` : ''}`}
                 style={styles.contextRow}>
-                <View
-                  style={[
-                    styles.topicChip,
-                    { backgroundColor: theme[info.hue.soft], borderColor: theme[info.hue.line] },
-                  ]}>
-                  <Glyph emoji={info.category.emoji} size={16} color={theme[info.hue.ink]} />
-                  <ThemedText type="smallBold" themeColor={info.hue.ink} style={styles.topicChipText}>
+                {/* Kutusuz: harita rengi noktası + ad */}
+                <View style={styles.topicChip}>
+                  <View style={[styles.dot, { backgroundColor: theme[info.hue.line] }]} />
+                  <ThemedText type="smallBold" style={styles.topicChipText}>
                     {info.title}
                   </ThemedText>
                 </View>
@@ -578,9 +567,6 @@ export default function RoadmapQuestionsScreen() {
                 <View ref={headingRef} accessible accessibilityRole="header">
                   <ThemedText type="heading">{question.title}</ThemedText>
                 </View>
-                <ThemedText type="small" themeColor="textSecondary">
-                  {question.subtitle}
-                </ThemedText>
               </View>
               <View accessibilityRole="radiogroup" accessibilityLabel={question.title} style={styles.options}>
                 {question.options.map((option, index) => (
@@ -652,21 +638,14 @@ const styles = StyleSheet.create({
   segments: { flex: 1, flexDirection: 'row', gap: Spacing.two },
   seg: { flex: 1, height: 6, borderRadius: 3 },
   contextRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: Spacing.two },
-  topicChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    gap: Spacing.one,
-    paddingVertical: Spacing.one,
-    paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
-  },
+  topicChip: { flexDirection: 'row', alignItems: 'center', flexShrink: 1, gap: Spacing.two },
+  topicLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.two },
+  dot: { width: 10, height: 10, borderRadius: 5 },
   topicChipText: { flexShrink: 1 },
   questionBlock: { gap: Spacing.three },
   titles: { gap: Spacing.one },
   options: { gap: Spacing.three },
-  footer: { gap: Spacing.three, paddingVertical: Spacing.three, borderTopWidth: 2 },
+  footer: { gap: Spacing.three, paddingVertical: Spacing.three, borderTopWidth: 1 },
   skipBlock: { alignItems: 'center', minHeight: MinTouch },
   problem: { flex: 1, justifyContent: 'center', gap: Spacing.three },
   preparing: { flexGrow: 1, alignItems: 'center', justifyContent: 'center' },

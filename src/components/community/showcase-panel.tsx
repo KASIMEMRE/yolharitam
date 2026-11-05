@@ -6,10 +6,9 @@ import { blockAction } from '@/components/block-user-button';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { FilterChipRow } from '@/components/filter-chips';
-import { IconTile } from '@/components/icon-tile';
 import { RowMenu, type SheetAction } from '@/components/row-menu';
 import { Skeleton } from '@/components/skeleton';
-import { Surface } from '@/components/surface';
+import { ListGroup } from '@/components/list-row';
 import { ThemedText } from '@/components/themed-text';
 import { getRoadmap } from '@/constants/dev-roadmaps';
 import { MinTouch, Spacing } from '@/constants/theme';
@@ -31,7 +30,7 @@ export function ShowcasePanel() {
   // Çipler yalnız kullanıcının haritalarından kurulur
   const maps = roadmaps.flatMap((r) => {
     const m = getRoadmap(r.topic_path);
-    return m ? [{ id: m.id, emoji: m.emoji, title: m.title }] : [];
+    return m ? [{ id: m.id, emoji: m.emoji, hue: m.hue, title: m.title }] : [];
   });
   // Seçili harita artık listede yoksa "Tümü"ne düş
   const active = selected && maps.some((m) => m.id === selected) ? selected : null;
@@ -41,7 +40,6 @@ export function ShowcasePanel() {
   return (
     <View style={styles.panel}>
       <Button
-        icon="🧩"
         label="Projeni paylaş"
         onPress={() => router.push(active ? { pathname: '/showcase-new', params: { map: active } } : '/showcase-new')}
       />
@@ -50,10 +48,11 @@ export function ShowcasePanel() {
 
       {maps.length > 0 && (
         <FilterChipRow
+          variant="tabs"
           label="Harita süzgeci"
           options={[
             { id: ALL, label: 'Tümü', accessibilityLabel: 'Tüm projeler' },
-            ...maps.map((m) => ({ id: m.id, label: m.title, icon: m.emoji })),
+            ...maps.map((m) => ({ id: m.id, label: m.title, dot: m.hue })),
           ]}
           value={active ?? ALL}
           onChange={(id) => setSelected(id === ALL ? null : id)}
@@ -62,13 +61,15 @@ export function ShowcasePanel() {
 
       {status === 'loading' && (
         <View accessible accessibilityLabel="Yükleniyor" accessibilityState={{ busy: true }} style={styles.list}>
-          {[0, 1, 2].map((i) => (
-            <Surface key={i}>
-              <Skeleton width="60%" height={18} />
-              <Skeleton height={14} />
-              <Skeleton width="40%" height={14} />
-            </Surface>
-          ))}
+          <ListGroup>
+            {[0, 1, 2].map((i) => (
+              <View key={i} style={styles.card}>
+                <Skeleton width="60%" height={18} />
+                <Skeleton height={14} />
+                <Skeleton width="40%" height={14} />
+              </View>
+            ))}
+          </ListGroup>
         </View>
       )}
 
@@ -81,29 +82,30 @@ export function ShowcasePanel() {
 
       {status === 'ready' && items.length === 0 && (
         <View style={styles.empty}>
-          <IconTile emoji="🧩" tone="violet" size={64} />
           <ThemedText type="cardTitle" accessibilityRole="header">
             Henüz proje yok
           </ThemedText>
           <ThemedText themeColor="textSecondary" style={styles.center}>
-            Burada henüz paylaşılmış proje yok. İlk projeyi sen paylaş; GitHub linkini eklemen yeter.
+            İlk projeyi sen paylaş.
           </ThemedText>
         </View>
       )}
 
       {items.length > 0 && (
         <View style={styles.list}>
-          {items.map((p) => (
-            <ProjectCard
-              key={p.id}
-              project={p}
-              onDelete={removeProject}
-              onReport={reportProject}
-              onBlocked={hideUser}
-              // Belirli bir harita seçiliyken etiket zaten belli: tekrarlamayız
-              showMap={active === null}
-            />
-          ))}
+          <ListGroup>
+            {items.map((p) => (
+              <ProjectCard
+                key={p.id}
+                project={p}
+                onDelete={removeProject}
+                onReport={reportProject}
+                onBlocked={hideUser}
+                // Belirli bir harita seçiliyken etiket zaten belli: tekrarlamayız
+                showMap={active === null}
+              />
+            ))}
+          </ListGroup>
           {hasMore && <Button variant="secondary" label="Daha fazla göster" loading={loadingMore} onPress={loadMore} />}
         </View>
       )}
@@ -111,7 +113,7 @@ export function ShowcasePanel() {
   );
 }
 
-// Düz proje kartı: sahibi · harita, başlık, açıklama, bağlantılar. Bildir/Engelle/Sil "…" sayfasında.
+// Düz proje satırı (kutusuz, ListGroup ayırıcılarıyla): sahibi · harita, başlık, açıklama, bağlantılar. Bildir/Engelle/Sil "…" sayfasında.
 function ProjectCard({
   project: p,
   onDelete,
@@ -172,7 +174,7 @@ function ProjectCard({
       ];
 
   return (
-    <Surface tone="plain" style={styles.card}>
+    <View style={styles.card}>
       <View style={styles.meta}>
         {/* numberOfLines yok: "@ad · Harita adı" dar ekranda kırpılmasın, gerekirse iki satıra insin */}
         <ThemedText type="eyebrow" themeColor="textSecondary" style={styles.metaText}>
@@ -190,7 +192,7 @@ function ProjectCard({
         <LinkButton label="GitHub'da aç ↗" onPress={() => openExternalUrl(p.repo_url)} />
         {!!p.demo_url && <LinkButton label="Demo ↗" onPress={() => openExternalUrl(p.demo_url!)} />}
       </View>
-    </Surface>
+    </View>
   );
 }
 
@@ -213,7 +215,7 @@ function LinkButton({ label, onPress }: { label: string; onPress: () => void }) 
 const styles = StyleSheet.create({
   panel: { gap: Spacing.three },
   list: { gap: Spacing.three },
-  card: { gap: Spacing.one },
+  card: { gap: Spacing.one, paddingVertical: Spacing.three },
   // "…" düğmesi sağ üst köşeye yakın; negatif kenar boşluğu satırı şişirmesin
   meta: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, marginVertical: -Spacing.one, marginRight: -Spacing.two },
   metaText: { flex: 1, minWidth: 0 },

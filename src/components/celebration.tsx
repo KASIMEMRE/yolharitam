@@ -12,12 +12,12 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { IconTile } from '@/components/icon-tile';
+import { Glyph } from '@/components/icon';
 import { LevelBadge } from '@/components/level-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Radius, Spacing } from '@/constants/theme';
-import type { Hue } from '@/constants/visuals';
-import { useShadow, useTheme } from '@/hooks/use-theme';
+import { Spacing } from '@/constants/theme';
+import { HUES, type Hue } from '@/constants/visuals';
+import { useTheme } from '@/hooks/use-theme';
 
 // Kısa kutlama: yol haritası BAŞARIYLA kaydedilince gösterilir (hata durumunda hiç çıkmaz).
 // Konfeti için ağır kütüphane yok; 24 küçük kare/daire tek bir "progress" değeriyle hareket eder.
@@ -38,7 +38,6 @@ const JITTER = [0, 6, -4, 9, -7, 3];
 
 export function Celebration({ visible, emoji, hue, title, subtitle, levelId, onDone }: CelebrationProps) {
   const theme = useTheme();
-  const shadow = useShadow();
   const reduceMotion = useReducedMotion();
 
   const backdrop = useSharedValue(0);
@@ -95,7 +94,8 @@ export function Celebration({ visible, emoji, hue, title, subtitle, levelId, onD
 
   if (!visible) return null;
 
-  const colors = [theme.accent, theme.marker, theme.sky, theme.coral, theme.violet, theme.berry, theme.leaf];
+  // Konfeti yalnız mürekkep ve mercan: gökkuşağı yok
+  const colors = [theme.accent, theme.marker];
 
   return (
     // Modal: kutlama native başlık çubuğunu da kaplasın (normal View sadece ekran içeriğini kaplar).
@@ -113,11 +113,9 @@ export function Celebration({ visible, emoji, hue, title, subtitle, levelId, onD
           <Particle key={i} index={i} progress={progress} color={colors[i % colors.length]} />
         ))}
 
+      {/* Sahne simgesi: kutusuz, tek çizgi simge (harita rengi yalnız simgede) */}
       <Animated.View style={[styles.center, tileStyle]}>
-        {/* borderRadius IconTile 96'nın köşesiyle aynı: gölge kare görünmesin */}
-        <Animated.View style={[shadow('lifted'), { borderRadius: Radius.lg }]}>
-          <IconTile emoji={emoji} tone={hue} size={96} />
-        </Animated.View>
+        <Glyph emoji={emoji} size={64} color={theme[HUES[hue].ink]} strokeWidth={1.5} />
       </Animated.View>
 
       <Animated.View
@@ -129,9 +127,6 @@ export function Celebration({ visible, emoji, hue, title, subtitle, levelId, onD
         {subtitle && (
           <>
             <ThemedText style={styles.title}>{subtitle}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary" style={styles.title}>
-              Devam etmek için dokun
-            </ThemedText>
           </>
         )}
       </Animated.View>

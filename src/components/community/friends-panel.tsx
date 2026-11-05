@@ -5,7 +5,6 @@ import { blockAction } from '@/components/block-user-button';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { Glyph } from '@/components/icon';
-import { IconTile } from '@/components/icon-tile';
 import { ListGroup, ListRow } from '@/components/list-row';
 import { RowMenu, type SheetAction } from '@/components/row-menu';
 import { SectionHeader } from '@/components/section-header';
@@ -24,7 +23,7 @@ const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
 // friend_request() cevabına göre kullanıcıya gösterilen mesaj
 const RESULT_TEXT: Record<RequestResult, { tone: 'success' | 'info' | 'warning'; text: string }> = {
   sent: { tone: 'success', text: 'İstek gönderildi. Kabul edince arkadaş olacaksınız.' },
-  accepted: { tone: 'success', text: 'Bu kişi sana zaten istek atmıştı; artık arkadaşsınız!' },
+  accepted: { tone: 'success', text: 'Bu kişi sana zaten istek atmıştı; artık arkadaşsınız.' },
   not_found: { tone: 'warning', text: 'Bu kullanıcı adında kimseyi bulamadık. Yazımı kontrol et.' },
   self: { tone: 'info', text: 'Kendi kullanıcı adını yazdın. Bir arkadaşının adını yaz.' },
   exists: { tone: 'info', text: 'Bu kişiyle zaten arkadaşsınız ya da bekleyen bir istek var.' },
@@ -87,10 +86,8 @@ export function FriendsPanel() {
           <SectionHeader title="Çalışma arkadaşların" />
           {status === 'ready' && friends.length === 0 ? (
             <View style={styles.empty}>
-              <IconTile emoji="🤝" tone="sky" size={64} />
               <ThemedText themeColor="textSecondary" style={styles.center}>
-                Henüz arkadaşın yok. Bir arkadaşının kullanıcı adını yazıp istek gönder; birbirinizin seri ve günlük
-                çalışmasını görürsünüz.
+                Henüz arkadaşın yok.
               </ThemedText>
             </View>
           ) : (
@@ -392,8 +389,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: Spacing.one,
     paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
+    borderRadius: Radius.sm,
+    borderWidth: Border.thin,
   },
   inlineIcon: { width: MinTouch, paddingHorizontal: 0 },
   skeletonRow: { gap: Spacing.two, padding: Spacing.three },

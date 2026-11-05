@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { IconTile } from '@/components/icon-tile';
 import { FilterChipRow } from '@/components/filter-chips';
 import { ListGroup } from '@/components/list-row';
 import { Banner } from '@/components/banner';
@@ -26,7 +25,7 @@ export default function NewsScreen() {
   // Kullanıcının haritaları: çip ve etiketler için emoji + başlık
   const maps = roadmaps.flatMap((r) => {
     const m = getRoadmap(r.topic_path);
-    return m ? [{ id: m.id, emoji: m.emoji, title: m.title }] : [];
+    return m ? [{ id: m.id, emoji: m.emoji, hue: m.hue, title: m.title }] : [];
   });
   const mapIds = maps.map((m) => m.id);
   // Seçili harita artık listede yoksa (silindi) "Tümü"ne düş
@@ -48,14 +47,15 @@ export default function NewsScreen() {
       )}
 
       {mapsLoading ? (
-        <Skeleton height={MinTouch} radius={Radius.pill} />
+        <Skeleton height={MinTouch} radius={Radius.sm} />
       ) : (
         maps.length > 0 && (
           <FilterChipRow
+            variant="tabs"
             label="Harita süzgeci"
             options={[
               { id: ALL, label: 'Tümü', accessibilityLabel: 'Tüm haberler' },
-              ...maps.map((m) => ({ id: m.id, label: m.title, icon: m.emoji })),
+              ...maps.map((m) => ({ id: m.id, label: m.title, dot: m.hue })),
             ]}
             value={active ?? ALL}
             onChange={(id) => setSelected(id === ALL ? null : id)}
@@ -85,12 +85,11 @@ export default function NewsScreen() {
 
       {!newsLoading && status === 'ready' && items.length === 0 && (
         <View style={styles.empty}>
-          <IconTile emoji="📰" tone="sky" size={64} />
           <ThemedText type="cardTitle" accessibilityRole="header">
             Henüz haber yok
           </ThemedText>
           <ThemedText themeColor="textSecondary" style={styles.center}>
-            Bu konuda henüz haber yok. Biraz sonra tekrar bak.
+            Biraz sonra tekrar bak.
           </ThemedText>
           {active && <Button variant="secondary" label="Tümünü göster" onPress={() => setSelected(null)} />}
         </View>
@@ -115,7 +114,7 @@ export default function NewsScreen() {
               />
             ))}
           </ListGroup>
-          {/* Tek satır not: başlık/özet çevirisi yapay zekâ işi; tam metin kaynakta */}
+          {/* Bilgilendirme yükümlülüğü: çeviri notu listenin en altında tek küçük satır olarak kalır */}
           <ThemedText type="small" themeColor="textSecondary" style={styles.center}>
             Çeviri yapay zekâyla yapılır.
           </ThemedText>
@@ -130,7 +129,7 @@ const ALL = '__all__';
 
 const styles = StyleSheet.create({
   list: { gap: Spacing.three },
-  skeletonRow: { gap: Spacing.two, padding: Spacing.three },
+  skeletonRow: { gap: Spacing.two, paddingVertical: Spacing.three },
   empty: { alignItems: 'center', gap: Spacing.two, paddingVertical: Spacing.five },
   center: { textAlign: 'center' },
 });

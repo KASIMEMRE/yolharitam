@@ -11,7 +11,6 @@ import { ListGroup, ListRow } from '@/components/list-row';
 import { ScreenHeader } from '@/components/screen-header';
 import { Segmented } from '@/components/segmented';
 import { TabScreen } from '@/components/tab-screen';
-import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useAuthGate } from '@/lib/auth-gate';
 
@@ -44,11 +43,11 @@ export default function CommunityScreen() {
       {isGuest ? (
         // Misafirde lig/arkadaş/vitrin sorguları (RPC) hiç çağrılmaz; yalnız sade tanıtım + kayıt daveti
         <View style={styles.intro}>
-          <ThemedText themeColor="textSecondary">Birlikte çalışmak motivasyonu artırır. Katılmak için ücretsiz hesap gerekir.</ThemedText>
+          {/* Sekme tanıtım cümleleri kalktı: üç başlık yeter, asıl karar "kayıt ol" düğmesinde */}
           <ListGroup>
-            <ListRow icon="🏆" title="Haftalık lig" subtitle="Bu hafta kazandığın XP ile diğer öğrenenlerle yarış." />
-            <ListRow icon="🤝" title="Çalışma arkadaşları" subtitle="Arkadaş ekle, birbirinizin serisini ve bugünkü çalışmasını gör." />
-            <ListRow icon="🧩" title="Proje vitrini" subtitle="Bitirdiğin projeleri paylaş, başkalarının projelerine göz at." />
+            <ListRow icon="🏆" title="Haftalık lig" />
+            <ListRow icon="🤝" title="Çalışma arkadaşları" />
+            <ListRow icon="🧩" title="Proje vitrini" />
           </ListGroup>
           <View style={styles.actions}>
             <Button

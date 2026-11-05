@@ -27,7 +27,7 @@ export default function ShowcaseNewScreen() {
 
   const maps = roadmaps.flatMap((r) => {
     const m = getRoadmap(r.topic_path);
-    return m ? [{ id: m.id, emoji: m.emoji, title: m.title }] : [];
+    return m ? [{ id: m.id, emoji: m.emoji, hue: m.hue, title: m.title }] : [];
   });
   const [picked, setPicked] = useState<string | null>(mapParam ?? null);
   // Seçim yoksa ya da artık listede değilse ilk haritaya düş (türetilmiş değer: efekt gerekmez)
@@ -93,11 +93,7 @@ export default function ShowcaseNewScreen() {
           automaticallyAdjustKeyboardInsets
           contentContainerStyle={styles.content}>
           <View style={styles.inner}>
-            <ThemedText themeColor="textSecondary">
-              Bitirdiğin bir projeyi diğer kullanıcılara göster. Proje herkese açık bir GitHub deposunda olmalı.
-            </ThemedText>
-
-            {mapsStatus === 'loading' && <Skeleton height={MinTouch} radius={Radius.pill} />}
+            {mapsStatus === 'loading' && <Skeleton height={MinTouch} radius={Radius.sm} />}
             {mapsStatus === 'error' && (
               <>
                 <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
@@ -116,11 +112,12 @@ export default function ShowcaseNewScreen() {
             {maps.length > 0 && (
               <View style={styles.group}>
                 <ThemedText type="smallBold">Hangi harita için?</ThemedText>
-                {/* Tek satır yatay çipler (Topluluk ve Gelişmeler ile aynı bileşen); form için zorunlu tek seçim */}
+                {/* Altı çizili yatay sekmeler (Topluluk ve Gelişmeler ile aynı bileşen); form için zorunlu tek seçim */}
                 <FilterChipRow
                   role="radio"
+                  variant="tabs"
                   label="Harita"
-                  options={maps.map((m) => ({ id: m.id, label: m.title, icon: m.emoji }))}
+                  options={maps.map((m) => ({ id: m.id, label: m.title, dot: m.hue }))}
                   value={mapId ?? maps[0].id}
                   onChange={setPicked}
                 />
@@ -169,7 +166,7 @@ export default function ShowcaseNewScreen() {
             />
 
             {error && <Banner tone="warning">{error}</Banner>}
-            <Button icon="🧩" label="Paylaş" loading={busy} disabled={mapId === null} onPress={submit} />
+            <Button label="Paylaş" loading={busy} disabled={mapId === null} onPress={submit} />
           </View>
         </ScrollView>
       </SafeAreaView>

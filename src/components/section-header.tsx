@@ -7,15 +7,21 @@ import { MinTouch, Spacing } from '@/constants/theme';
 // Alt yazı (subtitle) YOK: açıklama satırı yalnız kullanıcının kararını değiştiriyorsa yazılır (AGENTS.md).
 type SectionHeaderProps = {
   title: string;
+  count?: string; // isteğe bağlı sade sayı, başlığın yanında ("3 / 9")
   action?: { label: string; onPress: () => void };
 };
 
-export function SectionHeader({ title, action }: SectionHeaderProps) {
+export function SectionHeader({ title, count, action }: SectionHeaderProps) {
   return (
     <View style={styles.row}>
       <View style={styles.texts}>
         <ThemedText type="subtitle" accessibilityRole="header">
           {title}
+          {count ? (
+            <ThemedText type="small" themeColor="textSecondary">
+              {`  ${count}`}
+            </ThemedText>
+          ) : null}
         </ThemedText>
       </View>
       {action && (

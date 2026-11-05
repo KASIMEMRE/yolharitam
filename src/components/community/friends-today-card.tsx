@@ -43,5 +43,5 @@ export function FriendsTodayCard({ compact = false }: { compact?: boolean }) {
 
 const styles = StyleSheet.create({
   compact: { gap: Spacing.one },
-  card: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thick },
+  card: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.lg, borderWidth: Border.thin },
 });
