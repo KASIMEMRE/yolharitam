@@ -75,6 +75,14 @@ Proje sahibi (Emre) yazılımı bu projeyi geliştirerek ÖĞRENİYOR. Kod okuna
 - Ayrıntı aşamalı gösterilir: ilk ekranda yalnız "şimdi ne yapmalıyım?" cevabı, gerisi dokununca açılır.
 - Renk az ve anlamlı: renkli zemin yalnız harita kimliği (hue) ve durum için; seçenek anahtarı için `Segmented`.
 
+## Görünüm ve metin kuralları (ayrıntı: `docs/plan/TASARIM-MUREKKEP.md` bölüm 3–6)
+- Palet: tek ana renk mürekkep (`accent`), tek vurgu mercan (`marker`, yalnız şimdi/çalışıyorum, seri, XP). Harita renkleri yalnız küçük noktada.
+- Yazı tipi: başlıklar Bricolage Grotesque, metin Figtree (`ThemedText` türleri üzerinden; ekranda elle `fontWeight` yazma).
+- 3D alt kenar, gölge, başlık yanında simge kutusu, liste satırında renkli kutulu simge YOK. Köşeler küçük (8–14).
+- Sekme/görünüm anahtarı: altı çizili sekme. Liste: ince çizgili satırlar.
+- Açıklama satırı yalnız kullanıcının kararını değiştiriyorsa yazılır (uyarı, hata, geri alınamaz işlem). Başlık altı tanıtım cümlesi, alan ipucu, "dokununca şu olur" anlatımı YAZMA.
+- Ton sakin: ünlem, "harika!", ✨ ve "yapay zekâ" süslemesi yok.
+
 ## Çalışma kuralları
 1. Görevleri `BACKLOG.md` dosyasından al: "Sıradaki" bölümündeki EN ÜSTTEKİ, başlamamış görevi seç. Sırayı değiştirme.
 2. `main` dalına ASLA doğrudan push etme. Her görev için `agent/<görev-id>-<kısa-ad>` dalı aç ve Pull Request oluştur.
