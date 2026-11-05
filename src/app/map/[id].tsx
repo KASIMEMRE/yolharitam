@@ -5,7 +5,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { HeaderBackButton } from '@/components/header-back-button';
-import { IconTile } from '@/components/icon-tile';
 import { ListGroup, ListRow } from '@/components/list-row';
 import { SectionHeader } from '@/components/section-header';
 import { ThemedText } from '@/components/themed-text';
@@ -104,7 +103,6 @@ export default function MapPreviewScreen() {
           <View style={styles.inner}>
             {/* Harita kimliği: çerçevesiz (kart içinde kart olmasın) */}
             <View style={styles.identity}>
-              <IconTile emoji={map.emoji} tone={map.hue} size={64} />
               <View style={styles.identityTexts}>
                 <ThemedText type="heading" accessibilityRole="header">
                   {map.title}
@@ -125,7 +123,6 @@ export default function MapPreviewScreen() {
                 <View key={section.id} style={styles.section}>
                   <SectionHeader
                     title={section.title}
-                    subtitle={`${section.topics.length} konu`}
                     action={{ label: open ? 'Gizle' : 'Göster', onPress: () => toggle(section.id) }}
                   />
                   {open && (

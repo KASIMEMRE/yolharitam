@@ -133,7 +133,7 @@ function MapRow({
   return (
     <View style={styles.mapRow}>
       {/* Harita kimliği (renk ailesi) simge kutusunda; satırın kendisi düz */}
-      <ListRow icon={map.emoji} iconTile={map.hue} title={map.title} subtitle={subtitle} />
+      <ListRow dot={map.hue} title={map.title} subtitle={subtitle} />
 
       {!confirming ? (
         <View style={styles.rowActions}>

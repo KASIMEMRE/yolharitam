@@ -39,7 +39,7 @@ export default function CommunityScreen() {
 
   return (
     <TabScreen>
-      <ScreenHeader title="Topluluk" emoji="👥" hue="violet" />
+      <ScreenHeader title="Topluluk" />
 
       {isGuest ? (
         // Misafirde lig/arkadaş/vitrin sorguları (RPC) hiç çağrılmaz; yalnız sade tanıtım + kayıt daveti

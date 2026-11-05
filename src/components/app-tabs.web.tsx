@@ -66,17 +66,13 @@ export function TabButton({
       style={[
         styles.tab,
         narrow && styles.tabNarrow,
-        {
-          backgroundColor: isFocused ? theme.accentSoft : 'transparent',
-          borderColor: isFocused ? theme.accent : 'transparent',
-        },
       ]}>
       {emoji && (
-        <Glyph emoji={emoji} size={narrow ? 22 : 18} color={isFocused ? theme.accentInk : theme.textSecondary} strokeWidth={isFocused ? 2.25 : 2} />
+        <Glyph emoji={emoji} size={narrow ? 22 : 18} color={isFocused ? theme.accent : theme.textSecondary} strokeWidth={isFocused ? 2.25 : 2} />
       )}
       <ThemedText
         type={isFocused ? 'smallBold' : 'small'}
-        themeColor={isFocused ? 'accentInk' : 'textSecondary'}
+        themeColor={isFocused ? 'accent' : 'textSecondary'}
         numberOfLines={1}
         adjustsFontSizeToFit
         minimumFontScale={0.8}
@@ -102,8 +98,8 @@ export function CustomTabList(props: TabListProps) {
           styles.inner,
           { backgroundColor: theme.card },
           narrow
-            ? { borderTopWidth: Border.thick, borderTopColor: theme.border }
-            : { borderWidth: Border.thick, borderColor: theme.border, borderRadius: Radius.xl, maxWidth: MaxContentWidth },
+            ? { borderTopWidth: Border.thin, borderTopColor: theme.border }
+            : { borderWidth: Border.thin, borderColor: theme.border, borderRadius: Radius.lg, maxWidth: MaxContentWidth },
           narrow && styles.innerNarrow,
         ]}>
         {!narrow && (
@@ -138,10 +134,9 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.md,
-    borderWidth: Border.thick,
   },
   tabNarrow: { flex: 1, minWidth: 0, flexDirection: 'column', justifyContent: 'center', gap: 0, paddingHorizontal: 2 },
-  labelNarrow: { fontSize: 13, lineHeight: 16, textAlign: 'center', maxWidth: '100%' },
+  labelNarrow: { fontSize: 11, lineHeight: 14, textAlign: 'center', maxWidth: '100%' },
   // 320 px: dört sekme etiketi ("Yol Haritam", "Gelişmeler") kırpılmadan sığsın
-  labelTiny: { fontSize: 12, lineHeight: 15 },
+  labelTiny: { fontSize: 11, lineHeight: 14 },
 });

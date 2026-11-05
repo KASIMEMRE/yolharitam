@@ -20,7 +20,7 @@ import { Segmented } from '@/components/segmented';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Radius, Spacing } from '@/constants/theme';
+import { Fonts, Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { normalizeUsername, USERNAME_PATTERN } from '@/hooks/use-username';
 import { clearPendingIntent } from '@/lib/auth-gate';
@@ -379,6 +379,6 @@ const styles = StyleSheet.create({
   form: { gap: Spacing.four },
   showButton: { minHeight: 44, minWidth: 44, marginRight: Spacing.two, paddingHorizontal: Spacing.two, alignItems: 'center', justifyContent: 'center' },
   legal: { textAlign: 'center' },
-  link: { textDecorationLine: 'underline', fontWeight: '700' },
+  link: { textDecorationLine: 'underline', fontFamily: Fonts.sansBold },
   footer: { gap: Spacing.one, paddingTop: Spacing.three, paddingBottom: Spacing.three, borderTopWidth: 2 },
 });

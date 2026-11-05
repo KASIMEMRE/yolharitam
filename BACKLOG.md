@@ -8,13 +8,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 > **Aktif plan:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti).
 > TS-01 önce; TS-02 ve TS-03 paralel; TS-04 son. Hiçbir özellik kaldırılmaz (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
 
-### TS-01 · Temel: renkler, yazı tipleri, ortak bileşenler
-- `theme.ts` renk jetonları plan bölüm 3'teki tabloya göre (açık + koyu); `Radius` küçülür; 3D `Edge` hiçbir yerde çizilmez.
-- Bricolage Grotesque + Figtree (`npx expo install @expo-google-fonts/bricolage-grotesque @expo-google-fonts/figtree`), kök `_layout.tsx`'te yüklenir; `ThemedText` türleri ve `Fonts` yeni ailelere eşlenir.
-- Ortak bileşenler yeni dile geçer: `Button` (düz dolgu), `Surface`, `ListRow` (kutulu simge yok), `ScreenHeader` (simge kutusu yok), `SectionHeader` (alt yazı yok), `Segmented` → altı çizili sekme, `OptionCard`, `FilterChipRow`, rozetler, `IconTile` kullanımı kaldırılır.
-- `AGENTS.md`: "Sadelik kuralları"na plan bölüm 5–6 (biçim + metin kuralları) eklenir.
-- Kabul: tsc + lint temiz; uygulama açık/koyu temada açılıyor; hiçbir ekranda 3D kenar ve simge kutusu kalmadı.
-
 ### TS-02 · Ana akış ekranları (Yol Haritam, Konu, Keşfet, Harita önizleme)
 - Plan bölüm 7'deki tarif + metin diyeti (bölüm 6). Ağaç görünümü (`roadmap-tree`) yeni renklere uyar.
 - Kabul: tarifteki yerleşim; gereksiz açıklama satırı yok; envanterin ilgili maddeleri çalışıyor.
@@ -49,6 +42,14 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### TS-01 · Temel: renkler, yazı tipleri, ortak bileşenler
+- `theme.ts` renk jetonları plan bölüm 3'teki tabloya göre (açık + koyu); `Radius` küçülür; 3D `Edge` hiçbir yerde çizilmez.
+- Bricolage Grotesque + Figtree (`npx expo install @expo-google-fonts/bricolage-grotesque @expo-google-fonts/figtree`), kök `_layout.tsx`'te yüklenir; `ThemedText` türleri ve `Fonts` yeni ailelere eşlenir.
+- Ortak bileşenler yeni dile geçer: `Button` (düz dolgu), `Surface`, `ListRow` (kutulu simge yok), `ScreenHeader` (simge kutusu yok), `SectionHeader` (alt yazı yok), `Segmented` → altı çizili sekme, `OptionCard`, `FilterChipRow`, rozetler, `IconTile` kullanımı kaldırılır.
+- `AGENTS.md`: "Sadelik kuralları"na plan bölüm 5–6 (biçim + metin kuralları) eklenir.
+- Kabul: tsc + lint temiz; uygulama açık/koyu temada açılıyor; hiçbir ekranda 3D kenar ve simge kutusu kalmadı.
+- ✅ Mürekkep+mercan renk jetonları (açık/koyu), Bricolage Grotesque + Figtree (`useFonts`, `ThemedText`/`Fonts` yeni ailelerde), `Radius` küçüldü, 3D `Edge` kaldırıldı; `Button`, `Surface`, `ListRow` (kutusuz simge / `dot`), `ScreenHeader`, `SectionHeader` (alt yazısız), `Segmented` (altı çizili + `variant="buttons"`), `OptionCard`, `FilterChipRow`, rozetler ve sekme çubuğu düz yeni dile geçti.
 
 ### SM-08 · Son kabul (ürün sorumlusu + testçi + tasarımcı)
 - Plan bölüm 5'teki **özellik envanterinin her maddesi** tek tek denenir; tablo halinde PR'a eklenir (✅/❌ + ekran görüntüsü).

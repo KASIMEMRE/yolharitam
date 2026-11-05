@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { Platform } from 'react-native';
 
 import { webHeaderLeft } from '@/components/header-back-button';
+import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
 // Doğrudan /settings/maps gibi bir adrese girilince (web yenileme, derin bağlantı) altında Ayarlar listesi
@@ -19,7 +20,7 @@ export default function SettingsLayout() {
         headerStyle: { backgroundColor: theme.background },
         headerShadowVisible: false,
         headerTintColor: theme.accentInk,
-        headerTitleStyle: { fontWeight: '900' },
+        headerTitleStyle: { fontFamily: Fonts.display },
         contentStyle: { backgroundColor: theme.background },
         // Web'de varsayılan geri oku küçük: 44pt'lik özel düğme (native'de sistemin geri düğmesi kalır)
         headerLeft: web ? webHeaderLeft('/settings') : undefined,

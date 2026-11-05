@@ -7,12 +7,11 @@ import type { ThemeColor } from '@/constants/theme';
 
 export type Hue = 'accent' | 'marker' | 'sky' | 'coral' | 'violet' | 'berry' | 'leaf';
 
-// line = kenarlık/ikon çerçevesi, soft = zemin, ink = o zemin üstündeki yazı, edge = 3D alt kenar.
+// line = nokta/çerçeve rengi, soft = soluk zemin, ink = o zemin üstündeki yazı, edge = koyu ince çerçeve.
 // Değerler theme.ts anahtarlarıdır (hex değil); bileşen `theme[anahtar]` ile gerçek rengi alır.
 export const HUES: Record<Hue, { line: ThemeColor; soft: ThemeColor; ink: ThemeColor; edge: ThemeColor }> = {
   accent: { line: 'accent', soft: 'accentSoft', ink: 'accentInk', edge: 'accentEdge' },
-  // Düz marker kenarlık için fazla açık (kontrast düşük), o yüzden markerEdge kullanılır
-  marker: { line: 'markerEdge', soft: 'markerSoft', ink: 'markerInk', edge: 'markerEdge' },
+  marker: { line: 'marker', soft: 'markerSoft', ink: 'markerInk', edge: 'markerEdge' },
   sky: { line: 'sky', soft: 'skySoft', ink: 'skyInk', edge: 'skyEdge' },
   coral: { line: 'coral', soft: 'coralSoft', ink: 'coralInk', edge: 'coralEdge' },
   violet: { line: 'violet', soft: 'violetSoft', ink: 'violetInk', edge: 'violetEdge' },

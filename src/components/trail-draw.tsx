@@ -79,7 +79,7 @@ export function TrailDraw({ width, slow = false }: TrailDrawProps) {
             style={[
               styles.stop,
               i === 0 && arrived
-                ? { backgroundColor: theme.marker, borderColor: theme.markerEdge }
+                ? { backgroundColor: theme.marker, borderColor: theme.marker }
                 : { backgroundColor: theme.accentSoft, borderColor: theme.accent },
             ]}>
             {i === 0 && arrived && (

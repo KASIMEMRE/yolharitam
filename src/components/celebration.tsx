@@ -115,7 +115,7 @@ export function Celebration({ visible, emoji, hue, title, subtitle, levelId, onD
 
       <Animated.View style={[styles.center, tileStyle]}>
         {/* borderRadius IconTile 96'nın köşesiyle aynı: gölge kare görünmesin */}
-        <Animated.View style={[shadow('lifted'), { borderRadius: Radius.xl }]}>
+        <Animated.View style={[shadow('lifted'), { borderRadius: Radius.lg }]}>
           <IconTile emoji={emoji} tone={hue} size={96} />
         </Animated.View>
       </Animated.View>

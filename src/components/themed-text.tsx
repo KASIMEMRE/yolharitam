@@ -6,6 +6,7 @@ import { useTheme } from '@/hooks/use-theme';
 export type ThemedTextProps = TextProps & {
   type?:
     | 'default'
+    | 'defaultSemiBold'
     | 'title'
     | 'small'
     | 'smallBold'
@@ -32,6 +33,7 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
       style={[
         { color: theme[color] },
         type === 'default' && styles.default,
+        type === 'defaultSemiBold' && styles.defaultSemiBold,
         type === 'title' && styles.title,
         type === 'small' && styles.small,
         type === 'smallBold' && styles.smallBold,
@@ -51,22 +53,27 @@ export function ThemedText({ style, type = 'default', themeColor, ...rest }: The
   );
 }
 
-// Ağırlık kuralı: başlık/buton 900, vurgu 700, gövde 400. Başka ağırlık kullanılmaz;
-// Android sistem fontunda 700 ve üstü zaten aynı kalınlıkta görünür.
+// Yazı tipi kuralı: başlıklar Bricolage Grotesque (600/700), metin Figtree (400/600).
+// Özel yazı tipinde `fontWeight` dosya seçmez; her ağırlık ayrı `fontFamily` adıdır (bkz. Fonts).
+// Bu yüzden stillerde `fontWeight` YOK, ağırlık aile adından gelir.
+// Ölçek: ekran başlığı 32/700 · bölüm başlığı 19/600 · kart başlığı 22/600 · gövde 16 · küçük 14.
 const styles = StyleSheet.create({
-  small: { fontSize: 14, lineHeight: 20, fontWeight: 400 },
-  smallBold: { fontSize: 14, lineHeight: 20, fontWeight: 700 },
-  default: { fontSize: 16, lineHeight: 24, fontWeight: 400 },
-  title: { fontSize: 48, fontWeight: 600, lineHeight: 52 },
-  subtitle: { fontSize: 32, lineHeight: 44, fontWeight: 600 },
-  link: { lineHeight: 30, fontSize: 14 },
-  linkPrimary: { lineHeight: 30, fontSize: 14 },
-  // iOS'ta yuvarlak (rounded) font başlıklara oyunsu bir hava katar; Android'de normal font.
-  display: { fontFamily: Fonts.rounded, fontSize: 48, lineHeight: 52, fontWeight: 900, letterSpacing: -1 },
-  heading: { fontFamily: Fonts.rounded, fontSize: 32, lineHeight: 38, fontWeight: 900, letterSpacing: -0.5 },
-  cardTitle: { fontFamily: Fonts.rounded, fontSize: 18, lineHeight: 24, fontWeight: 900 },
+  small: { fontFamily: Fonts.sans, fontSize: 14, lineHeight: 20 },
+  smallBold: { fontFamily: Fonts.sansSemiBold, fontSize: 14, lineHeight: 20 },
+  default: { fontFamily: Fonts.sans, fontSize: 16, lineHeight: 24 },
+  defaultSemiBold: { fontFamily: Fonts.sansSemiBold, fontSize: 16, lineHeight: 24 },
+  title: { fontFamily: Fonts.displayBold, fontSize: 40, lineHeight: 46, letterSpacing: -0.8 },
+  // Bölüm başlığı (SectionHeader)
+  subtitle: { fontFamily: Fonts.display, fontSize: 19, lineHeight: 25 },
+  link: { fontFamily: Fonts.sansSemiBold, lineHeight: 30, fontSize: 14 },
+  linkPrimary: { fontFamily: Fonts.sansSemiBold, lineHeight: 30, fontSize: 14 },
+  // Büyük rakamlar / kutlama başlığı
+  display: { fontFamily: Fonts.displayBold, fontSize: 40, lineHeight: 46, letterSpacing: -0.8 },
+  // Ekran başlığı
+  heading: { fontFamily: Fonts.displayBold, fontSize: 32, lineHeight: 38, letterSpacing: -0.5 },
+  cardTitle: { fontFamily: Fonts.display, fontSize: 22, lineHeight: 28, letterSpacing: -0.2 },
   // textTransform kullanılmaz: Türkçede i/İ büyük harfe yanlış dönüşür.
-  eyebrow: { fontSize: 14, lineHeight: 18, fontWeight: 700, letterSpacing: 0.4 },
-  button: { fontFamily: Fonts.rounded, fontSize: 17, lineHeight: 22, fontWeight: 900, letterSpacing: 0.2 },
-  chip: { fontSize: 14, lineHeight: 18, fontWeight: 700 },
+  eyebrow: { fontFamily: Fonts.sansSemiBold, fontSize: 13, lineHeight: 18, letterSpacing: 0.3 },
+  button: { fontFamily: Fonts.sansSemiBold, fontSize: 16, lineHeight: 22 },
+  chip: { fontFamily: Fonts.sansSemiBold, fontSize: 14, lineHeight: 18 },
 });

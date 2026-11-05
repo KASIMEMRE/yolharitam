@@ -1,27 +1,18 @@
-import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, {
-  FadeIn,
-  FadeInDown,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { FadeIn, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
-import { IconTile } from '@/components/icon-tile';
+import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
-import { Border, Edge, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { Border, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
 import { HUES, type Hue } from '@/constants/visuals';
-import { useShadow, useTheme } from '@/hooks/use-theme';
+import { useTheme } from '@/hooks/use-theme';
 
 // Seçenek kartı. Üç görünümü var:
 //  - list: yatay satır (alt konular, seviyeler)
 //  - tile: kare kutucuk (ana kategoriler, 2 sütunlu ızgarada)
 //  - compact: ince özet satırı (seçilen konu, "Değiştir" yazısıyla)
-// Kenarlık HER ZAMAN 3px; durum sadece renkten değişir, böylece seçince kart zıplamaz.
+// DÜZ görünüm: alt kenar/gölge yok. Kenarlık HER ZAMAN 1.5px; durum sadece renkten değişir (seçili = mürekkep
+// kenar + soluk zemin), böylece seçince kart zıplamaz. Simge kutusuz, çizgi simge olarak solda durur.
 type OptionCardProps = {
   title: string;
   description?: string;
@@ -54,62 +45,19 @@ export function OptionCard({
   index = 0,
 }: OptionCardProps) {
   const theme = useTheme();
-  const shadow = useShadow();
   const reduceMotion = useReducedMotion();
   const { width } = useWindowDimensions();
-
-  const press = useSharedValue(0); // yüzün aşağı inme miktarı
-  const scale = useSharedValue(1); // seçilince yaylanma
-  const wobble = useSharedValue(0); // ikon sallanması (derece)
-
-  const faceStyle = useAnimatedStyle(() => ({ transform: [{ translateY: press.value }] }));
-  const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  const wobbleStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${wobble.value}deg` }] }));
-
-  function shake() {
-    if (reduceMotion) return;
-    wobble.set(withSequence(
-      withTiming(-8, { duration: 50 }),
-      withTiming(8, { duration: 50 }),
-      withTiming(-4, { duration: 50 }),
-      withTiming(0, { duration: 50 })
-    ));
-  }
-
-  // Seçili durum false -> true olunca: kart yaylanır, ikon sallanır. İlk çizimde çalışmaz.
-  const wasSelected = useRef(selected);
-  useEffect(() => {
-    if (selected && !wasSelected.current && !reduceMotion) {
-      scale.set(withSequence(
-        withSpring(1.03, { damping: 12, stiffness: 260 }),
-        withSpring(1, { damping: 14, stiffness: 220 })
-      ));
-      wobble.set(withSequence(
-        withTiming(-8, { duration: 50 }),
-        withTiming(8, { duration: 50 }),
-        withTiming(-4, { duration: 50 }),
-        withTiming(0, { duration: 50 })
-      ));
-    }
-    wasSelected.current = selected;
-  }, [selected, reduceMotion, scale, wobble]);
 
   const tone = hue ? HUES[hue] : undefined;
   const isCompact = variant === 'compact';
   const isTile = variant === 'tile';
 
-  // Renkleri duruma göre seç
+  // Renkleri duruma göre seç: seçili kart soluk zemin + mürekkep (ya da harita rengi) kenar
   let background: string = theme.card;
-  // Seçili olmayan tüm kartlar (kategori de seviye de) aynı sakin kenar dilini kullanır;
-  // seçimi renk + ✓ halkası taşır.
   let border: string = theme.border;
-  let plate: string = theme.borderEdge;
-  if (isCompact) {
-    border = theme.border;
-  } else if (selected) {
-    background = tone ? theme[tone.soft] : theme.accentSoft;
+  if (!isCompact && selected) {
+    background = tone ? theme[tone.soft] : theme.backgroundElement;
     border = tone ? theme[tone.line] : theme.accent;
-    plate = tone ? theme[tone.edge] : theme.accentEdge;
   }
 
   // Izgara kutucuğunun genişliği: iki sütun + aralarındaki boşluk
@@ -121,12 +69,15 @@ export function OptionCard({
   const body = (
     <>
       {icon && (
-        <Animated.View style={wobbleStyle}>
-          <IconTile emoji={icon} tone={hue ?? 'neutral'} size={isTile ? 64 : isCompact ? 40 : 48} />
-        </Animated.View>
+        <Glyph
+          emoji={icon}
+          size={isTile ? 28 : 22}
+          color={tone ? theme[tone.ink] : theme.textSecondary}
+          strokeWidth={2}
+        />
       )}
       <View style={[styles.texts, isTile && styles.textsTile]}>
-        <ThemedText type="cardTitle" style={isCompact && styles.flex}>
+        <ThemedText type="cardTitle" style={[styles.title, isCompact && styles.flex]}>
           {title}
         </ThemedText>
         {description && !isCompact && (
@@ -147,15 +98,7 @@ export function OptionCard({
                   width: 10,
                   height: 14 + i * 6,
                   borderRadius: 3,
-                  backgroundColor:
-                    i < ladder
-                      ? selected
-                        ? theme.text
-                        : theme.borderStrong
-                      : // Seçili kartın zemini (accentSoft) üstünde backgroundSelected koyuda kaybolur
-                        selected
-                        ? theme.borderStrong
-                        : theme.backgroundSelected,
+                  backgroundColor: i < ladder ? (selected ? theme.text : theme.borderStrong) : theme.backgroundSelected,
                 }}
               />
             ))}
@@ -185,11 +128,11 @@ export function OptionCard({
           style={[
             styles.check,
             selected
-              ? { backgroundColor: theme.accentInk, borderColor: theme.accentInk }
+              ? { backgroundColor: theme.accent, borderColor: theme.accent }
               : { borderColor: theme.borderStrong },
           ]}>
           {selected && (
-            <Text allowFontScaling={false} style={[styles.checkMark, { color: theme.card }]}>
+            <Text allowFontScaling={false} style={[styles.checkMark, { color: theme.onAccent }]}>
               ✓
             </Text>
           )}
@@ -200,53 +143,32 @@ export function OptionCard({
 
   const entering = reduceMotion
     ? FadeIn.duration(150)
-    : FadeInDown.duration(280)
-        .springify()
-        .damping(16)
-        .delay(Math.min(index, 4) * 60);
+    : FadeInDown.duration(240).delay(Math.min(index, 4) * 50);
 
   return (
-    // Dıştaki sarmalayıcı sadece giriş animasyonu için; ölçek animasyonu içteki katmanda
-    // (aynı elemanda iki animasyon türü çakışmasın diye).
+    // Sarmalayıcı yalnız giriş animasyonu için.
     // Tile: aynı satırdaki kartlar eşit yükseklikte olsun diye zincirdeki her katman flex: 1
     <Animated.View entering={entering} style={isTile && { width: tileWidth, alignSelf: 'stretch' }}>
-      <Animated.View style={[scaleStyle, isTile && styles.fill]}>
-        <Pressable
-          onPress={onPress}
-          onPressIn={() => {
-            press.set(reduceMotion ? Edge - 1 : withTiming(Edge - 1, { duration: 60 }));
-            if (isTile) shake();
-          }}
-          onPressOut={() => {
-            press.set(reduceMotion ? 0 : withSpring(0, { damping: 14, stiffness: 320, mass: 0.6 }));
-          }}
-          accessibilityRole={role}
-          accessibilityLabel={isCompact ? `${title}. Konuyu değiştir` : undefined}
-          accessibilityHint={hint}
-          accessibilityState={role === 'radio' ? { checked: selected } : undefined}
-          // Düz renkli zemin için gölge sarmalayıcıya; alt kenar plakası kartın kendi rengi
-          style={[!isCompact && shadow('card'), { borderRadius: radius }, isTile && styles.fill]}>
-          <View style={[{ borderRadius: radius }, !isCompact && { backgroundColor: plate }, isTile && styles.fill]}>
-            <Animated.View
-              style={[
-                styles.face,
-                {
-                  backgroundColor: background,
-                  borderColor: border,
-                  borderRadius: radius,
-                  borderWidth: isCompact ? Border.thick : Border.chunky,
-                },
-                isCompact
-                  ? styles.compact
-                  : [styles.faceFull, { marginBottom: Edge }, isTile ? styles.tile : styles.list],
-                !isCompact && faceStyle,
-                isTile && styles.fill,
-              ]}>
-              {body}
-            </Animated.View>
-          </View>
-        </Pressable>
-      </Animated.View>
+      <Pressable
+        onPress={onPress}
+        accessibilityRole={role}
+        accessibilityLabel={isCompact ? `${title}. Konuyu değiştir` : undefined}
+        accessibilityHint={hint}
+        accessibilityState={role === 'radio' ? { checked: selected } : undefined}
+        style={({ pressed }) => [
+          styles.face,
+          {
+            backgroundColor: background,
+            borderColor: border,
+            borderRadius: radius,
+            borderWidth: 1.5,
+            opacity: pressed ? 0.75 : 1,
+          },
+          isCompact ? styles.compact : [styles.faceFull, isTile ? styles.tile : styles.list],
+          isTile && styles.fill,
+        ]}>
+        {body}
+      </Pressable>
     </Animated.View>
   );
 }
@@ -254,11 +176,12 @@ export function OptionCard({
 const styles = StyleSheet.create({
   face: { flexDirection: 'row', alignItems: 'center' },
   faceFull: { padding: Spacing.three, gap: Spacing.three },
-  list: { minHeight: 72 },
-  tile: { minHeight: 148, flexDirection: 'column', alignItems: 'flex-start', gap: Spacing.two },
+  list: { minHeight: 64 },
+  tile: { minHeight: 120, flexDirection: 'column', alignItems: 'flex-start', gap: Spacing.two },
   compact: { minHeight: 56, paddingHorizontal: Spacing.three, gap: Spacing.three },
   flex: { flex: 1, minWidth: 0 },
   fill: { flex: 1 },
+  title: { fontSize: 18, lineHeight: 24 },
   texts: { flex: 1, minWidth: 0, gap: Spacing.half },
   textsTile: { flex: 0, alignSelf: 'stretch' },
   ladder: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.one, marginTop: Spacing.two },
@@ -272,5 +195,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  checkMark: { fontSize: 16, lineHeight: 18, fontWeight: 900 },
+  checkMark: { fontSize: 16, lineHeight: 18 },
 });

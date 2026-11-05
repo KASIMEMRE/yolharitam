@@ -1,3 +1,10 @@
+import { BricolageGrotesque_600SemiBold } from '@expo-google-fonts/bricolage-grotesque/600SemiBold';
+import { BricolageGrotesque_700Bold } from '@expo-google-fonts/bricolage-grotesque/700Bold';
+import { Figtree_400Regular } from '@expo-google-fonts/figtree/400Regular';
+import { Figtree_500Medium } from '@expo-google-fonts/figtree/500Medium';
+import { Figtree_600SemiBold } from '@expo-google-fonts/figtree/600SemiBold';
+import { Figtree_700Bold } from '@expo-google-fonts/figtree/700Bold';
+import { useFonts } from 'expo-font';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { Platform } from 'react-native';
@@ -6,7 +13,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { AppErrorScreen } from '@/components/app-error';
 import { webHeaderLeft } from '@/components/header-back-button';
 import { XpToast } from '@/components/xp-toast';
-import { Colors } from '@/constants/theme';
+import { Colors, Fonts } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
@@ -19,6 +26,19 @@ export { AppErrorScreen as ErrorBoundary };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  // Yazı tipi dosyalarını yükle. Her ağırlık ayrı aile adıdır (bkz. Fonts). Yüklenene kadar hiçbir şey
+  // çizmiyoruz; yerel açılış ekranı (splash) AnimatedSplashOverlay çizilene kadar zaten açık kalır.
+  // Yükleme hata verirse de (fontError) uygulamayı açarız: sistem yazı tipiyle çalışmaya devam eder.
+  const [fontsLoaded, fontError] = useFonts({
+    BricolageGrotesque_600SemiBold,
+    BricolageGrotesque_700Bold,
+    Figtree_400Regular,
+    Figtree_500Medium,
+    Figtree_600SemiBold,
+    Figtree_700Bold,
+  });
+  if (!fontsLoaded && !fontError) return null;
+
   return (
     // Gezinme çerçevesinin (başlık, geçiş sırasındaki zemin) renkleri de bizim temadan gelsin
     <ThemeProvider value={navigationTheme(colorScheme)}>
@@ -59,7 +79,7 @@ function RootStack() {
         headerStyle: { backgroundColor: theme.background },
         headerShadowVisible: false,
         headerTintColor: theme.accentInk,
-        headerTitleStyle: { fontWeight: '900' },
+        headerTitleStyle: { fontFamily: Fonts.display },
         contentStyle: { backgroundColor: theme.background },
       }}>
       {/* Karşılama ("/"): herkese açık. Giriş yapmışsa ekranın kendisi /roadmap'e yönlendirir. */}

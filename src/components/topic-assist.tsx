@@ -12,7 +12,7 @@ import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
 import type { DevRoadmap, Section, Topic } from '@/constants/dev-roadmaps';
 import type { LevelId } from '@/constants/plan';
-import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
+import { Border, Fonts, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { XP_PER_CORRECT } from '@/constants/xp';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
@@ -219,7 +219,7 @@ function ExplainView({ data }: { data: Explain }) {
         </View>
       )}
       {data.exercise !== '' && (
-        <View style={[styles.exercise, { backgroundColor: theme.markerSoft, borderColor: theme.markerEdge }]}>
+        <View style={[styles.exercise, { backgroundColor: theme.markerSoft, borderColor: theme.marker }]}>
           <IconLabel emoji="🛠️" type="smallBold" themeColor="markerInk">
             Mini alıştırma
           </IconLabel>
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   code: { borderRadius: Radius.sm, borderWidth: Border.thin, padding: Spacing.two },
-  codeText: { fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace', default: 'monospace' }), fontSize: 13, lineHeight: 19 },
+  codeText: { fontFamily: Fonts.mono, fontSize: 13, lineHeight: 19 },
   exercise: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thick },
   options: { gap: Spacing.two },
   option: { minHeight: MinTouch, justifyContent: 'center', padding: Spacing.two, borderRadius: Radius.sm, borderWidth: Border.thick },

@@ -45,9 +45,9 @@ export function FilterChipRow<T extends string>({ options, value, onChange, role
             style={({ pressed }) => [
               styles.chip,
               {
-                backgroundColor: selected ? theme.accentSoft : theme.card,
-                borderColor: selected ? theme.accent : theme.border,
-                opacity: pressed ? 0.85 : 1,
+                backgroundColor: selected ? theme.backgroundSelected : 'transparent',
+                borderColor: selected ? theme.backgroundSelected : theme.border,
+                opacity: pressed ? 0.75 : 1,
               },
             ]}>
             {o.icon && (
@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     minHeight: MinTouch,
     justifyContent: 'center',
     paddingHorizontal: Spacing.three,
-    borderRadius: Radius.pill,
-    borderWidth: Border.thick,
+    borderRadius: Radius.md,
+    borderWidth: Border.thin,
   },
 });

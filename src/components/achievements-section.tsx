@@ -94,7 +94,7 @@ export function AchievementsSection() {
 const STRIP_COUNT = 5;
 
 export function AchievementsStrip() {
-  const { status, achievements, earnedCount, retrying, retry } = useAchievements();
+  const { status, achievements, retrying, retry } = useAchievements();
   const ordered = [...achievements].sort((a, b) => Number(b.earned) - Number(a.earned));
   const failed = status === 'schema' || status === 'network' || status === 'error';
   const errorText =
@@ -105,7 +105,6 @@ export function AchievementsStrip() {
     <View style={styles.section}>
       <SectionHeader
         title="Başarımlar"
-        subtitle={status === 'ready' ? summaryText(earnedCount, achievements.length) : undefined}
         action={status === 'ready' ? { label: 'Tümü', onPress: openAll } : undefined}
       />
       {status === 'loading' && (
