@@ -7,7 +7,7 @@
 // Haritalar herkes için AYNIDIR ve uygulamanın içinde durur. Veritabanına yalnız kullanıcının
 // konu durumları (topic_progress) ve yapay zekânın kişisel işaretleri (roadmaps.personalization) yazılır.
 
-import type { Hue } from '@/constants/visuals';
+import type { MapHue } from '@/constants/visuals';
 
 // core = önerilen (bu rol için gerekli) · optional = isteğe bağlı (iyi olur) · alt = alternatif
 // (aynı bölümdeki önerilen konunun yerine seçilebilir; ikisini birden öğrenmek gerekmez)
@@ -49,7 +49,7 @@ export type DevRoadmap = {
   title: string;
   tagline: string; // seçim ekranındaki tek cümle
   emoji: string;
-  hue: Hue;
+  hue: MapHue; // yalnız soluk aileler (accent/marker harita rengi olamaz)
   sections: Section[];
 };
 

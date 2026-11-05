@@ -44,7 +44,8 @@ export default function MapPreviewScreen() {
   const screenOptions = (
     <Stack.Screen
       options={{
-        title: map?.title ?? 'Harita',
+        // Sayfanın kendi başlığı harita adı; üst çubukta aynı adı tekrar yazmayız
+        title: 'Harita',
         // Web'de varsayılan geri oku küçük; 44x44'lük kendi düğmemizi koyarız (native aynı kalır)
         headerLeft: Platform.OS === 'web' ? () => <HeaderBackButton onPress={goBack} label="Geri dön" /> : undefined,
       }}

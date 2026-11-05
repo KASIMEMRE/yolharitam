@@ -5,14 +5,7 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-> **Aktif plan:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti).
-> TS-01 önce; TS-02 ve TS-03 paralel; TS-04 son. Hiçbir özellik kaldırılmaz (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
-
-
-### TS-04 · Son kabul (yeni görünüm)
-- Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
-
-
+> **Plan tamamlandı:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti). TS-01 … TS-04 tamamlandı (PR'lar açıldı); son kabul raporu: `docs/plan/TS-04-kabul-raporu.md`. Hiçbir özellik kaldırılmadı (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
 
 
 ### MAĞAZA-01 · Şifremi unuttum akışı
@@ -35,6 +28,10 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### TS-04 · Son kabul (yeni görünüm)
+- Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
+- ✅ Son kabul: 33 ekran/durum × 390/320 px × açık/koyu (132 görüntü) `pageerror` ve "Surface içinde Surface" uyarısı olmadan geçti; envanter 46/46 madde yeni görünümde ✅ (çoğu web + taklit veriyle, birkaç alt parça kodla). Kontrast: 3 çift 4.5:1 altındaydı, `theme.ts`'te düzeltildi (açık `markerInk` `#B73A17`, açık `onMarker` `#1C1B1F`); tüm metin/zemin çiftleri ≥ 4.5:1. Düzeltilenler: karşılama üstüne tek renkli patika çizimi (`TrailMark`), 5 haritanın `accent`/`marker` hue'su soluk ailelere taşındı (`MapHue` tipi artık bunu zorunlu kılar), bölüm notları nötr yazı, ağaç görünümü bölüm sayaçları plana göre (liste ile aynı), konu durum düğmesi 320 px'te "Çalışıyorum" kırpılması, kutlama penceresinde kart içinde kart, onboarding "Değiştir" satırı 320 px dikey boşluk, Projeni paylaş 320 px kenar boşluğu, boş kullanıcı adı ipucu satırları, harita menüsü ve önizleme başlığında tekrar eden metin; kullanılmayan `IconTile`, `RouteSteps`, `StatusChip`, `ProgressSummary` bileşeni, `useShadow`/`Shadow`, `QUESTIONS[].subtitle`, ✨ eşlemesi silindi. Splash/adaptive-icon arka planı `#1C1B1F` (`app.json` değişti: yeni APK'da görünür). Rapor: `docs/plan/TS-04-kabul-raporu.md`.
 
 ### TS-02 · Ana akış ekranları (Yol Haritam, Konu, Keşfet, Harita önizleme)
 - Plan bölüm 7'deki tarif + metin diyeti (bölüm 6). Ağaç görünümü (`roadmap-tree`) yeni renklere uyar.
@@ -265,6 +262,12 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 ## Öneriler (ekipten)
 
 Sıraya konmadı; önceliği proje sahibi verir.
+
+- **Hata/yıkıcı eylem için ayrı renk jetonu** (TS-04'ten): hata yazısı, geçersiz alan çerçevesi, "Çıkış yap"/"Engelle" gibi eylemler `coral`/`coralInk` kullanıyor; bu aynı zamanda bir harita rengi (Java, Mobil, Rust…). Küçük noktada karışmıyor ama anlam ayrımı için `danger`/`dangerInk` jetonu eklenmeli (theme.ts + `Button quiet` + `TextField invalid` + `Banner`).
+- **Sayaç tutarsızlığı: tüm harita ile plan** (TS-04'ten): Ayarlar › Haritalarım "8 / 43 konu bitti" tüm haritaya, Yol Haritam "6/31" plana (seviye + kişiselleştirme) göre sayıyor. Tek tanım seçilmeli (plan).
+- **Başarım ve lig renkleri** (TS-04'ten): `achievements.ts` bazı rozetlerde `accent`/`marker` hue; Lig'de 1. madalya `markerEdge`, 3. `coralEdge` (koyu temada birbirine yakın). Plan "mercan yalnız durum/XP" dediği için nötr tonlara çekilebilir.
+- **Native cihazda görsel doğrulama** (TS-04'ten): kabul yalnız web + taklit veriyle yapıldı. Android/iOS'ta yeni splash/adaptive-icon rengi (yeni APK), Figtree/Bricolage yüklemesi, `adjustsFontSizeToFit` ve "…" menüsünün alt sayfası gerçek cihazda gözle denenmeli. Uygulama simgesi PNG'si (`icon.png`) hâlâ eski teal zemin; yeni palete göre yeniden çizilmeli.
+- **Web üst çubuk geri düğmesi** (TS-04'ten): web'de `‹` metin karakteri kalın ve varsayılan yazı tipinde; Lucide `ChevronLeft` ile aynı çizgi kalınlığına getirilebilir (yalnız web, native sistem oku).
 
 - **Sihirbaz seçenek kartları** (SM-08'den): seviye ve 3 soru adımlarında her seçenek 3D `OptionCard`; "tek birincil öğe" ilkesine göre seçenekler düz olup yalnız seçili kart/birincil düğme 3D olabilir (ya da açıklamalı radyo `ListRow`). Tasarım kararı gerektirir.
 - **"Sonraki konu: <ad>" düğmesi** (SM-08'den): uzun konu adında etiket iki satıra iniyor (kırpılmıyor ama düğme şişiyor); etiket "Sonraki konu", ad ikinci satır/alt yazı olabilir.

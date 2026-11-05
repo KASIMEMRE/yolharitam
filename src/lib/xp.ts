@@ -141,7 +141,7 @@ export async function awardXp(input: AwardInput): Promise<boolean> {
   if (input.kind !== 'daily' && !state.dailyDoneDays.has(today)) {
     const completes = await matchesTodayTask({ kind: input.kind, roadmapId: input.roadmapId, topicId: input.topicId });
     if (completes) {
-      const ok = await awardXp({ kind: 'daily', ref: today, label: '🎯 Günün görevi tamam!' });
+      const ok = await awardXp({ kind: 'daily', ref: today, label: 'Günün görevi tamamlandı' });
       if (ok) {
         version++;
         state = { ...state, dailyDoneDays: new Set(state.dailyDoneDays).add(today) };

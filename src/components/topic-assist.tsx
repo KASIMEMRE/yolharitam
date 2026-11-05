@@ -210,11 +210,11 @@ function ExplainView({ data }: { data: Explain }) {
         </View>
       )}
       {data.exercise !== '' && (
-        <View style={[styles.exercise, { backgroundColor: theme.markerSoft, borderColor: theme.marker }]}>
-          <IconLabel emoji="🛠️" type="smallBold" themeColor="markerInk">
+        <View style={[styles.exercise, { backgroundColor: theme.backgroundElement }]}>
+          <IconLabel emoji="🛠️" type="smallBold">
             Mini alıştırma
           </IconLabel>
-          <ThemedText type="small" themeColor="markerInk">
+          <ThemedText type="small">
             {data.exercise}
           </ThemedText>
         </View>
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
   },
   code: { borderRadius: Radius.sm, borderWidth: Border.thin, padding: Spacing.two },
   codeText: { fontFamily: Fonts.mono, fontSize: 13, lineHeight: 19 },
-  exercise: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thin },
+  exercise: { gap: Spacing.one, padding: Spacing.three, borderRadius: Radius.md },
   options: { gap: Spacing.two },
   option: { minHeight: MinTouch, justifyContent: 'center', padding: Spacing.two, borderRadius: Radius.sm, borderWidth: Border.thin },
   answer: { gap: Spacing.two, padding: Spacing.three, borderRadius: Radius.md, borderWidth: Border.thin },

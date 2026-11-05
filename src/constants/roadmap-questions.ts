@@ -15,7 +15,6 @@ export type QuestionOption = { id: string; title: string; description: string; e
 export type Question = {
   key: AnswerKey;
   title: string;
-  subtitle: string;
   options: QuestionOption[];
 };
 
@@ -23,7 +22,6 @@ export const QUESTIONS: Question[] = [
   {
     key: 'weeklyHours',
     title: 'Haftada kaç saat ayırabilirsin?',
-    subtitle: 'Tahmini süreleri bu tempoya göre hesaplarız.',
     options: [
       { id: '1-2', title: 'En fazla 2 saat', description: 'Hafif tempo', emoji: '🍃' },
       { id: '3-5', title: '3-5 saat', description: 'Dengeli tempo', emoji: '🌿' },
@@ -34,7 +32,6 @@ export const QUESTIONS: Question[] = [
   {
     key: 'goal',
     title: 'Hedefin ne?',
-    subtitle: 'Yolun son adımları hedefine göre şekillenir.',
     options: [
       { id: 'job', title: 'İş ve kariyer', description: 'Portfolyo ve mülakata hazırlan', emoji: '💼' },
       { id: 'project', title: 'Kendi projem', description: 'Bir şey inşa etmek istiyorum', emoji: '🏗️' },
@@ -45,7 +42,6 @@ export const QUESTIONS: Question[] = [
   {
     key: 'learningStyle',
     title: 'Nasıl öğrenmeyi seversin?',
-    subtitle: 'Adımlara önerilen kaynak türü buna göre seçilir.',
     options: [
       { id: 'video', title: 'Video izleyerek', description: 'Ders ve eğitim serileri', emoji: '🎬' },
       { id: 'reading', title: 'Okuyarak', description: 'Dokümantasyon ve rehberler', emoji: '📖' },

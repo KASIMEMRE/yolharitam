@@ -24,19 +24,21 @@ type Props = {
   map: DevRoadmap;
   statuses: ReadonlyMap<string, TopicStatus>;
   personalization: Personalization;
+  planIds: ReadonlySet<string>; // plana giren konular: bölüm sayaçları liste görünümüyle aynı çıksın
   nextId: string | undefined;
   onOpenTopic: (id: string) => void;
 };
 
-export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopic }: Props) {
+export function RoadmapTree({ map, statuses, personalization, planIds, nextId, onOpenTopic }: Props) {
   const theme = useTheme();
   let side = 0; // konuları sırayla sola/sağa dağıtmak için sayaç (bölümler arasında da sürer)
 
   return (
     <View accessibilityRole="list">
       {map.sections.map((section, sIndex) => {
-        const done = section.topics.filter((t) => statuses.get(t.id) === 'done').length;
-        const complete = section.topics.length > 0 && done === section.topics.length;
+        const inPlan = section.topics.filter((t) => planIds.has(t.id));
+        const done = inPlan.filter((t) => statuses.get(t.id) === 'done').length;
+        const complete = inPlan.length > 0 && done === inPlan.length;
         return (
           <View key={section.id}>
             {/* Bölüm kutusu: omurganın tam ortasında */}
@@ -45,7 +47,7 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
               <View
                 accessible
                 accessibilityRole="header"
-                accessibilityLabel={`Bölüm ${sIndex + 1}: ${section.title}. ${section.topics.length} konunun ${done} tanesi bitti.`}
+                accessibilityLabel={`Bölüm ${sIndex + 1}: ${section.title}. ${inPlan.length} konunun ${done} tanesi bitti.`}
                 style={[
                   styles.sectionBox,
                   // Nötr zemin; tamamlanan bölüm daha da sade (zemin yok, yalnız çizgi)
@@ -61,7 +63,7 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
                   {section.title}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {done}/{section.topics.length}
+                  {done}/{inPlan.length}
                 </ThemedText>
               </View>
             </View>
@@ -71,7 +73,7 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
               <View style={styles.noteRow}>
                 <View style={[styles.spineLine, { backgroundColor: theme.borderStrong }]} />
                 <View style={[styles.note, { backgroundColor: theme.card, borderColor: theme.border }]}>
-                  <ThemedText type="small" themeColor="markerInk">
+                  <ThemedText type="small" themeColor="textSecondary">
                     {personalization.notes[section.id]}
                   </ThemedText>
                 </View>
@@ -172,7 +174,7 @@ function TopicNode({
             <Glyph emoji="✅" size={14} color={theme.accentInk} strokeWidth={2.5} />
           </View>
         )}
-        {/* Senin için öncelikli: küçük mercan nokta (✨ yerine) */}
+        {/* Senin için öncelikli: küçük mercan nokta */}
         {!status && focus && <View style={[styles.focusDot, { backgroundColor: theme.marker }]} />}
         <ThemedText
           type="smallBold"

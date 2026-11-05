@@ -8,7 +8,7 @@ export const FULLSTACK: DevRoadmap = {
   title: 'Full Stack Geliştirici',
   tagline: 'Arayüzden veritabanına bir ürünü tek başına uçtan uca çıkar.',
   emoji: '🧱',
-  hue: 'accent',
+  hue: 'berry',
   sections: [
     {
       id: 'web-basics',

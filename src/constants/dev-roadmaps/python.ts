@@ -6,7 +6,7 @@ export const PYTHON: DevRoadmap = {
   title: 'Python',
   tagline: 'Web’den veri bilimine her yerde kullanılan dili sıfırdan ustalığa öğren.',
   emoji: '🐍',
-  hue: 'marker',
+  hue: 'leaf',
   sections: [
     {
       id: 'basics',

@@ -84,7 +84,6 @@ import {
   SkipForward,
   Smartphone,
   Snowflake,
-  Sparkles,
   Sprout,
   Star,
   Sun,
@@ -125,7 +124,6 @@ const GLYPHS: Record<string, LucideIcon> = {
   '🚀': Rocket,
   '🔄': RefreshCw,
   '🧭': Compass,
-  '✨': Sparkles,
   '🧱': Blocks,
   '🧩': Puzzle,
   '📍': MapPin,
@@ -292,7 +290,7 @@ type IconLabelProps = {
   numberOfLines?: number;
 };
 
-// Simge + yazı satırı ("✨ Senin için seçildi" gibi). Eskiden emoji yazının içindeydi; artık simge ayrı
+// Simge + yazı satırı ("Önerilen · 3 saat" gibi). Eskiden emoji yazının içindeydi; artık simge ayrı
 // çizilir, yazıyla aynı renkte durur. Ekran okuyucu yalnız yazıyı okur.
 export function IconLabel({ emoji, children, type = 'small', themeColor = 'text', iconSize = 14, numberOfLines }: IconLabelProps) {
   const theme = useTheme();

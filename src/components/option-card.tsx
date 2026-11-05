@@ -178,7 +178,8 @@ const styles = StyleSheet.create({
   faceFull: { padding: Spacing.three, gap: Spacing.three },
   list: { minHeight: 64 },
   tile: { minHeight: 120, flexDirection: 'column', alignItems: 'flex-start', gap: Spacing.two },
-  compact: { minHeight: 56, paddingHorizontal: Spacing.three, gap: Spacing.three },
+  // Dar ekranda ad iki satıra inebilir; dikey boşluk olmazsa metin kenara yapışıyordu
+  compact: { minHeight: 56, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, gap: Spacing.three },
   flex: { flex: 1, minWidth: 0 },
   fill: { flex: 1 },
   title: { fontSize: 18, lineHeight: 24 },

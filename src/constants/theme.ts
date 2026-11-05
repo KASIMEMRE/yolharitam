@@ -10,7 +10,7 @@ import { Platform } from 'react-native';
 // Renk jetonları (design tokens): ekranlarda hiç hex yazılmaz, hep bu isimler kullanılır.
 // Palet: bir ana renk (mürekkep = `accent`) + tek vurgu (mercan = `marker`) + nötrler.
 // Kural: renkli YAZI her zaman `*Ink`, renkli ZEMİN `*Soft`, nokta/dolgu düz renk, ince çerçeve `*Edge`.
-// (Artık 3D alt kenar yok; `*Edge` yalnız koyu tonlu ince çerçeve rengi.) Böylece açık ve koyu modda
+// (Artık 3D alt kenar ve gölge yok; `*Edge` yalnız koyu tonlu ince çerçeve rengi.) Böylece açık ve koyu modda
 // kontrast tek yerden garanti edilir.
 // Önemli: light ve dark AYNI anahtarlara sahip olmalı, yoksa ThemeColor tipi daralır.
 export const Colors = {
@@ -33,8 +33,8 @@ export const Colors = {
     marker: '#E4572E',
     markerEdge: '#B8401F',
     markerSoft: '#FBE3DA',
-    markerInk: '#C2401C',
-    onMarker: '#FFFFFF',
+    markerInk: '#B73A17',
+    onMarker: '#1C1B1F', // marker zemin üstündeki yazı: beyaz 3.7:1 kalıyordu, mürekkep 4.65:1
     // Harita renk aileleri (hue): soluk tonlar; yalnız küçük noktada ya da yumuşak zeminde kullanılır
     sky: '#8C9AAD',
     skyEdge: '#6F7D90',
@@ -136,13 +136,6 @@ export const MaxContentWidth = 800;
 // Köşe yuvarlaklığı ve kenarlık kalınlığı: tek yerden değişsin diye sabit.
 // Kartlar 14 (lg), butonlar ve giriş alanları 10 (md), küçük öğeler 8 (sm). Hap (pill) yalnız küçük etiketlerde.
 export const Radius = { sm: 8, md: 10, lg: 14, xl: 18, pill: 999 } as const;
-export const Border = { thin: 1, thick: 2, chunky: 3 } as const;
+export const Border = { thin: 1, thick: 2 } as const;
 export const MinTouch = 44; // dokunma hedefi alt sınırı (dp)
 
-// Gölge: neredeyse yok. Ayrım için ince `border` çizgisi ve boşluk kullanılır; yalnız kutlama
-// penceresi gibi ekranın üstünde yüzen öğelerde çok hafif bir gölge kalır.
-// Koyu modda gölge görünmez, orada `useShadow()` hiçbir şey döndürmez.
-export const Shadow = {
-  card: { boxShadow: '0px 1px 2px rgba(28, 27, 31, 0.04)' },
-  lifted: { boxShadow: '0px 4px 12px rgba(28, 27, 31, 0.08)' },
-} as const;

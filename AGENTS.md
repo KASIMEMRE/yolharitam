@@ -62,10 +62,10 @@ Proje sahibi (Emre) yazılımı bu projeyi geliştirerek ÖĞRENİYOR. Kod okuna
 - Supabase: Postgres + Auth. İstemci: `src/lib/supabase.ts`, tipler: `src/lib/database.types.ts`
 - Oturum: `src/lib/auth-context.tsx` + `_layout.tsx` içinde `Stack.Protected`
 - Tema: `src/constants/theme.ts` (`accent` = mürekkep, `marker` = mercan). Renk sabit kodlama; temadan al.
-- Ortak bileşenler: `OptionCard`, `TextField`, `RouteSteps`, `ThemedText`, `ThemedView`, `ProgressSummary`,
+- Ortak bileşenler: `OptionCard`, `TextField`, `ThemedText`, `ThemedView`, `ProgressBar` (4 px çubuk),
   `Surface` (tek seviye kart: plain/soft/primary), `ListRow` + `ListGroup` (ayırıcılı liste satırı), `SectionHeader`
   (başlık + sağ bağlantı, alt yazı yok), `Segmented` (altı çizili sekme; `variant="buttons"` konu durumu için)
-- Simgeler: tek çizgi simge seti (Lucide, `src/components/icon.tsx`: `Glyph`, `IconLabel`, `IconTile`). Arayüz metnine
+- Simgeler: tek çizgi simge seti (Lucide, `src/components/icon.tsx`: `Glyph`, `IconLabel`). Arayüz metnine
   doğrudan emoji YAZMA. İçerik dosyaları simgeyi emoji adıyla seçer; yeni emoji kullanırsan `icon.tsx` tablosuna eşlemesini ekle.
 
 ## Sadelik kuralları (ayrıntı: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 3)

@@ -6,7 +6,7 @@ export const AWS: DevRoadmap = {
   title: 'AWS (Bulut)',
   tagline: 'Amazon’un bulut servisleriyle uygulama kur ve yayınla.',
   emoji: '☁️',
-  hue: 'marker',
+  hue: 'coral',
   sections: [
     {
       id: 'cloud-basics',

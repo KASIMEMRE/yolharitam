@@ -6,6 +6,8 @@ import type { ThemeColor } from '@/constants/theme';
 // (Haritaların kendi emoji ve rengi dev-roadmaps içinde, haritayla birlikte durur.)
 
 export type Hue = 'accent' | 'marker' | 'sky' | 'coral' | 'violet' | 'berry' | 'leaf';
+// Harita kimliği yalnız soluk ailelerden olur: mürekkep (accent) ana eylem, mercan (marker) durum/XP için ayrılmıştır.
+export type MapHue = Exclude<Hue, 'accent' | 'marker'>;
 
 // line = nokta/çerçeve rengi, soft = soluk zemin, ink = o zemin üstündeki yazı, edge = koyu ince çerçeve.
 // Değerler theme.ts anahtarlarıdır (hex değil); bileşen `theme[anahtar]` ile gerçek rengi alır.
