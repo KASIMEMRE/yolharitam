@@ -1,22 +1,23 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
-import { IconLabel , Glyph } from '@/components/icon';
+import { Glyph } from '@/components/icon';
 import { ThemedText } from '@/components/themed-text';
 import type { DevRoadmap, Topic } from '@/constants/dev-roadmaps';
 import type { Personalization, TopicStatus } from '@/constants/dev-roadmaps/personalize';
 import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
-import { HUES, MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
+import { MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
 
 // GÖRSEL HARİTA: roadmap.sh'teki ağacın telefona uyarlanmış hali.
 // Ortada dikey bir omurga (yol), üstünde bölüm kutuları; konular omurganın iki yanına sırayla
 // dizilir ve kısa bir çizgiyle omurgaya bağlanır. Çizim için SVG gerekmez: hepsi düz View.
 //
-// Görsel dil:
-//   önerilen konu = kalın koyu kenarlık · isteğe bağlı = ince açık kenarlık · alternatif = kesik çizgi
-//   bitti = yeşil zemin · çalışıyorum = sarı zemin · atladım = soluk + üstü çizili · ✨ = senin için öncelikli
+// Görsel dil (mürekkep ve mercan, düz düğümler, 1px kenar):
+//   önerilen konu = koyu kenarlık · isteğe bağlı = açık kenarlık · alternatif = kesik çizgi
+//   bitti = nötr zemin + mürekkep kenar + onay işareti · çalışıyorum = mercan zemin + mercan kenar
+//   atladım = soluk + üstü çizili · küçük mercan nokta = senin için öncelikli
 
-const SPINE = 4; // omurga kalınlığı
+const SPINE = 2; // omurga kalınlığı
 const RAIL = 28; // omurganın kapladığı orta sütun genişliği
 
 type Props = {
@@ -29,13 +30,13 @@ type Props = {
 
 export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopic }: Props) {
   const theme = useTheme();
-  const hue = HUES[map.hue];
   let side = 0; // konuları sırayla sola/sağa dağıtmak için sayaç (bölümler arasında da sürer)
 
   return (
     <View accessibilityRole="list">
       {map.sections.map((section, sIndex) => {
         const done = section.topics.filter((t) => statuses.get(t.id) === 'done').length;
+        const complete = section.topics.length > 0 && done === section.topics.length;
         return (
           <View key={section.id}>
             {/* Bölüm kutusu: omurganın tam ortasında */}
@@ -47,13 +48,19 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
                 accessibilityLabel={`Bölüm ${sIndex + 1}: ${section.title}. ${section.topics.length} konunun ${done} tanesi bitti.`}
                 style={[
                   styles.sectionBox,
-                  { backgroundColor: theme.markerSoft, borderColor: theme.marker },
+                  // Nötr zemin; tamamlanan bölüm daha da sade (zemin yok, yalnız çizgi)
+                  { backgroundColor: complete ? theme.background : theme.backgroundElement, borderColor: theme.borderEdge },
                 ]}>
-                <Glyph emoji={section.emoji} size={20} color={theme.markerInk} strokeWidth={2} />
-                <ThemedText type="smallBold" themeColor="markerInk" style={styles.sectionTitle}>
+                <Glyph
+                  emoji={complete ? '✅' : section.emoji}
+                  size={18}
+                  color={complete ? theme.accent : theme.textSecondary}
+                  strokeWidth={2}
+                />
+                <ThemedText type="smallBold" themeColor={complete ? 'textSecondary' : 'text'} style={styles.sectionTitle}>
                   {section.title}
                 </ThemedText>
-                <ThemedText type="small" themeColor="markerInk">
+                <ThemedText type="small" themeColor="textSecondary">
                   {done}/{section.topics.length}
                 </ThemedText>
               </View>
@@ -63,10 +70,10 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
             {personalization.notes[section.id] && (
               <View style={styles.noteRow}>
                 <View style={[styles.spineLine, { backgroundColor: theme.borderStrong }]} />
-                <View style={[styles.note, { backgroundColor: theme.card, borderColor: theme[hue.line] }]}>
-                  <IconLabel emoji="✨" themeColor={hue.ink}>
+                <View style={[styles.note, { backgroundColor: theme.card, borderColor: theme.border }]}>
+                  <ThemedText type="small" themeColor="markerInk">
                     {personalization.notes[section.id]}
-                  </IconLabel>
+                  </ThemedText>
                 </View>
               </View>
             )}
@@ -93,8 +100,8 @@ export function RoadmapTree({ map, statuses, personalization, nextId, onOpenTopi
       {/* Yolun sonu: bayrak */}
       <View style={styles.sectionRow}>
         <View style={[styles.spineFill, { backgroundColor: theme.borderStrong }]} />
-        <View style={[styles.finish, { backgroundColor: theme.accentSoft, borderColor: theme.accent }]}>
-          <Glyph emoji="🏁" size={20} color={theme.accentInk} strokeWidth={2.25} />
+        <View style={[styles.finish, { backgroundColor: theme.backgroundElement, borderColor: theme.borderEdge }]}>
+          <Glyph emoji="🏁" size={18} color={theme.textSecondary} strokeWidth={2} />
         </View>
       </View>
     </View>
@@ -119,19 +126,19 @@ function TopicNode({
   onPress: () => void;
 }) {
   const theme = useTheme();
+  const done = status === 'done';
 
-  // Zemin ve kenarlık durumdan; kenarlık stili haritadaki işaretten gelir
-  const bg =
-    status === 'done' ? theme.accentSoft : status === 'in_progress' ? theme.markerSoft : theme.card;
-  // İsteğe bağlı konular ince ve açık kenarlıkla geri planda durur; önerilenler kalın ve koyu
-  const border = isNext
+  // Zemin ve kenarlık durumdan; kenarlık stili haritadaki işaretten gelir (hepsi düz, 1px)
+  const bg = done ? theme.backgroundElement : status === 'in_progress' ? theme.markerSoft : theme.card;
+  // İsteğe bağlı konular açık kenarlıkla geri planda durur; önerilenler daha koyu. Sıradaki konu mürekkep kenarlı.
+  const border = done
     ? theme.accent
-    : status === 'done'
-      ? theme.accent
-      : status === 'in_progress'
-        ? theme.marker
+    : status === 'in_progress'
+      ? theme.marker
+      : isNext
+        ? theme.accent
         : topic.marker === 'optional'
-          ? theme.border
+          ? theme.borderEdge
           : theme.borderStrong;
   const faded = status === 'skipped' || (!status && skipHint);
   const label = [
@@ -155,23 +162,18 @@ function TopicNode({
           backgroundColor: bg,
           borderColor: border,
           borderStyle: topic.marker === 'alt' ? 'dashed' : 'solid',
-          borderWidth: isNext ? Border.thick : topic.marker === 'optional' && !status ? Border.thin : Border.thick,
-          opacity: faded ? 0.55 : 1,
+          borderWidth: isNext && !status ? 1.5 : Border.thin,
+          opacity: faded ? 0.55 : pressed ? 0.75 : 1,
         },
-        pressed && { transform: [{ scale: 0.97 }] },
       ]}>
       <View style={styles.nodeTop}>
-        {status && (
-          <Glyph
-            emoji={status === 'done' ? '✅' : status === 'in_progress' ? '⏳' : '⏭️'}
-            size={14}
-            color={status === 'done' ? theme.accentInk : status === 'in_progress' ? theme.markerInk : theme.textSecondary}
-            strokeWidth={2.5}
-          />
+        {done && (
+          <View style={styles.nodeIcon}>
+            <Glyph emoji="✅" size={14} color={theme.accentInk} strokeWidth={2.5} />
+          </View>
         )}
-        {!status && focus && (
-          <Glyph emoji="✨" size={14} color={theme.markerInk} strokeWidth={2.25} />
-        )}
+        {/* Senin için öncelikli: küçük mercan nokta (✨ yerine) */}
+        {!status && focus && <View style={[styles.focusDot, { backgroundColor: theme.marker }]} />}
         <ThemedText
           type="smallBold"
           numberOfLines={3}
@@ -199,8 +201,8 @@ function TopicNode({
           style={[
             styles.dot,
             {
-              backgroundColor: status === 'done' ? theme.accent : theme.card,
-              borderColor: status === 'done' ? theme.accent : theme.borderStrong,
+              backgroundColor: done ? theme.accent : status === 'in_progress' ? theme.marker : theme.card,
+              borderColor: done ? theme.accent : status === 'in_progress' ? theme.marker : theme.borderStrong,
             },
           ]}
         />
@@ -213,30 +215,28 @@ function TopicNode({
   );
 }
 
-// Kısa açıklama kutusu: görsel dilin anahtarı (lejant)
+// Tek satır küçük açıklama: yalnız metinden anlaşılmayan işaretler (önerilen/isteğe bağlı/alternatif
+// zaten düğümde yazıyor)
 export function TreeLegend() {
   const theme = useTheme();
-  const items: { label: string; style: object }[] = [
-    { label: 'Önerilen', style: { borderWidth: Border.thick, borderColor: theme.borderStrong } },
-    { label: 'İsteğe bağlı', style: { borderWidth: Border.thin, borderColor: theme.border } },
-    { label: 'Alternatif', style: { borderWidth: Border.thick, borderColor: theme.borderStrong, borderStyle: 'dashed' } },
-    { label: 'Bitti', style: { borderWidth: Border.thick, borderColor: theme.accent, backgroundColor: theme.accentSoft } },
-    { label: 'Çalışıyorum', style: { borderWidth: Border.thick, borderColor: theme.marker, backgroundColor: theme.markerSoft } },
+  const items: { label: string; swatch: object }[] = [
+    { label: 'Bitti', swatch: { backgroundColor: theme.backgroundElement, borderColor: theme.accent } },
+    { label: 'Çalışıyorum', swatch: { backgroundColor: theme.markerSoft, borderColor: theme.marker } },
   ];
   return (
-    <View style={styles.legend} accessibilityLabel="Harita açıklaması: kalın kenarlık önerilen, ince isteğe bağlı, kesik çizgi alternatif; yeşil bitti, sarı çalışıyorum.">
+    <View style={styles.legend} accessibilityLabel="Harita açıklaması: koyu kenar ve onay işareti bitti, mercan çalışıyorum, mercan nokta senin için öncelikli.">
       {items.map((i) => (
         <View key={i.label} style={styles.legendItem}>
-          <View style={[styles.legendSwatch, i.style]} />
+          <View style={[styles.legendSwatch, i.swatch]} />
           <ThemedText type="small" themeColor="textSecondary">
             {i.label}
           </ThemedText>
         </View>
       ))}
       <View style={styles.legendItem}>
-        <Glyph emoji="✨" size={14} color={theme.markerInk} strokeWidth={2.25} />
+        <View style={[styles.focusDot, styles.focusDotLegend, { backgroundColor: theme.marker }]} />
         <ThemedText type="small" themeColor="textSecondary">
-          Senin için öncelikli
+          Öncelikli
         </ThemedText>
       </View>
     </View>
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.md,
-    borderWidth: Border.thick,
+    borderWidth: Border.thin,
     maxWidth: '90%',
   },
   sectionTitle: { flexShrink: 1 },
@@ -266,8 +266,11 @@ const styles = StyleSheet.create({
   halfRight: { justifyContent: 'flex-start' },
   rail: { width: RAIL, alignItems: 'center', justifyContent: 'center' },
   spineLine: { position: 'absolute', top: 0, bottom: 0, width: SPINE, left: '50%', marginLeft: -SPINE / 2 },
-  dot: { width: 14, height: 14, borderRadius: 7, borderWidth: Border.thick },
-  connector: { width: Spacing.two, height: 3 },
+  dot: { width: 12, height: 12, borderRadius: 6, borderWidth: Border.thick },
+  connector: { width: Spacing.two, height: SPINE },
+  nodeIcon: { flexShrink: 0, marginTop: 2 },
+  focusDot: { width: 6, height: 6, borderRadius: 3, marginTop: 5 },
+  focusDotLegend: { marginTop: 0 },
   node: {
     flex: 1,
     minWidth: 0,
@@ -282,14 +285,14 @@ const styles = StyleSheet.create({
   nodeTitle: { flexShrink: 1 },
   strike: { textDecorationLine: 'line-through' },
   finish: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    borderWidth: Border.thick,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: Border.thin,
     alignItems: 'center',
     justifyContent: 'center',
   },
   legend: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.three, rowGap: Spacing.two },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one },
-  legendSwatch: { width: 18, height: 12, borderRadius: 3 },
+  legendSwatch: { width: 16, height: 12, borderRadius: 3, borderWidth: Border.thin },
 });

@@ -28,6 +28,7 @@ type SegmentedProps<T extends string> = {
   onChange: (id: T) => void; // seçili olana tekrar dokununca da çağrılır; kaldırma kararı üstte
   size?: 'md' | 'sm';
   fill?: boolean; // true: tüm genişliği eşit paylaş; false: içeriği kadar yer kapla
+  fullRule?: boolean; // yalnız tabs + fill=false: sekmeler içeriği kadar, alttaki ince çizgi tam genişlikte
   variant?: 'tabs' | 'buttons';
   label?: string; // radiogroup'un ekran okuyucu adı
   allowDeselect?: boolean; // seçili olana tekrar dokunmak seçimi kaldırır (ekran okuyucuya ipucu verir)
@@ -39,6 +40,7 @@ export function Segmented<T extends string>({
   onChange,
   size = 'md',
   fill = true,
+  fullRule = false,
   variant = 'tabs',
   label,
   allowDeselect = false,
@@ -56,7 +58,7 @@ export function Segmented<T extends string>({
       style={[
         buttons ? styles.buttonsRow : styles.track,
         !buttons && { borderBottomColor: theme.border },
-        !fill && !buttons && styles.trackHug,
+        !fill && !buttons && (fullRule ? styles.trackRule : styles.trackHug),
       ]}>
       {options.map((o) => {
         const selected = o.id === value;
@@ -123,6 +125,7 @@ const styles = StyleSheet.create({
   // Sekme satırı: altta tam genişlik 1px çizgi
   track: { flexDirection: 'row', borderBottomWidth: Border.thin },
   trackHug: { alignSelf: 'flex-start', gap: Spacing.three },
+  trackRule: { gap: Spacing.three },
   item: {
     minHeight: MinTouch, // dokunma hedefi: sm'de de 44
     flexDirection: 'row',
