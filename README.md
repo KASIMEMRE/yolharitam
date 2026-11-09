@@ -104,9 +104,9 @@ npx expo start -c   # önbelleği temizleyip başlat
 
 ```
 ┌──────────────────────────────┐        ┌──────────────────────────────────┐
-│  📱 Uygulama                  │        │  ☁️ Supabase                      │
+│  📱 Uygulama                 │        │  ☁️ Supabase                    │
 │                              │        │                                  │
-│  Expo SDK 58 · React Native  │  ───▶  │  Postgres + Row Level Security   │
+│  Expo SDK 58 · React Native  │  ───▶ │   Postgres + Row Level Security  │
 │  Expo Router (dosya tabanlı) │        │  Auth (e-posta + kullanıcı adı)  │
 │  TypeScript                  │  ◀───  │  Edge Functions (Deno)           │
 │  Reanimated · SVG · Lucide   │        │  pg_cron (haber toplama)         │
@@ -156,19 +156,6 @@ yolharitam/
     ├── YAYIN.md              # mağazaya çıkış listesi
     └── GUNCELLEME.md         # otomatik güncelleme kurulumu
 ```
-
-## Nasıl geliştiriliyor?
-
-Bu proje **yaparak öğrenme** projesi. Kod bir yapay zekâ ekibiyle yazılıyor: ürün sorumlusu, analist, tasarımcı, kodlayıcı, testçi, inceleyici ve öğretmen rolleri var ([Claude Code](https://claude.com/claude-code) alt ajanları).
-
-1. Görevler [`BACKLOG.md`](BACKLOG.md) dosyasında sıralanıyor.
-2. Ekip her görevi planlıyor, kodluyor, test ediyor ve ekran görüntüleriyle denetliyor.
-3. İş bir **Pull Request** olarak açılıyor.
-4. Öğretmen, o işten öğrenilecek kavramları [`docs/dersler/`](docs/dersler) klasörüne ders notu olarak yazıyor.
-
-Kurallar [`AGENTS.md`](AGENTS.md) dosyasında: Türkçe arayüz, Expo Go uyumluluğu, sade görünüm, repoda gizli anahtar yok.
-
----
 
 <div align="center">
 <sub>
