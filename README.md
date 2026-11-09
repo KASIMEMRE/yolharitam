@@ -22,6 +22,25 @@ Bir rol seç, konu konu ilerle, nerede kaldığını hiç unutma.
 
 ---
 
+## Hakkında
+
+Ben Emre. Yazılımı kitaptan okuyarak değil, gerçek bir uygulama geliştirerek öğreniyorum. Yol Haritam da bu yolculuğun ürünü.
+
+Bu uygulamayı **bir yapay zekâ ekibiyle birlikte geliştirdim.** Fikirleri, öncelikleri ve tasarım kararlarını ben veriyorum. İşleri [Claude Code](https://claude.com/claude-code) üzerinde çalışan bir ekip yürütüyor. Her ajanın kendi rolü var:
+
+| Rol | Görevi |
+|---|---|
+| 🧑‍💼 Ürün sorumlusu | İşi kullanıcı gözüyle netleştirir, kabul kriterlerini yazar. |
+| 🔍 Analist | Kodu inceler, adım adım uygulama planı çıkarır. |
+| 🎨 Tasarımcı | Ekranı tarif eder, sonra ekran görüntüleriyle denetler. |
+| 🗄️ Veritabanı uzmanı | Şema ve güvenlik kurallarını (RLS) yazar. |
+| 👩‍💻 Kodlayıcı | Planı koda döker. |
+| 🧪 Testçi | Kabul kriterlerine göre dener. |
+| 🧐 İnceleyici | Kod kalitesini ve güvenliği sert bir gözle eleştirir. |
+| 👨‍🏫 Öğretmen | Her işten bana bir ders notu çıkarır. |
+
+Her değişiklik bir Pull Request olarak geliyor, ben inceleyip birleştiriyorum. Böylece hem uygulama büyüyor hem de ben her adımda yeni bir şey öğreniyorum. Ders notlarının hepsi [`docs/dersler/`](docs/dersler) klasöründe.
+
 ## Neden?
 
 Yazılım öğrenmeye başlayan herkes aynı duvara çarpar: *"Neyi, hangi sırayla öğrenmeliyim?"*
