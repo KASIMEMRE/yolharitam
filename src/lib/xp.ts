@@ -7,7 +7,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useSyncExternalStore } from 'react';
 
 import { dayKey } from '@/constants/activity';
-import { XP, type XpKind } from '@/constants/xp';
+import type { XpKind } from '@/constants/xp';
 import { useAuth } from '@/lib/auth-context';
 import { matchesTodayTask } from '@/lib/daily-task';
 import { supabase } from '@/lib/supabase';
@@ -99,56 +99,79 @@ export function refreshXp(): Promise<void> {
   return inFlight;
 }
 
+// Sunucunun (award_xp RPC) kendi başına verebildiği türler. quiz_done ve ask HARİÇ: onların kanıtı
+// yapay zekâ çağrısının başarıyla bitmesidir, bunu yalnız topic-assist Edge Function'ı bilir ve puanı
+// kendisi yazar (bkz. reportServerAward).
+type RpcKind = Exclude<XpKind, 'quiz_done' | 'ask'>;
 type AwardInput = {
-  kind: XpKind;
+  kind: RpcKind;
   ref: string; // olayın benzersiz anahtarı (aynı ref ikinci kez puan vermez)
-  amount?: number; // verilmezse XP tablosundaki değer
   roadmapId?: string;
   topicId?: string;
   label?: string; // bildirimde gösterilecek özel metin
 };
 
-// Puan kazandırır. Dönüş: true = yeni puan verildi, false = daha önce verilmiş ya da kaydedilemedi.
-// Günün görevini tamamlayan bir olaysa görev bonusu da otomatik verilir.
+// Verilen puanı yerel duruma işler ve bildirimi tetikler. Tutarı SUNUCU söyler; burada hesaplanmaz.
+function applyAward(kind: XpKind, amount: number, label?: string) {
+  version++; // uçuştaki tazeleme bu ödülü ezmesin
+  state = { ...state, total: state.total + amount, days: new Set(state.days).add(dayKey(new Date())) };
+  lastAward = { id: ++awardSeq, kind, amount, label };
+  emit();
+}
+
+// Bu olay günün görevini tamamlıyorsa görev bonusunu ister (bonusu da sunucu verir).
+async function completeDailyIfMatches(event: { kind: XpKind; roadmapId?: string; topicId?: string }) {
+  const today = dayKey(new Date());
+  if (event.kind === 'daily' || state.dailyDoneDays.has(today)) return;
+  const completes = await matchesTodayTask({ kind: event.kind, roadmapId: event.roadmapId, topicId: event.topicId });
+  if (!completes) return;
+  const ok = await awardXp({ kind: 'daily', ref: today, label: 'Günün görevi tamamlandı' });
+  if (ok) {
+    version++;
+    state = { ...state, dailyDoneDays: new Set(state.dailyDoneDays).add(today) };
+    emit();
+  }
+}
+
+// Puan ister. Dönüş: true = yeni puan verildi, false = daha önce verilmiş, reddedildi ya da kaydedilemedi.
+// İstemci tutar göndermez: sunucu award_xp(kind, ref) içinde tutarı sabit tablodan alır ve kanıtı
+// (konu gerçekten bitti mi, harita bu kullanıcıya mı ait) kendisi doğrular.
+// Günün görevini tamamlayan bir olaysa görev bonusu da otomatik istenir.
 export async function awardXp(input: AwardInput): Promise<boolean> {
-  const amount = input.amount ?? (input.kind === 'quiz_done' ? 0 : XP[input.kind as Exclude<XpKind, 'quiz_done'>]);
-  if (!amount || amount < 1) return false;
-  let isNew = true;
+  let amount = 0;
   try {
-    const { error } = await supabase.from('xp_events').insert({ kind: input.kind, ref: input.ref.slice(0, 160), amount });
-    if (error) {
-      // 23505 = bu olay daha önce puan almış. Olay yine de OLDU; günün görevi o olay için seçildiyse
-      // tamamlanabilsin diye aşağıdaki görev kontrolüne devam ederiz. Diğer hatalarda (tablo yok, ağ) sessiz çık.
-      if (error.code !== '23505') return false;
-      isNew = false;
-      // Günlük bonus zaten alınmışsa günü işaretle: gereksiz tekrar istekleri atılmasın
-      if (input.kind === 'daily') {
-        state = { ...state, dailyDoneDays: new Set(state.dailyDoneDays).add(input.ref) };
-        emit();
-      }
-    }
+    const { data, error } = await supabase.rpc('award_xp', { p_kind: input.kind, p_ref: input.ref.slice(0, 160) });
+    // Hata (kanıt yok, tavan, ağ): sessiz çık. Başarıda dönen sayı verilen puandır; 0 = daha önce verilmiş.
+    if (error || typeof data !== 'number') return false;
+    amount = data;
   } catch {
     return false;
   }
-  const today = dayKey(new Date());
+  const isNew = amount > 0;
   if (isNew) {
-    version++; // uçuştaki tazeleme bu ödülü ezmesin
-    state = { ...state, total: state.total + amount, days: new Set(state.days).add(today) };
-    lastAward = { id: ++awardSeq, kind: input.kind, amount, label: input.label };
+    applyAward(input.kind, amount, input.label);
+  } else if (input.kind === 'daily') {
+    // Günlük bonus zaten alınmışsa günü işaretle: gereksiz tekrar istekleri atılmasın
+    state = { ...state, dailyDoneDays: new Set(state.dailyDoneDays).add(input.ref) };
     emit();
   }
+  // Olay yine de OLDU (puan daha önce verilmiş olsa bile): günün görevi o olay için seçildiyse tamamlanabilsin
+  await completeDailyIfMatches(input);
+  return isNew;
+}
 
-  if (input.kind !== 'daily' && !state.dailyDoneDays.has(today)) {
-    const completes = await matchesTodayTask({ kind: input.kind, roadmapId: input.roadmapId, topicId: input.topicId });
-    if (completes) {
-      const ok = await awardXp({ kind: 'daily', ref: today, label: 'Günün görevi tamamlandı' });
-      if (ok) {
-        version++;
-        state = { ...state, dailyDoneDays: new Set(state.dailyDoneDays).add(today) };
-        emit();
-      }
-    }
-  }
+// topic-assist'in puanını (quiz, soru) ekrana yansıtır. Puan SUNUCUDA yazıldı; `amount` Edge Function'ın
+// cevabındaki xp_awarded değeridir. 0 = puan verilmedi (daha önce alınmış ya da reddedilmiş): bildirim çıkmaz.
+export async function reportServerAward(input: {
+  kind: 'quiz_done' | 'ask';
+  amount: number;
+  topicId?: string;
+  roadmapId?: string;
+  label?: string;
+}): Promise<boolean> {
+  const isNew = Number.isFinite(input.amount) && input.amount > 0;
+  if (isNew) applyAward(input.kind, input.amount, input.label);
+  await completeDailyIfMatches(input);
   return isNew;
 }
 
