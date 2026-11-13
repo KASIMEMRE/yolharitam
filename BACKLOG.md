@@ -5,6 +5,32 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
+> **Aktif plan: Play'e çıkış hazırlığı** (13 Kasım). PL-01 … PL-05 birbirinden bağımsız, paralel yürür.
+
+### PL-01 · Hata, boş ve yükleniyor durumları (Y-07'nin yerini alır)
+- Veri çeken her ekranda ağ hatası "kayıt yok" gibi görünmemeli: Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
+- `useLatestRoadmap` ve diğer veri kancaları hata durumunu döndürsün; tek ortak hata bileşeni.
+- Yükleniyor durumlarında yerleşimi zıplatmayan iskelet; okuma hatası ~7 sn yerine kısa sürede görünsün.
+
+### PL-02 · Çökme takibi (Sentry)
+- `@sentry/react-native` (`npx expo install`), DSN `EXPO_PUBLIC_SENTRY_DSN` ortam değişkeninden; boşsa tamamen kapalı.
+- Expo Go'da uygulama bozulmamalı. Kişisel veri gönderilmez (e-posta, kullanıcı adı yok; yalnız anonim kullanıcı kimliği değil, hiç kimlik yok).
+- Gizlilik politikası ve YAYIN.md veri güvenliği bölümü güncellenir; kurulum adımları `docs/SENTRY.md`.
+
+### PL-03 · XP'yi sunucuya taşımak 🗄️
+- İstemci `xp_events` tablosuna doğrudan yazamasın; XP miktarını sunucu belirlesin (RPC / Edge Function).
+- Quiz ve "sor" XP'si yalnız Edge Function gerçekten çalıştıysa verilsin. Aynı haritayı ikinci kez ekleyip puan toplama kapansın (`roadmaps(user_id, topic_path)` benzersiz).
+- Mevcut XP toplamları ve lig bozulmaz.
+
+### PL-04 · Kullanıcı adı filtresi 🗄️
+- Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
+- Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
+- `username_available` için hız sınırı.
+
+### PL-05 · Sayaç tutarlılığı
+- Ayarlar › Haritalarım "8 / 43" (tüm harita) ile Yol Haritam "6/31" (plan) aynı tanımla saysın: plan. Tek ortak yardımcı fonksiyon.
+
+
 > **Plan tamamlandı:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti). TS-01 … TS-04 tamamlandı (PR'lar açıldı); son kabul raporu: `docs/plan/TS-04-kabul-raporu.md`. Hiçbir özellik kaldırılmadı (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
 
 
@@ -17,9 +43,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
   (spam / zararlı / telif). Şimdilik 3 bildirimde otomatik gizleme var.
 
 
-### Y-07 · Boş, yükleniyor ve hata durumları
-- Tüm ekranlarda ağ hatasında Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
-- Yükleniyor durumlarında yerleşimi zıplatmayan iskelet görünümler.
 
 ## Beklemede (sırada değil)
 
