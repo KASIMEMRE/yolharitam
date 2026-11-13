@@ -24,14 +24,13 @@ import { getRoadmap, KIND_LABEL, type DevRoadmap, type Section, type Topic } fro
 import {
   computeProgress,
   nextTopic,
-  personalizationFor,
   planTopics,
   type Personalization,
   type TopicStatus,
 } from '@/constants/dev-roadmaps/personalize';
 import { computeStreak, startOfWeek, weeklyProgress } from '@/constants/activity';
 import { levelFor } from '@/constants/xp';
-import { toLevelId, type GoalId, type WeeklyHoursId } from '@/constants/plan';
+import { type WeeklyHoursId } from '@/constants/plan';
 import { LEVELS } from '@/constants/onboarding';
 import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questions';
 import { Border, Fonts, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
@@ -43,6 +42,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
 import { useUsername } from '@/hooks/use-username';
 import { getTodayTask, taskTitle, type DailyTask } from '@/lib/daily-task';
+import { personalizationOf, sectionProgress } from '@/lib/plan-progress';
 import { useXp } from '@/lib/xp';
 import { setPreferences, usePreferences, type MapViewPref } from '@/lib/preferences';
 import { useAuth } from '@/lib/auth-context';
@@ -280,12 +280,11 @@ function MapView({
   const weekly: WeeklyHoursId = isAnswerId('weeklyHours', roadmap.weekly_hours)
     ? (roadmap.weekly_hours as WeeklyHoursId)
     : '3-5';
-  const goal: GoalId = isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
-  // Kayıtlı kişisel işaretler; yoksa (eski kayıt) seviyeye göre kurallar
+  // Kayıtlı kişisel işaretler; yoksa (eski kayıt) seviyeye göre kurallar (Ayarlar › Haritalarım ile ortak çözüm)
   // useMemo: her render'da yeni nesne üretilirse günün görevi efekti her seferinde yeniden çalışır
   const personalization = useMemo(
-    () => personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal),
-    [map, roadmap.personalization, roadmap.level, goal]
+    () => personalizationOf(map, roadmap),
+    [map, roadmap]
   );
 
   const ready = progress.status === 'ready';
@@ -777,9 +776,8 @@ function SectionBlock({
   onOpenTopic: (id: string) => void;
 }) {
   const theme = useTheme();
-  const inPlan = section.topics.filter((t) => planIds.has(t.id));
-  const done = inPlan.filter((t) => statuses.get(t.id) === 'done').length;
-  const complete = inPlan.length > 0 && done === inPlan.length;
+  const { done, total } = sectionProgress(section, planIds, statuses);
+  const complete = total > 0 && done === total;
   const note = personalization.notes[section.id];
 
   return (
@@ -788,19 +786,19 @@ function SectionBlock({
         onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`${section.title}. ${inPlan.length} konunun ${done} tanesi bitti. ${open ? 'Kapatmak' : 'Açmak'} için dokun.`}
+        accessibilityLabel={`${section.title}. ${total} konunun ${done} tanesi bitti. ${open ? 'Kapatmak' : 'Açmak'} için dokun.`}
         style={styles.blockHead}>
         <ThemedText type="defaultSemiBold" style={styles.flex1}>
           {section.title}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.blockCount}>
-          {inPlan.length === 0 ? 'planında yok' : complete ? 'Bitti' : `${done}/${inPlan.length}`}
+          {total === 0 ? 'planında yok' : complete ? 'Bitti' : `${done}/${total}`}
         </ThemedText>
       </Pressable>
 
       {open && (
         <Animated.View entering={FadeIn.duration(150)} style={styles.blockBody}>
-          {inPlan.length > 0 && <ProgressBar ratio={done / inPlan.length} />}
+          {total > 0 && <ProgressBar ratio={done / total} />}
           {/* Kişisel bölüm notu: kutusuz, simgesiz, nötr küçük yazı (mercan yalnız durum/XP içindir) */}
           {note && (
             <ThemedText type="small" themeColor="textSecondary">
