@@ -7,11 +7,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 > **Aktif plan: Play'e çıkış hazırlığı** (13 Kasım). PL-01 … PL-05 birbirinden bağımsız, paralel yürür.
 
-### PL-01 · Hata, boş ve yükleniyor durumları (Y-07'nin yerini alır)
-- Veri çeken her ekranda ağ hatası "kayıt yok" gibi görünmemeli: Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
-- `useLatestRoadmap` ve diğer veri kancaları hata durumunu döndürsün; tek ortak hata bileşeni.
-- Yükleniyor durumlarında yerleşimi zıplatmayan iskelet; okuma hatası ~7 sn yerine kısa sürede görünsün.
-
 ### PL-02 · Çökme takibi (Sentry)
 - `@sentry/react-native` (`npx expo install`), DSN `EXPO_PUBLIC_SENTRY_DSN` ortam değişkeninden; boşsa tamamen kapalı.
 - Expo Go'da uygulama bozulmamalı. Kişisel veri gönderilmez (e-posta, kullanıcı adı yok; yalnız anonim kullanıcı kimliği değil, hiç kimlik yok).
@@ -51,6 +46,12 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### PL-01 · Hata, boş ve yükleniyor durumları (Y-07'nin yerini alır)
+- Veri çeken her ekranda ağ hatası "kayıt yok" gibi görünmemeli: Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
+- `useLatestRoadmap` ve diğer veri kancaları hata durumunu döndürsün; tek ortak hata bileşeni.
+- Yükleniyor durumlarında yerleşimi zıplatmayan iskelet; okuma hatası ~7 sn yerine kısa sürede görünsün.
+✅ Ortak `LoadError` bileşeni (ekran/satır içi), tüm veri ekranlarında hata dalı, okuma zaman aşımı 4 sn (yazma 15 sn), supabase-js otomatik yeniden denemesi kapatıldı, harita geçişi başarısızlığında bildirim, Haritalarım ve Yol Haritam konu listesi için iskelet.
 
 ### TS-04 · Son kabul (yeni görünüm)
 - Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
@@ -283,6 +284,7 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 
 ## Öneriler (ekipten)
+- `useActivity` hata durumunu döndürmüyor; hatada seri/haftalık hedef kartı sessizce gizleniyor (PL-01 dışı bırakıldı).
 
 Sıraya konmadı; önceliği proje sahibi verir.
 

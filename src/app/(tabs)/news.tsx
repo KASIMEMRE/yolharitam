@@ -5,6 +5,7 @@ import { FilterChipRow } from '@/components/filter-chips';
 import { ListGroup } from '@/components/list-row';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { LoadError } from '@/components/load-error';
 import { NewsCard } from '@/components/news-card';
 import { ScreenHeader } from '@/components/screen-header';
 import { Skeleton } from '@/components/skeleton';
@@ -14,11 +15,10 @@ import { getRoadmap } from '@/constants/dev-roadmaps';
 import { MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useNews } from '@/hooks/use-news';
-import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 // Gelişmeler: kullanıcının haritalarına bağlı haber akışı (başlık + kısa özet + kaynağa link).
 export default function NewsScreen() {
-  const { roadmaps, status: mapsStatus } = useLatestRoadmap();
+  const { roadmaps, status: mapsStatus, failed: mapsFailed, retry: retryMaps } = useLatestRoadmap();
   // null = "Tümü"; yoksa seçili haritanın id'si
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -36,12 +36,17 @@ export default function NewsScreen() {
   const mapsLoading = mapsStatus === 'loading';
   const { items, status, refreshing, refresh, retry } = useNews(filter, !mapsLoading);
   const newsLoading = mapsLoading || status === 'loading';
+  // Haritalar ya da haberler okunamadıysa tek hata görünür; "Tekrar dene" ikisini de yeniden dener
+  const loadFailed = !newsLoading && items.length === 0 && (status === 'error' || mapsFailed);
+  function retryAll() {
+    if (mapsFailed) retryMaps();
+    retry();
+  }
 
   return (
     <TabScreen onRefresh={refresh} refreshing={refreshing}>
       <ScreenHeader title="Gelişmeler" />
 
-      {mapsStatus === 'error' && <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>}
       {mapsStatus === 'ready' && maps.length === 0 && (
         <Banner tone="info">Bir yol haritası seçince haberler sana göre süzülür.</Banner>
       )}
@@ -76,14 +81,9 @@ export default function NewsScreen() {
         </ListGroup>
       )}
 
-      {!newsLoading && status === 'error' && items.length === 0 && (
-        <View style={styles.list}>
-          <Banner tone="warning">{ERROR_TEXT.newsLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-        </View>
-      )}
+      {loadFailed && <LoadError onRetry={retryAll} />}
 
-      {!newsLoading && status === 'ready' && items.length === 0 && (
+      {!newsLoading && !loadFailed && status === 'ready' && items.length === 0 && (
         <View style={styles.empty}>
           <ThemedText type="cardTitle" accessibilityRole="header">
             Henüz haber yok
@@ -98,12 +98,7 @@ export default function NewsScreen() {
       {items.length > 0 && (
         <View style={styles.list}>
           {/* Yenileme başarısız olduysa eski liste kalır, ama kullanıcıya haber veririz */}
-          {status === 'error' && (
-            <>
-              <Banner tone="warning">{ERROR_TEXT.newsLoadFailed}</Banner>
-              <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-            </>
-          )}
+          {(status === 'error' || mapsFailed) && <LoadError variant="inline" onRetry={retryAll} />}
           <ListGroup>
             {items.map((item) => (
               <NewsCard
