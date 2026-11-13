@@ -48,7 +48,8 @@ export const ERROR_TEXT = {
   // Topluluk: kullanıcı adı ve lig
   usernameLoadFailed: 'Kullanıcı adın yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   usernameSaveFailed: 'Kullanıcı adı kaydedilemedi. Biraz sonra tekrar dene.',
-  usernameTaken: 'Bu kullanıcı adı alınmış.',
+  // Alınmış, ayrılmış ve uygunsuz adlar için TEK mesaj: hangisi olduğunu söylemek kelime listesini sızdırır
+  usernameTaken: 'Bu kullanıcı adı kullanılamaz.',
   inappropriate: 'Bu metin uygunsuz ifade içeriyor gibi görünüyor. Lütfen değiştir.',
   usernameCheckFailed: 'Uygunluk şu an denetlenemedi. Yine de kaydetmeyi deneyebilirsin.',
   leagueLoadFailed: 'Lig sıralaması yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',

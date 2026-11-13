@@ -22,11 +22,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Quiz ve "sor" XP'si yalnız Edge Function gerçekten çalıştıysa verilsin. Aynı haritayı ikinci kez ekleyip puan toplama kapansın (`roadmaps(user_id, topic_path)` benzersiz).
 - Mevcut XP toplamları ve lig bozulmaz.
 
-### PL-04 · Kullanıcı adı filtresi 🗄️
-- Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
-- Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
-- `username_available` için hız sınırı.
-
 ### PL-05 · Sayaç tutarlılığı
 - Ayarlar › Haritalarım "8 / 43" (tüm harita) ile Yol Haritam "6/31" (plan) aynı tanımla saysın: plan. Tek ortak yardımcı fonksiyon.
 
@@ -51,6 +46,12 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### PL-04 · Kullanıcı adı filtresi 🗄️
+- Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
+- Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
+- `username_available` için hız sınırı.
+- ✅ `20261113110000_username_moderation.sql`: `profiles` üzerinde `BEFORE INSERT OR UPDATE OF username` tetikleyicisi (`profiles_username_guard`); `username_blocked()` mevcut `contains_banned_words` + leetspeak/ayraç sadeleştirmesi + `reserved_usernames` tablosu (admin, yonetici, moderator, yolharitam, destek, support, root, system, anthropic, claude, null ve birkaç ek). `handle_new_user` yasaklı adda kaydı bozmaz, adsız profil açar (uygulama yeni ad seçtirir). `username_available` uygunsuz/ayrılmış adda `false`; hız sınırı: kullanıcı başı 30/dk, anon IP başı 20/dk + anon toplam 300/dk (aşılınca `rate_limited` hatası, istemci "belirsiz" sayar). İstemci: tek mesaj "Bu kullanıcı adı kullanılamaz.", kayıttan önce son uygunluk sorusu, `isUsernameRejection` yardımcısı. Mevcut adlara dokunulmadı; yönetici sorgusu migration sonundaki yorumda. `database.types.ts` değişmedi (yeni tablolar/işlevler istemciye kapalı, `username_available` imzası aynı).
 
 ### TS-04 · Son kabul (yeni görünüm)
 - Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
@@ -311,7 +312,7 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Push bildirimi** (Y-12'den): "Ahmet bugün 2 konu bitirdi" şimdilik uygulama içi kart; gerçek bildirim için development build + expo-notifications gerekir (Expo Go'da yok).
 - **Kullanıcı adı denetimi ve hız sınırı** (Y-12'den): küfür filtresi, `username_available`/`friend_request` için hız sınırı.
 - **XP'yi tamamen sunucuya taşımak** (Y-12'den): tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
-- **Kullanıcı adı taraması için hız sınırı / CAPTCHA** (SEC-01'den): `username_available` anon çağrılabiliyor; kullanıcı adları toplu taranabilir.
+- **Kullanıcı adı taraması için CAPTCHA** (SEC-01'den; PL-04 hız sınırını ekledi, IP başlığı canlıda doğrulanmalı): `username_available` anon çağrılabiliyor; kullanıcı adları toplu taranabilir.
 - **Web için Content-Security-Policy** (SEC-01'den): web yayınında başlık olarak eklenmeli.
 - **XP'yi tamamen sunucuya taşımak (quiz/ask kanıtı)** (SEC-01'den): quiz ve soru-cevap XP'si için sunucu tarafında yapıldığının kanıtı (Edge Function sonucu) aranmalı.
 - **pg_net uzantısını `extensions` şemasına taşımak** (SEC-01'den): Supabase uyarısı; silip yeniden kurmayı gerektirdiği için ertelendi.
