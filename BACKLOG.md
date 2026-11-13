@@ -5,9 +5,7 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 ## Sıradaki
 
-> **Aktif plan: Play'e çıkış hazırlığı** (13 Kasım). PL-01 … PL-05 birbirinden bağımsız, paralel yürür.
-
-
+> **Plan tamamlandı: Play'e çıkış hazırlığı** (13 Kasım). PL-01 … PL-05 birleşti (PR #62–#66); migration'lar canlıda, `topic-assist` v4 yayında, uygulama sürümü 1.0.1.
 
 > **Plan tamamlandı:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti). TS-01 … TS-04 tamamlandı (PR'lar açıldı); son kabul raporu: `docs/plan/TS-04-kabul-raporu.md`. Hiçbir özellik kaldırılmadı (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
 
