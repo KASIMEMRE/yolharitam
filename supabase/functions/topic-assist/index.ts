@@ -1,4 +1,11 @@
-// Konu derinleştirme: alt konular (explain), mini quiz (quiz) ve serbest soru (ask).
+// Konu derinleştirme: alt konular (explain), mini quiz (quiz), serbest soru (ask) ve quiz sonucu (quiz_submit).
+//
+// XP (PL-03): quiz ve soru XP'sini İSTEMCİ yazamaz; bu fonksiyon, iş gerçekten yapılınca service_role ile yazar.
+//   - ask: model cevabı başarıyla üretildikten sonra 2 XP.
+//   - quiz_submit: istemci yalnız seçtiği şıkları gönderir; doğru sayısını SUNUCU önbellekteki quiz'den
+//     hesaplar (istemcinin "kaç doğru" demesine güvenilmez). Doğru başına 5 XP, konu başına bir kez.
+//   Tutar, sahiplik ve günlük tavanlar veritabanındaki xp_events_guard tetikleyicisinde de doğrulanır.
+//   Cevaba `xp_awarded` (verilen puan; 0 = verilmedi) eklenir, istemci bildirimi buna göre gösterir.
 //
 // explain ve quiz herkes için ORTAKTIR: önce topic_ai_cache'e bakılır, yoksa üretilip yazılır.
 // ask kişiseldir ve önbelleğe girmez. Kota koruması: kullanıcı başına son 24 saatte
@@ -16,6 +23,9 @@ const TIMEOUT_MS = 15000;
 const GEN_LIMIT = 40;
 const ASK_LIMIT = 20;
 const CACHE_REFRESH_MS = 7 * 24 * 60 * 60 * 1000; // uyuşmayan önbellek satırı en erken 7 günde yenilenir
+// XP tutarları src/constants/xp.ts ile aynı olmalı (veritabanı tetikleyicisi de bu değerleri bekler)
+const XP_ASK = 2;
+const XP_PER_CORRECT = 5;
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -23,7 +33,7 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-type Kind = 'explain' | 'quiz' | 'ask';
+type Kind = 'explain' | 'quiz' | 'ask' | 'quiz_submit';
 type Body = {
   kind: Kind;
   mapId: string;
@@ -34,6 +44,7 @@ type Body = {
   topicSummary: string;
   level?: 'beginner' | 'intermediate' | 'advanced';
   question?: string;
+  answers?: number[]; // yalnız quiz_submit: her soru için seçilen şık (0-3)
 };
 
 const LEVEL_TR = { beginner: 'başlangıç', intermediate: 'orta', advanced: 'ileri' };
@@ -50,12 +61,15 @@ function isValidBody(b: Body): boolean {
   // JSON "null" ya da dizi gelirse alanlara erişmeden önce ele
   if (typeof b !== 'object' || b === null || Array.isArray(b)) return false;
   return (
-    typeof b.kind === 'string' && ['explain', 'quiz', 'ask'].includes(b.kind) &&
+    typeof b.kind === 'string' && ['explain', 'quiz', 'ask', 'quiz_submit'].includes(b.kind) &&
     typeof b.mapId === 'string' && MAP_ID.test(b.mapId) &&
     typeof b.topicId === 'string' && ID.test(b.topicId) &&
     str(b.mapTitle, 80) && str(b.sectionTitle, 80) && str(b.topicTitle, 120) && str(b.topicSummary, 400) &&
     (b.level === undefined || (typeof b.level === 'string' && Object.hasOwn(LEVEL_TR, b.level))) &&
-    (b.kind === 'ask' ? str(b.question, 300) : b.question === undefined || typeof b.question === 'string')
+    (b.kind === 'ask' ? str(b.question, 300) : b.question === undefined || typeof b.question === 'string') &&
+    (b.kind !== 'quiz_submit' ||
+      (Array.isArray(b.answers) && b.answers.length >= 3 && b.answers.length <= 5 &&
+        b.answers.every((a) => Number.isInteger(a) && a >= 0 && a < 4)))
   );
 }
 
@@ -150,6 +164,22 @@ function stripSrc(content: Record<string, unknown>) {
   return rest;
 }
 
+// Yapay zekâ XP'sini service_role ile yazar. Dönüş: verilen puan (0 = verilmedi).
+// 23505 = bu olay daha önce puan almış (beklenen durum, sessiz). Başka hata (tavan, sahiplik, ağ) puanı
+// vermez ama asıl işlemi (cevap/quiz) bozmaz; yalnız günlüğe yazılır.
+async function awardAiXp(
+  service: ReturnType<typeof createClient>,
+  userId: string,
+  kind: 'quiz_done' | 'ask',
+  ref: string,
+  amount: number,
+): Promise<number> {
+  const { error } = await service.from('xp_events').insert({ user_id: userId, kind, ref, amount });
+  if (!error) return amount;
+  if (error.code !== '23505') console.error('xp insert failed', kind, error.code, error.message);
+  return 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
   if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405);
@@ -169,6 +199,31 @@ Deno.serve(async (req) => {
     return json({ error: 'bad_json' }, 400);
   }
   if (!isValidBody(body)) return json({ error: 'bad_input' }, 400);
+
+  // 0) Quiz sonucu: model çağrısı yok, kota harcanmaz. Puan yalnız bu konunun quiz'i sunucu önbelleğinde
+  // VARSA (yani bu fonksiyon onu gerçekten üretmişse) ve gönderilen şıklar soru sayısıyla uyuşuyorsa verilir.
+  if (body.kind === 'quiz_submit') {
+    const { data: cached } = await service
+      .from('topic_ai_cache')
+      .select('content')
+      .eq('map_id', body.mapId)
+      .eq('topic_id', body.topicId)
+      .eq('topic_title', body.topicTitle)
+      .eq('kind', 'quiz')
+      .maybeSingle();
+    const hit = cached?.content as Record<string, unknown> | undefined;
+    const questions = Array.isArray(hit?.questions) ? (hit!.questions as { answer: number }[]) : [];
+    const answers = body.answers!;
+    if (!hit || !sameSrc(hit._src, body) || questions.length !== answers.length) {
+      return json({ content: { correct: 0, total: questions.length }, xp_awarded: 0 });
+    }
+    const correct = questions.filter((q, i) => answers[i] === q.answer).length;
+    // Konu başına bir kez (ref = harita:konu); 0 doğruya puan yok
+    const xp = correct > 0
+      ? await awardAiXp(service, userId, 'quiz_done', `${body.mapId}:${body.topicId}`, correct * XP_PER_CORRECT)
+      : 0;
+    return json({ content: { correct, total: questions.length }, xp_awarded: xp });
+  }
 
   // 1) Önbellek (explain/quiz)
   // canWriteCache: satır yoksa, _src'siz eski bir satırsa ya da 7 günden eskiyse önbelleğe yazılır.
@@ -297,5 +352,7 @@ Deno.serve(async (req) => {
   const out = await callModel(system, `${context}\n\nÖğrencinin sorusu: ${body.question!.trim()}`, false);
   if (!out || !out.content.trim()) return fail('provider_error');
   const answer = out.content.trim().slice(0, 2000).replace(/https?:\/\/\S+/gi, '');
-  return json({ content: { answer }, remaining: Math.max(0, ASK_LIMIT - (count ?? 0)) }); // count kendi satırımızı da içerir
+  // Cevap başarıyla üretildi: puan ancak şimdi yazılır (ref'e zaman damgası girer, her soru ayrı olay)
+  const xp = await awardAiXp(service, userId, 'ask', `${body.mapId}:${body.topicId}:${Date.now()}`, XP_ASK);
+  return json({ content: { answer }, remaining: Math.max(0, ASK_LIMIT - (count ?? 0)), xp_awarded: xp }); // count kendi satırımızı da içerir
 });

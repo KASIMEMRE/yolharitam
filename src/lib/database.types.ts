@@ -353,6 +353,7 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          dedupe_key: string | null
           id: number
           kind: string
           ref: string
@@ -361,6 +362,7 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          dedupe_key?: string | null
           id?: never
           kind: string
           ref: string
@@ -369,6 +371,7 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          dedupe_key?: string | null
           id?: never
           kind?: string
           ref?: string
@@ -446,6 +449,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      award_xp: {
+        // Verilen puan; 0 = bu olay daha önce puan almış. quiz_done/ask burada verilmez (topic-assist yazar).
+        Args: { p_kind: string; p_ref: string }
+        Returns: number
+      }
       blocked_list: {
         Args: never
         Returns: {

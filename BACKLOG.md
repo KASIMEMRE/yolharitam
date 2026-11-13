@@ -12,11 +12,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Expo Go'da uygulama bozulmamalı. Kişisel veri gönderilmez (e-posta, kullanıcı adı yok; yalnız anonim kullanıcı kimliği değil, hiç kimlik yok).
 - Gizlilik politikası ve YAYIN.md veri güvenliği bölümü güncellenir; kurulum adımları `docs/SENTRY.md`.
 
-### PL-03 · XP'yi sunucuya taşımak 🗄️
-- İstemci `xp_events` tablosuna doğrudan yazamasın; XP miktarını sunucu belirlesin (RPC / Edge Function).
-- Quiz ve "sor" XP'si yalnız Edge Function gerçekten çalıştıysa verilsin. Aynı haritayı ikinci kez ekleyip puan toplama kapansın (`roadmaps(user_id, topic_path)` benzersiz).
-- Mevcut XP toplamları ve lig bozulmaz.
-
 ### PL-04 · Kullanıcı adı filtresi 🗄️
 - Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
 - Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
@@ -43,6 +38,12 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### PL-03 · XP'yi sunucuya taşımak 🗄️
+- İstemci `xp_events` tablosuna doğrudan yazamasın; XP miktarını sunucu belirlesin (RPC / Edge Function).
+- Quiz ve "sor" XP'si yalnız Edge Function gerçekten çalıştıysa verilsin. Aynı haritayı ikinci kez ekleyip puan toplama kapansın (`roadmaps(user_id, topic_path)` benzersiz).
+- Mevcut XP toplamları ve lig bozulmaz.
+- ✅ XP artık yalnız sunucudan yazılır: `award_xp(kind, ref)` RPC'si (tutar sabit tablodan, istemci tutar göndermez; konu bitmiş mi / harita kullanıcıya mı ait kontrolü) ve `topic-assist` Edge Function'ı (ask: cevap üretilince; quiz: yeni `quiz_submit` ile doğru sayısını önbellekteki quiz'den sunucu hesaplar, cevaba `xp_awarded` eklenir). `authenticated` rolünün `xp_events` yazma yetkisi kalktı; okuma ve lig/toplam hesapları aynı. "Aynı olay" anahtarı artık harita satırının uuid'si değil `xp_events.dedupe_key` (`<harita>:<konu>`): haritayı silip yeniden eklemek ya da kopya satırla konuyu yeniden bitirmek puan vermez. `roadmaps(user_id, topic_path)` benzersiz; mevcut kopyalar migration'da birleştirilir (en eski satır kalır, ilerleme ve en son kişisel ayarlar ona taşınır, silinenler `roadmap_merge_backup`'a yedeklenir); harita ekleme upsert. Migration: `20261113100000_xp_server.sql`. Ders: `docs/dersler/PL-03.md`.
 
 ### PL-01 · Hata, boş ve yükleniyor durumları (Y-07'nin yerini alır)
 - Veri çeken her ekranda ağ hatası "kayıt yok" gibi görünmemeli: Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
@@ -306,21 +307,25 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Okuma hatasında "Tekrar dene" ve kısa zaman aşımı** (Y-02'den): supabase-js GET isteklerini birkaç kez yeniden denediği için "Adın yüklenemedi" uyarısı ~7 sn sonra çıkıyor (Y-07 ile birlikte ele alınabilir).
 - **Pasif buton kontrastı** (Y-02'den): `Button` pasifken etiket koyu modda zor seçiliyor; disabled etiket rengi `textSecondary`'ye yaklaştırılabilir.
 - **Selamlamayı belirginleştirme** (Y-02'den): "Merhaba, <ad>" eyebrow'u küçük ve silik; tema renkleriyle bir kademe daha belirgin yapılabilir.
-- **XP'yi sunucuda hesaplamak** (QA-01'den): XP satırları istemciden yazılıyor (300'e kadar); lig/sıralama gelmeden önce RPC ile sunucuya taşınmalı. Toplam da RPC ile hesaplanabilir.
-- **Aynı haritanın iki kez eklenmesini engelleme** (QA-01'den): `roadmaps(user_id, topic_path)` benzersiz kısıtı + upsert (önce kopyaları temizleyen migration).
+- **XP'yi sunucuda hesaplamak** (QA-01'den): ✅ PL-03'te yapıldı (toplam hâlâ `xp_events` toplamından okunur). XP satırları istemciden yazılıyor (300'e kadar); lig/sıralama gelmeden önce RPC ile sunucuya taşınmalı. Toplam da RPC ile hesaplanabilir.
+- **Aynı haritanın iki kez eklenmesini engelleme** (QA-01'den): ✅ PL-03'te yapıldı. `roadmaps(user_id, topic_path)` benzersiz kısıtı + upsert (önce kopyaları temizleyen migration).
 - **topic-assist önbellek anahtarına özet (hash)** (QA-01'den): şimdilik içerik `_src` ile doğrulanıyor; kalıcı çözüm anahtara hash eklemek (migration).
 - **pg_net/cron kayıt temizliği** (Y-09'dan): `net._http_response` ve `cron.job_run_details` zamanla büyür; haftalık temizlik işi eklenebilir.
 - **Push bildirimi** (Y-12'den): "Ahmet bugün 2 konu bitirdi" şimdilik uygulama içi kart; gerçek bildirim için development build + expo-notifications gerekir (Expo Go'da yok).
 - **Kullanıcı adı denetimi ve hız sınırı** (Y-12'den): küfür filtresi, `username_available`/`friend_request` için hız sınırı.
-- **XP'yi tamamen sunucuya taşımak** (Y-12'den): tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
+- **XP'yi tamamen sunucuya taşımak** (Y-12'den): ✅ PL-03'te yapıldı. tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
 - **Kullanıcı adı taraması için hız sınırı / CAPTCHA** (SEC-01'den): `username_available` anon çağrılabiliyor; kullanıcı adları toplu taranabilir.
 - **Web için Content-Security-Policy** (SEC-01'den): web yayınında başlık olarak eklenmeli.
-- **XP'yi tamamen sunucuya taşımak (quiz/ask kanıtı)** (SEC-01'den): quiz ve soru-cevap XP'si için sunucu tarafında yapıldığının kanıtı (Edge Function sonucu) aranmalı.
+- **XP'yi tamamen sunucuya taşımak (quiz/ask kanıtı)** (SEC-01'den): ✅ PL-03'te yapıldı. quiz ve soru-cevap XP'si için sunucu tarafında yapıldığının kanıtı (Edge Function sonucu) aranmalı.
 - **pg_net uzantısını `extensions` şemasına taşımak** (SEC-01'den): Supabase uyarısı; silip yeniden kurmayı gerektirdiği için ertelendi.
 
 - **Erişilebilirlik etiketlerini görünür metinle hizalama** (UX-01'den): "Harita ekle" çipinin etiketi "Yeni harita ekle", Harita/Liste anahtarının etiketi "Harita görünümü"; sesli kontrol için etiket görünür metinle başlamalı.
 - **Aynı konuyu açan iki kart** (UX-01'den): günün görevi quiz/bitir türündeyken sıradaki konuyla aynı konuysa iki kart da görünür; birleştirilebilir.
 - **Gün değişiminde günün görevi** (UX-01'den): uygulama gece yarısı açık kalırsa görev bayat kalır; `AppState` ile yeniden hesaplanabilir.
+- **Günün görevi bonusu hâlâ istemci kanıtına dayanıyor** (PL-03'ten): `daily` XP'sini sunucu ref'in tarihine ve günde bir kez kuralına göre veriyor ama görevin gerçekten yapıldığını bilmiyor (görev cihazda üretiliyor). Günde en çok 30 XP; görev seçimi sunucuya (ya da seçilen görevin `topic_progress`/quiz kanıtına) bağlanabilir.
+- **Bölüm ve harita bonusu için sunucuda içerik listesi** (PL-03'ten): sunucu hangi bölümde hangi konuların olduğunu bilmiyor; `section_done`/`roadmap_done` yalnız "en az bir konu bitti + günlük tavan" sezgisiyle doğrulanıyor. Konu/bölüm kimliklerini bir tabloya (seed) koyup bonusu gerçek tamamlanmaya bağlamak kapatır.
+- **Quiz'in doğru cevapları istemciye gidiyor** (PL-03'ten): quiz XP'sini sunucu hesaplıyor ama şıkların doğru olanı cevapla birlikte istemciye geliyor; teknik bir kullanıcı hepsini doğru göndererek konu başına 25 XP alabilir. Cevabı ancak seçim sonrası açıklamak (soru soru doğrulama) gerekir.
+- **Eski `create_roadmap_with_steps` RPC'si** (PL-03'ten): uygulama kullanmıyor; `roadmaps` benzersiz olduktan sonra var olan haritada `unique_violation` verir. Artık kullanılmayan RPC ve `roadmap_steps` tablosu bir temizlik migration'ında kaldırılabilir.
 
 ## Yayından sonra
 - [ ] **Yapay zekâ katmanı ücretli abonelik (freemium):** kişisel işaretleme (`src/lib/personalize-roadmap.ts` → `personalize-roadmap` Edge Function) abonelere açık olsun; ücretsiz kullanıcılar kural tabanlı işaretlemeyi görür. Mağaza içi satın alma (RevenueCat vb.) + sunucu tarafında abonelik kontrolü.
