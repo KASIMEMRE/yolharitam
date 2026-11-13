@@ -3,9 +3,9 @@ import { ActivityIndicator, Pressable, StyleSheet, useWindowDimensions, View } f
 
 import { blockAction } from '@/components/block-user-button';
 import { Banner } from '@/components/banner';
-import { Button } from '@/components/button';
 import { Glyph } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
 import { RowMenu, type SheetAction } from '@/components/row-menu';
 import { SectionHeader } from '@/components/section-header';
 import { Skeleton } from '@/components/skeleton';
@@ -48,11 +48,12 @@ export function FriendsPanel() {
 
   return (
     <View style={styles.panel}>
+      {/* Hiç veri yokken ortada sade hata; eski liste ekrandayken kısa uyarı */}
       {status === 'error' && (
-        <>
-          <Banner tone="warning">{ERROR_TEXT.friendsLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-        </>
+        <LoadError
+          variant={friends.length + incoming.length + outgoing.length > 0 ? 'inline' : 'screen'}
+          onRetry={retry}
+        />
       )}
 
       <AddFriend onSend={sendRequest} />

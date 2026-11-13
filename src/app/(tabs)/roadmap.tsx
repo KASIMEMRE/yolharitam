@@ -10,6 +10,7 @@ import { Button } from '@/components/button';
 import { FriendsTodayCard } from '@/components/community/friends-today-card';
 import { UsernameForm } from '@/components/community/username-gate';
 import { ListRow } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
 import { ProgressBar, remainingLabel } from '@/components/progress-summary';
 import { RoadmapCatalog } from '@/components/roadmap-catalog';
 import { RoadmapTree, TreeLegend } from '@/components/roadmap-tree';
@@ -46,7 +47,7 @@ import { personalizationOf, sectionProgress } from '@/lib/plan-progress';
 import { useXp } from '@/lib/xp';
 import { setPreferences, usePreferences, type MapViewPref } from '@/lib/preferences';
 import { useAuth } from '@/lib/auth-context';
-import { ERROR_TEXT } from '@/lib/supabase-errors';
+import { ERROR_TEXT, loadErrorKind } from '@/lib/supabase-errors';
 
 // Konu detayını açar. Harita kimliği de gönderilir: detay ekranı içeriği veritabanına gitmeden bulur.
 function openTopic(roadmap: Roadmap, topicId: string) {
@@ -100,6 +101,12 @@ function MemberRoadmapScreen() {
   const [nameVersion, setNameVersion] = useState(0);
   // useCallback: kimliği sabit kalsın (gereksiz yeniden çizimi önler)
   const onNameSaved = useCallback(() => setNameVersion((v) => v + 1), []);
+  // Harita geçişi kaydedilemezse (activate iyimser öne alır, sonra geri alır) kullanıcıya kısa haber
+  const [switchFailed, setSwitchFailed] = useState(false);
+  async function switchMap(id: string) {
+    setSwitchFailed(false);
+    if (!(await activate(id))) setSwitchFailed(true);
+  }
 
   // Harita yokken ("…" menüsü ve harita değiştirici anlamsız) yalın başlık
   const header = <RoadmapHeader key={nameVersion} />;
@@ -118,10 +125,7 @@ function MemberRoadmapScreen() {
     return (
       <TabScreen>
         {header}
-        <View style={styles.errorBox}>
-          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-        </View>
+        <LoadError onRetry={retry} />
       </TabScreen>
     );
   }
@@ -151,8 +155,9 @@ function MemberRoadmapScreen() {
     <TabScreen>
       {/* Başlık bloğu: selam + "…" menüsü, hemen altında altı çizili harita sekmeleri ("+ Ekle" de burada) */}
       <RoadmapHeader key={nameVersion} menu={{ roadmap, map }}>
-        {roadmaps.length > 0 && <MapTabs roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
+        {roadmaps.length > 0 && <MapTabs roadmaps={roadmaps} activeId={roadmap.id} onSelect={switchMap} />}
       </RoadmapHeader>
+      {switchFailed && <Banner tone="warning">{ERROR_TEXT.switchFailed}</Banner>}
       {/* Kullanıcı adı yoksa (kayıtta ad seçilmeyen eski hesaplar) tek satırlık şerit olarak bir kez sorulur */}
       <NamePrompt onSaved={onNameSaved} />
       {/* key: harita değişince içteki açık/kapalı bölüm durumu sıfırdan başlasın */}
@@ -332,17 +337,10 @@ function MapView({
       />
 
       {(progress.status === 'schema' || progress.status === 'network' || progress.status === 'error') && (
-        <View style={styles.errorBox}>
-          <Banner tone="warning">
-            {progress.status === 'schema'
-              ? ERROR_TEXT.loadSchema
-              : progress.status === 'network'
-                ? ERROR_TEXT.network
-                : ERROR_TEXT.other}
-          </Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={progress.retry} />
-        </View>
+        <LoadError kind={loadErrorKind(progress.status)} onRetry={progress.retry} />
       )}
+      {/* Konular okunurken yerleşim zıplamasın: ağaç gelince yerini alacak iskelet */}
+      {progress.status === 'loading' && <RoadmapSkeleton />}
 
       {ready && (
         <Sections
@@ -915,7 +913,6 @@ function EmptyState({ title }: { title: string }) {
 
 const styles = StyleSheet.create({
   flex1: { flex: 1, minWidth: 0 },
-  errorBox: { gap: Spacing.three },
   // Başlık bloğu: başlık ile harita sekmeleri arası dar (tek blok gibi okunsun)
   headBlock: { gap: Spacing.one },
   moreButton: { width: MinTouch, height: MinTouch, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },

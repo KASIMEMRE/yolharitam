@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Banner } from '@/components/banner';
+import { LoadError } from '@/components/load-error';
 import { Button } from '@/components/button';
 import { FilterChipRow } from '@/components/filter-chips';
 import { Skeleton } from '@/components/skeleton';
@@ -96,12 +97,7 @@ export default function ShowcaseNewScreen() {
           contentContainerStyle={[styles.content, { padding: gutter }]}>
           <View style={styles.inner}>
             {mapsStatus === 'loading' && <Skeleton height={MinTouch} radius={Radius.sm} />}
-            {mapsStatus === 'error' && (
-              <>
-                <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
-                <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-              </>
-            )}
+            {mapsStatus === 'error' && <LoadError variant="inline" onRetry={retry} />}
             {mapsStatus === 'ready' && maps.length === 0 && (
               <Banner tone="info">Proje paylaşmak için önce bir yol haritası seçmelisin.</Banner>
             )}

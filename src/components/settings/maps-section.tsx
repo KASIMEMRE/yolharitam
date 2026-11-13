@@ -5,6 +5,8 @@ import { StyleSheet, View } from 'react-native';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { ListGroup, ListRow } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
+import { Skeleton } from '@/components/skeleton';
 import { Surface } from '@/components/surface';
 import { ThemedText } from '@/components/themed-text';
 import { getRoadmap, KIND_LABEL } from '@/constants/dev-roadmaps';
@@ -21,6 +23,8 @@ const EMPTY_STATUSES: ReadonlyMap<string, TopicStatus> = new Map(); // ilerlemes
 // Haritalarım: geç, kaldır, ekle. (Eski settings.tsx'ten taşındı; mantık aynı, yalnız düzen ListGroup.)
 export function MapsSection() {
   const { roadmap: active, roadmaps, leftovers, loading, failed, retry, activate, remove } = useLatestRoadmap();
+  // Haritaya geçiş kaydedilemezse listede kalır ve kısa haber verilir (sessizce başka ekrana atlamayız)
+  const [openFailed, setOpenFailed] = useState(false);
   // Haritalardaki konu durumları (her odakta tazelenir), harita kimliğine göre.
   // null = okunamadı (0 diye gösterip kullanıcıyı yanıltmayalım)
   // Neden TÜM durumlar (yalnız 'done' değil)? Plan sayacı "atladım" (plandan çıkar) ve "çalışıyorum"
@@ -55,14 +59,13 @@ export function MapsSection() {
   return (
     <View style={styles.section}>
       {loading ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          Yükleniyor…
-        </ThemedText>
-      ) : failed ? (
-        <View style={styles.section}>
-          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
+        // Satır boyunda iskelet: harita gelince liste zıplamasın
+        <View accessible accessibilityLabel="Haritalar yükleniyor" accessibilityState={{ busy: true }} style={styles.section}>
+          <Skeleton height={64} radius={Radius.md} />
+          <Skeleton height={64} radius={Radius.md} />
         </View>
+      ) : failed ? (
+        <LoadError onRetry={retry} />
       ) : roadmaps.length === 0 ? (
         <ThemedText>Henüz bir haritan yok.</ThemedText>
       ) : (
@@ -75,14 +78,17 @@ export function MapsSection() {
               active={r.id === active?.id}
               statuses={statusesByMap ? (statusesByMap[r.id] ?? EMPTY_STATUSES) : null}
               onOpen={async () => {
-                await activate(r.id);
-                router.replace('/roadmap');
+                setOpenFailed(false);
+                if (await activate(r.id)) router.replace('/roadmap');
+                else setOpenFailed(true);
               }}
               onRemove={() => remove(r.id)}
             />
           ))}
         </ListGroup>
       )}
+
+      {openFailed && <Banner tone="warning">{ERROR_TEXT.switchFailed}</Banner>}
 
       {/* Her durumda görünür (yükleniyor/hata dahil). Hiç harita yoksa asıl eylem bu olduğu için birincil. */}
       <Button

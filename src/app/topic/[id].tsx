@@ -8,6 +8,7 @@ import { Glyph } from '@/components/icon';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { ListGroup, ListRow } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
 import { type Milestone, MilestoneCelebration } from '@/components/milestone-celebration';
 import { SectionHeader } from '@/components/section-header';
 import { Segmented, type SegmentedOption } from '@/components/segmented';
@@ -27,7 +28,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
 import { useAuthGate } from '@/lib/auth-gate';
 import { personalizationOf, planProgress } from '@/lib/plan-progress';
-import { ERROR_TEXT } from '@/lib/supabase-errors';
+import { loadErrorKind } from '@/lib/supabase-errors';
 import { awardXp } from '@/lib/xp';
 
 const LEVEL_LABEL = { 1: 'Başlangıç konusu', 2: 'Orta seviye konu', 3: 'İleri seviye konu' } as const;
@@ -55,7 +56,7 @@ export default function TopicScreen() {
   const roadmapParam = first(params.roadmapId);
   const { requireAuth, isGuest } = useAuthGate();
   // Kullanıcının yol haritası satırları (Yol Haritam ile aynı kaynak). Misafirde sorgu atılmaz.
-  const { roadmaps, loading: roadmapsLoading } = useLatestRoadmap();
+  const { roadmaps, loading: roadmapsLoading, failed: roadmapsFailed, retry: retryRoadmaps } = useLatestRoadmap();
   // Konuya haritadan değil önizlemeden gelindiyse roadmapId yoktur; kullanıcı bu haritayı zaten takip
   // ediyorsa satırını kendimiz buluruz. Bulunamazsa konu SALT OKUNUR açılır (durum/yapay zekâ yok).
   const roadmapId = roadmapParam ?? (map ? roadmaps.find((r) => r.topic_path === map.id)?.id : undefined);
@@ -64,6 +65,8 @@ export default function TopicScreen() {
   const readOnly = isGuest || !roadmapId;
   // Takip satırı hâlâ aranıyorsa kayıt satırı yerine iskelet göster (yanlış "seç" çağrısı çıkmasın)
   const lookingUp = !isGuest && !roadmapParam && roadmapsLoading;
+  // Harita listesi OKUNAMADIYSA "bu haritayı takip etmiyorsun" demek yanlış olur: hata + tekrar dene
+  const lookupFailed = !isGuest && !roadmapParam && roadmapsFailed;
   // Durum/ilerleme sorgusu yalnız gerçekten takip edilen haritada atılır
   const progress = useTopicProgress(readOnly ? undefined : roadmapId);
   // Bölüm/harita bitince açılan kutlama (hook erken return'lerden ÖNCE çağrılır)
@@ -257,16 +260,7 @@ export default function TopicScreen() {
                 {progress.saveError && <Banner tone="warning">{progress.saveError}</Banner>}
                 {progressFailed ? (
                   // Okunamadı: iskeleti sonsuza dek göstermek yerine hata ve "Tekrar dene"
-                  <View style={styles.block}>
-                    <Banner tone="warning">
-                      {progress.status === 'schema'
-                        ? ERROR_TEXT.loadSchema
-                        : progress.status === 'network'
-                          ? ERROR_TEXT.network
-                          : ERROR_TEXT.other}
-                    </Banner>
-                    <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={progress.retry} />
-                  </View>
+                  <LoadError kind={loadErrorKind(progress.status)} onRetry={progress.retry} />
                 ) : !ready ? (
                   <Skeleton width="100%" height={52} radius={Radius.lg} />
                 ) : (
@@ -324,6 +318,8 @@ export default function TopicScreen() {
             {readOnly && (
               lookingUp ? (
                 <Skeleton width="100%" height={52} radius={Radius.lg} />
+              ) : lookupFailed ? (
+                <LoadError onRetry={retryRoadmaps} />
               ) : (
                 <Surface tone="soft">
                   <ThemedText type="smallBold">
