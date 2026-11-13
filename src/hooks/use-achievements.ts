@@ -32,7 +32,7 @@ export function useAchievements() {
         try {
           // Yol haritaları + konu durumları (yalnız rozetlerin ihtiyacı olan sütunlar)
           const [roadmaps, progress] = await Promise.all([
-            supabase.from('roadmaps').select('id, topic_path, created_at'),
+            supabase.from('roadmaps').select('id, topic_path, created_at, level, goal, personalization'),
             supabase.from('topic_progress').select('roadmap_id, topic_id, status, updated_at'),
           ]);
           if (cancelled) return;

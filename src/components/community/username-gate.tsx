@@ -3,6 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
+import { LoadError } from '@/components/load-error';
 import { Skeleton } from '@/components/skeleton';
 import { TextField } from '@/components/text-field';
 import { ThemedText } from '@/components/themed-text';
@@ -88,12 +89,7 @@ export function UsernameForm({ onSaved, submitLabel = 'Kaydet' }: { onSaved?: ()
 
   return (
     <View style={styles.wrap}>
-      {status === 'error' && (
-        <>
-          <Banner tone="warning">{ERROR_TEXT.usernameLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-        </>
-      )}
+      {status === 'error' && <LoadError variant="inline" onRetry={retry} />}
       <TextField
         label="Kullanıcı adı"
         value={typed}
@@ -136,10 +132,7 @@ export function UsernameGate({ children }: { children: ReactNode }) {
 
   if (status === 'error' && !username) {
     return (
-      <View style={styles.wrap}>
-        <Banner tone="warning">{ERROR_TEXT.usernameLoadFailed}</Banner>
-        <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-      </View>
+      <LoadError onRetry={retry} />
     );
   }
 

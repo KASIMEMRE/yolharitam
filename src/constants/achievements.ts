@@ -1,6 +1,7 @@
 import { findTopic, getRoadmap } from '@/constants/dev-roadmaps';
-import { planTopics, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
+import type { TopicStatus } from '@/constants/dev-roadmaps/personalize';
 import type { Hue } from '@/constants/visuals';
+import { planProgress, roadmapPlanTopics, sectionProgress } from '@/lib/plan-progress';
 
 // Başarım (rozet) tanımları ve hesabı. SAF modül: Supabase/React içermez, sadece veri alıp veri döndürür.
 // Böylece `node` ile tek başına denenebilir (roadmap-templates.ts ile aynı öğretici desen).
@@ -16,6 +17,10 @@ export type AchievementRoadmap = {
   id: string;
   topic_path: string; // harita kimliği ('frontend' …); eski sürümden kalan konular sayılmaz
   created_at: string; // ISO zaman damgası
+  // Plan sayacı için (Yol Haritam ile aynı tanım): seviye ve kişisel işaretler
+  level: string;
+  goal?: string | null;
+  personalization?: unknown;
 };
 
 export type AchievementProgress = { roadmap_id: string; topic_id: string; status: string; updated_at: string };
@@ -112,19 +117,22 @@ export function computeAchievements(input: AchievementInput): AchievementResult[
       const t = Date.parse(row.updated_at);
       if (row.status === 'done' && !Number.isNaN(t)) doneAt.set(row.topic_id, t);
     }
-    // Kişisel işaret olmadan plan: önerilenler + kullanıcının başladıkları − atladıkları
-    const plan = planTopics(map, statuses, null);
+    // Plan: Yol Haritam ve Ayarlar ile AYNI tanım (kişisel "atlanabilir" işaretleri dahil).
+    // Eskiden kişisel işaretsiz sayılıyordu; bu yüzden rozet ipucu ("x / y") ekrandaki sayaçtan sapabiliyordu.
+    const plan = roadmapPlanTopics(map, r, statuses);
+    const planIds = new Set(plan.map((t) => t.id));
+    const count = planProgress(map, r, statuses);
     const done = plan.filter((t) => statuses.get(t.id) === 'done');
     const sections = map.sections.map((s) => {
-      const inPlan = s.topics.filter((t) => plan.includes(t));
-      return { current: inPlan.filter((t) => statuses.get(t.id) === 'done').length, target: inPlan.length };
+      const c = sectionProgress(s, planIds, statuses);
+      return { current: c.done, target: c.total };
     });
     const times = [...doneAt.values()];
     return [
       {
         roadmap: r,
-        total: plan.length,
-        done: done.length,
+        total: count.total,
+        done: count.done,
         hours: done.reduce((sum, t) => sum + t.hours, 0),
         sections,
         firstDoneAt: times.length > 0 ? Math.min(...times) : null,
