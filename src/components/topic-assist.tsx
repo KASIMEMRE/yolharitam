@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View, Linking } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
@@ -13,10 +13,9 @@ import { ThemedText } from '@/components/themed-text';
 import type { DevRoadmap, Section, Topic } from '@/constants/dev-roadmaps';
 import type { LevelId } from '@/constants/plan';
 import { Border, Fonts, MinTouch, Radius, Spacing } from '@/constants/theme';
-import { XP_PER_CORRECT } from '@/constants/xp';
 import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/lib/supabase';
-import { awardXp } from '@/lib/xp';
+import { reportServerAward } from '@/lib/xp';
 
 // Konu detayındaki üç yapay zekâ aracı: alt konular, mini quiz, soru sor.
 // Hepsi `topic-assist` Edge Function'ından gelir. Alt konular ve quiz herkes için ortak önbellekte
@@ -53,7 +52,10 @@ const ERRORS: Record<string, string> = {
   default: 'Şu an cevap alınamadı. Biraz sonra tekrar dene.',
 };
 
-async function callAssist<T>(body: Record<string, unknown>): Promise<{ data?: T; remaining?: number; error?: string }> {
+// xpAwarded: sunucunun yazdığı puan (quiz_submit ve ask cevaplarında). XP'yi istemci yazmaz; sunucu cevabına göre gösterilir.
+async function callAssist<T>(
+  body: Record<string, unknown>
+): Promise<{ data?: T; remaining?: number; xpAwarded?: number; error?: string }> {
   try {
     const { data, error } = await supabase.functions.invoke('topic-assist', { body, timeout: 20000 });
     if (error) {
@@ -61,7 +63,7 @@ async function callAssist<T>(body: Record<string, unknown>): Promise<{ data?: T;
       const status = (error as { context?: { status?: number } }).context?.status;
       return { error: status === 429 ? ERRORS.daily_limit : ERRORS.default };
     }
-    return { data: data?.content as T, remaining: data?.remaining };
+    return { data: data?.content as T, remaining: data?.remaining, xpAwarded: data?.xp_awarded };
   } catch {
     return { error: ERRORS.default };
   }
@@ -118,7 +120,7 @@ export function TopicAssist({ map, section, topic, level }: Props) {
           load={quiz}
           actionLabel="Quiz'i başlat"
           onLoad={loadQuiz}>
-          {quiz.data && <QuizView data={quiz.data} xpRef={`${map.id}:${topic.id}`} topicId={topic.id} />}
+          {quiz.data && <QuizView data={quiz.data} base={base} topicId={topic.id} />}
         </Panel>
       </View>
 
@@ -223,7 +225,7 @@ function ExplainView({ data }: { data: Explain }) {
   );
 }
 
-function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId: string }) {
+function QuizView({ data, base, topicId }: { data: Quiz; base: Record<string, unknown>; topicId: string }) {
   const theme = useTheme();
   // Her soru için seçilen şık (bir kez seçilir, sonra cevap gösterilir)
   const [picked, setPicked] = useState<Record<number, number>>({});
@@ -231,12 +233,22 @@ function QuizView({ data, xpRef, topicId }: { data: Quiz; xpRef: string; topicId
   const correct = data.questions.filter((q, i) => picked[i] === q.answer).length;
   const finished = answered === data.questions.length;
 
-  // Quiz bitince doğru başına XP (konu başına bir kez; "Quiz'i sıfırla" tekrar puan vermez)
+  // Quiz bitince sonucu sunucuya bildir: doğru sayısını ve puanı SUNUCU hesaplar (doğru başına XP, konu başına
+  // bir kez; "Quiz'i sıfırla" tekrar puan vermez). İstemci yalnız seçtiği şıkları gönderir ve sunucunun
+  // verdiği puanı gösterir. Ekran açıkken bir kez gönderilir (ref), sıfırlayıp tekrar çözmek yeniden istek atmaz.
+  const submitted = useRef(false);
   useEffect(() => {
-    if (finished && correct > 0) {
-      awardXp({ kind: 'quiz_done', ref: xpRef, amount: correct * XP_PER_CORRECT, topicId });
-    }
-  }, [finished, correct, xpRef, topicId]);
+    if (!finished || correct === 0 || submitted.current) return;
+    submitted.current = true;
+    const answers = data.questions.map((_, i) => picked[i]);
+    callAssist<{ correct: number; total: number }>({ ...base, kind: 'quiz_submit', answers }).then((res) => {
+      if (res.xpAwarded === undefined) {
+        submitted.current = false; // ağ hatası: tekrar çözülünce yeniden denensin
+        return;
+      }
+      reportServerAward({ kind: 'quiz_done', amount: res.xpAwarded, topicId });
+    });
+  }, [finished, correct, data.questions, picked, base, topicId]);
 
   return (
     <View style={styles.inner}>
@@ -323,7 +335,8 @@ function AskBox({ base }: { base: Record<string, unknown> }) {
     );
     if (res.data) {
       setQuestion('');
-      awardXp({ kind: 'ask', ref: `${String(base.mapId)}:${String(base.topicId)}:${Date.now()}` });
+      // Puan sunucuda yazıldı (cevap başarıyla üretildi); burada yalnız bildirimi gösteririz
+      reportServerAward({ kind: 'ask', amount: res.xpAwarded ?? 0 });
     }
   }
 
