@@ -12,10 +12,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Expo Go'da uygulama bozulmamalı. Kişisel veri gönderilmez (e-posta, kullanıcı adı yok; yalnız anonim kullanıcı kimliği değil, hiç kimlik yok).
 - Gizlilik politikası ve YAYIN.md veri güvenliği bölümü güncellenir; kurulum adımları `docs/SENTRY.md`.
 
-### PL-04 · Kullanıcı adı filtresi 🗄️
-- Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
-- Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
-- `username_available` için hız sınırı.
 
 
 > **Plan tamamlandı:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti). TS-01 … TS-04 tamamlandı (PR'lar açıldı); son kabul raporu: `docs/plan/TS-04-kabul-raporu.md`. Hiçbir özellik kaldırılmadı (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
@@ -38,6 +34,12 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### PL-04 · Kullanıcı adı filtresi 🗄️
+- Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
+- Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
+- `username_available` için hız sınırı.
+- ✅ `20261113110000_username_moderation.sql`: `profiles` üzerinde `BEFORE INSERT OR UPDATE OF username` tetikleyicisi (`profiles_username_guard`); `username_blocked()` mevcut `contains_banned_words` + leetspeak/ayraç sadeleştirmesi + `reserved_usernames` tablosu (admin, yonetici, moderator, yolharitam, destek, support, root, system, anthropic, claude, null ve birkaç ek). `handle_new_user` yasaklı adda kaydı bozmaz, adsız profil açar (uygulama yeni ad seçtirir). `username_available` uygunsuz/ayrılmış adda `false`; hız sınırı: kullanıcı başı 30/dk, anon IP başı 20/dk + anon toplam 300/dk (aşılınca `rate_limited` hatası, istemci "belirsiz" sayar). İstemci: tek mesaj "Bu kullanıcı adı kullanılamaz.", kayıttan önce son uygunluk sorusu, `isUsernameRejection` yardımcısı. Mevcut adlara dokunulmadı; yönetici sorgusu migration sonundaki yorumda. `database.types.ts` değişmedi (yeni tablolar/işlevler istemciye kapalı, `username_available` imzası aynı).
 
 ### PL-03 · XP'yi sunucuya taşımak 🗄️
 - İstemci `xp_events` tablosuna doğrudan yazamasın; XP miktarını sunucu belirlesin (RPC / Edge Function).
@@ -313,6 +315,9 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **pg_net/cron kayıt temizliği** (Y-09'dan): `net._http_response` ve `cron.job_run_details` zamanla büyür; haftalık temizlik işi eklenebilir.
 - **Push bildirimi** (Y-12'den): "Ahmet bugün 2 konu bitirdi" şimdilik uygulama içi kart; gerçek bildirim için development build + expo-notifications gerekir (Expo Go'da yok).
 - **Kullanıcı adı denetimi ve hız sınırı** (Y-12'den): küfür filtresi, `username_available`/`friend_request` için hız sınırı.
+- **XP'yi tamamen sunucuya taşımak** (Y-12'den): tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
+- **Kullanıcı adı taraması için CAPTCHA** (SEC-01'den; PL-04 hız sınırını ekledi, IP başlığı canlıda doğrulanmalı): `username_available` anon çağrılabiliyor; kullanıcı adları toplu taranabilir.
+
 - **XP'yi tamamen sunucuya taşımak** (Y-12'den): ✅ PL-03'te yapıldı. tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
 - **Kullanıcı adı taraması için hız sınırı / CAPTCHA** (SEC-01'den): `username_available` anon çağrılabiliyor; kullanıcı adları toplu taranabilir.
 - **Web için Content-Security-Policy** (SEC-01'den): web yayınında başlık olarak eklenmeli.

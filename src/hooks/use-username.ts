@@ -2,6 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 
 import { useAuth } from '@/lib/auth-context';
+import { isUsernameRejection } from '@/lib/auth-rules';
 import { supabase } from '@/lib/supabase';
 import { classifyError, ERROR_TEXT } from '@/lib/supabase-errors';
 
@@ -99,7 +100,8 @@ export function useUsername() {
       if (error) {
         // 23505: benzersizlik ihlali (başkası aynı anda aldı). Yarış durumunda da doğru mesaj çıkar.
         if (error.code === '23505') return { ok: false, message: ERROR_TEXT.usernameTaken };
-        if (error.message?.includes('inappropriate_content')) return { ok: false, message: ERROR_TEXT.inappropriate };
+        // Uygunsuz ya da ayrılmış ad: alınmış ad ile aynı sade mesaj
+        if (isUsernameRejection(error)) return { ok: false, message: ERROR_TEXT.usernameTaken };
         return { ok: false, message: classifyError(error) === 'network' ? ERROR_TEXT.network : ERROR_TEXT.usernameSaveFailed };
       }
       if (!data) return { ok: false, message: ERROR_TEXT.usernameSaveFailed };
