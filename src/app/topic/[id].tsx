@@ -18,9 +18,8 @@ import { TopicAssist } from '@/components/topic-assist';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { allTopics, findTopic, getRoadmap } from '@/constants/dev-roadmaps';
-import { computeProgress, personalizationFor, planTopics, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
-import { toLevelId, type GoalId } from '@/constants/plan';
-import { isAnswerId } from '@/constants/roadmap-questions';
+import { planTopics, type TopicStatus } from '@/constants/dev-roadmaps/personalize';
+import { toLevelId } from '@/constants/plan';
 import { XP } from '@/constants/xp';
 import { Border, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { HUES, MARKER_STYLE, RESOURCE_KIND_STYLE, STATUS_STYLE } from '@/constants/visuals';
@@ -28,6 +27,7 @@ import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
 import { useAuthGate } from '@/lib/auth-gate';
+import { personalizationOf, planProgress } from '@/lib/plan-progress';
 import { loadErrorKind } from '@/lib/supabase-errors';
 import { awardXp } from '@/lib/xp';
 
@@ -105,10 +105,9 @@ export default function TopicScreen() {
   const { topic, section } = found;
   const hue = HUES[map.hue];
   // Yol Haritam ekranıyla AYNI kural (kayıt yoksa seviye kuralları): "bölüm bitti" kararı iki ekranda tutarlı olsun
-  const goal: GoalId = roadmap && isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
   const personalization =
     // roadmap yoksa (misafir ya da takip edilmeyen harita) kişisel işaret de yoktur
-    roadmap ? personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal) : null;
+    roadmap ? personalizationOf(map, roadmap) : null;
   const focusIndex = personalization?.focus.indexOf(topic.id) ?? -1;
   const skipHint = personalization?.skip.includes(topic.id) ?? false;
   const note = personalization?.notes[section.id];
@@ -137,7 +136,8 @@ export default function TopicScreen() {
     const after = new Map(progress.statuses);
     after.set(topic.id, 'done');
     const plan = planTopics(map, after, personalization);
-    const sum = computeProgress(map, after, personalization, '3-5');
+    // Yüzde de ortak plan sayacından (Yol Haritam ve Ayarlar ile aynı tanım)
+    const sum = planProgress(map, roadmap ?? null, after);
     const percent = sum.total > 0 ? Math.round((sum.done / sum.total) * 100) : 0;
     const allDone = plan.length > 0 && plan.every((t) => after.get(t.id) === 'done');
     const sectionPlan = section.topics.filter((t) => plan.includes(t));

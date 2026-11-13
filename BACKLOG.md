@@ -22,9 +22,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
 - `username_available` için hız sınırı.
 
-### PL-05 · Sayaç tutarlılığı
-- Ayarlar › Haritalarım "8 / 43" (tüm harita) ile Yol Haritam "6/31" (plan) aynı tanımla saysın: plan. Tek ortak yardımcı fonksiyon.
-
 
 > **Plan tamamlandı:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti). TS-01 … TS-04 tamamlandı (PR'lar açıldı); son kabul raporu: `docs/plan/TS-04-kabul-raporu.md`. Hiçbir özellik kaldırılmadı (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
 
@@ -52,6 +49,10 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - `useLatestRoadmap` ve diğer veri kancaları hata durumunu döndürsün; tek ortak hata bileşeni.
 - Yükleniyor durumlarında yerleşimi zıplatmayan iskelet; okuma hatası ~7 sn yerine kısa sürede görünsün.
 ✅ Ortak `LoadError` bileşeni (ekran/satır içi), tüm veri ekranlarında hata dalı, okuma zaman aşımı 4 sn (yazma 15 sn), supabase-js otomatik yeniden denemesi kapatıldı, harita geçişi başarısızlığında bildirim, Haritalarım ve Yol Haritam konu listesi için iskelet.
+
+### PL-05 · Sayaç tutarlılığı
+- Ayarlar › Haritalarım "8 / 43" (tüm harita) ile Yol Haritam "6/31" (plan) aynı tanımla saysın: plan. Tek ortak yardımcı fonksiyon.
+- ✅ Tek tanım "plan": `src/lib/plan-progress.ts` (`planProgress`, `sectionProgress`, `personalizationOf`, `roadmapPlanTopics`; sayma `computeProgress` ile aynı kural, kopya yok). Kullananlar: Yol Haritam (kişiselleştirme + bölüm sayaçları liste/ağaç), Ayarlar › Haritalarım (ek istek yok: seviye/kişiselleştirme zaten `roadmaps` satırında, yalnız `topic_progress` sorgusu artık tüm durumları okur), Konu ekranı kutlama yüzdesi, rozet hesabı (`achievements.ts`; artık kişisel işaretleri de sayar). Doğrulama: node betiğiyle 8 senaryo, web 390 px açık/koyu taklit veriyle iki ekran "4/25" ve "4 / 25" gösterdi.
 
 ### TS-04 · Son kabul (yeni görünüm)
 - Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
@@ -289,7 +290,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 Sıraya konmadı; önceliği proje sahibi verir.
 
 - **Hata/yıkıcı eylem için ayrı renk jetonu** (TS-04'ten): hata yazısı, geçersiz alan çerçevesi, "Çıkış yap"/"Engelle" gibi eylemler `coral`/`coralInk` kullanıyor; bu aynı zamanda bir harita rengi (Java, Mobil, Rust…). Küçük noktada karışmıyor ama anlam ayrımı için `danger`/`dangerInk` jetonu eklenmeli (theme.ts + `Button quiet` + `TextField invalid` + `Banner`).
-- **Sayaç tutarsızlığı: tüm harita ile plan** (TS-04'ten): Ayarlar › Haritalarım "8 / 43 konu bitti" tüm haritaya, Yol Haritam "6/31" plana (seviye + kişiselleştirme) göre sayıyor. Tek tanım seçilmeli (plan).
 - **Başarım ve lig renkleri** (TS-04'ten): `achievements.ts` bazı rozetlerde `accent`/`marker` hue; Lig'de 1. madalya `markerEdge`, 3. `coralEdge` (koyu temada birbirine yakın). Plan "mercan yalnız durum/XP" dediği için nötr tonlara çekilebilir.
 - **Native cihazda görsel doğrulama** (TS-04'ten): kabul yalnız web + taklit veriyle yapıldı. Android/iOS'ta yeni splash/adaptive-icon rengi (yeni APK), Figtree/Bricolage yüklemesi, `adjustsFontSizeToFit` ve "…" menüsünün alt sayfası gerçek cihazda gözle denenmeli. Uygulama simgesi PNG'si (`icon.png`) hâlâ eski teal zemin; yeni palete göre yeniden çizilmeli.
 - **Web üst çubuk geri düğmesi** (TS-04'ten): web'de `‹` metin karakteri kalın ve varsayılan yazı tipinde; Lucide `ChevronLeft` ile aynı çizgi kalınlığına getirilebilir (yalnız web, native sistem oku).
