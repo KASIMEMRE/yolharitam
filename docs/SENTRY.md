@@ -43,3 +43,6 @@ Yeni APK'yı kurduktan sonra Sentry panelinde "Issues" altında bir kayıt görm
 - Metro ayarı: `metro.config.js`. Kaynak haritası koşulu: `app.config.js`.
 - Gizlilik politikası ve mağaza veri güvenliği formu bu özelliği anlatır (`docs/yasal/gizlilik-politikasi.md`, `docs/YAYIN.md`).
 - Kaynak haritası yükleme yalnız yerel/EAS derlemesinde olur; OTA güncellemelerin haritası için `npx sentry-expo-upload-sourcemaps dist` gerekir (şimdilik gerekli değil).
+
+## Sürüm notu
+Sentry yerel (native) bir modül olduğu için uygulama sürümü 1.0.1'e yükseltildi. `runtimeVersion` politikası `appVersion` olduğundan 1.0.0 APK'lar bundan sonraki otomatik güncellemeleri almaz. Yeni APK'yı derleyip kurman gerekir: `npx eas-cli@latest build -p android --profile preview`.
