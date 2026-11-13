@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Banner } from '@/components/banner';
-import { Button } from '@/components/button';
 import { FilterChipRow } from '@/components/filter-chips';
 import { Glyph } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
 import { getRoadmap } from '@/constants/dev-roadmaps';
@@ -13,7 +13,6 @@ import { MinTouch, Radius, Spacing } from '@/constants/theme';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useLeague, type LeagueRow } from '@/hooks/use-league';
 import { useTheme } from '@/hooks/use-theme';
-import { ERROR_TEXT } from '@/lib/supabase-errors';
 import { weekEndText } from '@/lib/week';
 
 // İlk üç sıra madalya simgesiyle; renkler temadan: altın (sarı), gümüş (gri), bronz (mercan)
@@ -37,12 +36,7 @@ export function LeaguePanel() {
   const leagueLoading = mapsLoading || (active !== null && status === 'loading');
 
   if (mapsStatus === 'error' && maps.length === 0) {
-    return (
-      <View style={styles.list}>
-        <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
-        <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retryMaps} />
-      </View>
-    );
+    return <LoadError onRetry={retryMaps} />;
   }
 
   if (mapsStatus === 'ready' && maps.length === 0) {
@@ -80,10 +74,7 @@ export function LeaguePanel() {
       )}
 
       {!leagueLoading && status === 'error' && (
-        <>
-          <Banner tone="warning">{ERROR_TEXT.leagueLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-        </>
+        <LoadError variant={rows.length > 0 ? 'inline' : 'screen'} onRetry={retry} />
       )}
 
       {!leagueLoading && status === 'ready' && rows.length === 0 && (

@@ -1,10 +1,9 @@
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Banner } from '@/components/banner';
-import { Button } from '@/components/button';
 import { Glyph } from '@/components/icon';
 import { ListGroup } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
 import { SectionHeader } from '@/components/section-header';
 import { Skeleton } from '@/components/skeleton';
 import { ThemedText } from '@/components/themed-text';
@@ -12,7 +11,7 @@ import { summaryText, type AchievementResult } from '@/constants/achievements';
 import { Border, Radius, Spacing } from '@/constants/theme';
 import { useAchievements } from '@/hooks/use-achievements';
 import { useTheme } from '@/hooks/use-theme';
-import { ERROR_TEXT } from '@/lib/supabase-errors';
+import { loadErrorKind } from '@/lib/supabase-errors';
 
 // Tüm başarımlar ekranının gövdesi: durum (yükleniyor/hata/hazır) burada, hesap constants/achievements.ts'te.
 // Sade rozet görünümü: renkli kutu yok; kazanılan rozet mürekkep halkalı, kazanılmayan soluk. Satırlar ince çizgiyle ayrılır.
@@ -24,8 +23,6 @@ export function AchievementsSection() {
   const ordered = [...achievements].sort((a, b) => Number(b.earned) - Number(a.earned));
 
   const failed = status === 'schema' || status === 'network' || status === 'error';
-  const errorText =
-    status === 'schema' ? ERROR_TEXT.loadSchema : status === 'network' ? ERROR_TEXT.achievementsFailed : ERROR_TEXT.other;
 
   return (
     <View style={styles.section}>
@@ -53,12 +50,7 @@ export function AchievementsSection() {
         </View>
       )}
 
-      {failed && (
-        <View style={styles.grid}>
-          <Banner tone="warning">{errorText}</Banner>
-          <Button variant="secondary" label="Tekrar dene" loading={retrying} onPress={retry} />
-        </View>
-      )}
+      {failed && <LoadError kind={loadErrorKind(status)} retrying={retrying} onRetry={retry} />}
 
       {status === 'ready' && (
         <>
@@ -87,8 +79,6 @@ export function AchievementsStrip() {
   const { status, achievements, earnedCount, retrying, retry } = useAchievements();
   const ordered = [...achievements].sort((a, b) => Number(b.earned) - Number(a.earned));
   const failed = status === 'schema' || status === 'network' || status === 'error';
-  const errorText =
-    status === 'schema' ? ERROR_TEXT.loadSchema : status === 'network' ? ERROR_TEXT.achievementsFailed : ERROR_TEXT.other;
   const openAll = () => router.push('/achievements');
 
   return (
@@ -105,12 +95,7 @@ export function AchievementsStrip() {
           ))}
         </View>
       )}
-      {failed && (
-        <View style={styles.grid}>
-          <Banner tone="warning">{errorText}</Banner>
-          <Button variant="secondary" label="Tekrar dene" loading={retrying} onPress={retry} />
-        </View>
-      )}
+      {failed && <LoadError variant="inline" kind={loadErrorKind(status)} retrying={retrying} onRetry={retry} />}
       {status === 'ready' && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.stripRow}>
           {ordered.slice(0, STRIP_COUNT).map((a) => (

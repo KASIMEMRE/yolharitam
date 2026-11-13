@@ -10,6 +10,7 @@ import { Button } from '@/components/button';
 import { FriendsTodayCard } from '@/components/community/friends-today-card';
 import { UsernameForm } from '@/components/community/username-gate';
 import { ListRow } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
 import { ProgressBar, remainingLabel } from '@/components/progress-summary';
 import { RoadmapCatalog } from '@/components/roadmap-catalog';
 import { RoadmapTree, TreeLegend } from '@/components/roadmap-tree';
@@ -24,14 +25,13 @@ import { getRoadmap, KIND_LABEL, type DevRoadmap, type Section, type Topic } fro
 import {
   computeProgress,
   nextTopic,
-  personalizationFor,
   planTopics,
   type Personalization,
   type TopicStatus,
 } from '@/constants/dev-roadmaps/personalize';
 import { computeStreak, startOfWeek, weeklyProgress } from '@/constants/activity';
 import { levelFor } from '@/constants/xp';
-import { toLevelId, type GoalId, type WeeklyHoursId } from '@/constants/plan';
+import { type WeeklyHoursId } from '@/constants/plan';
 import { LEVELS } from '@/constants/onboarding';
 import { findOption, isAnswerId, weeklyLabel } from '@/constants/roadmap-questions';
 import { Border, Fonts, MaxContentWidth, MinTouch, Radius, Spacing } from '@/constants/theme';
@@ -43,10 +43,11 @@ import { useTheme } from '@/hooks/use-theme';
 import { useTopicProgress } from '@/hooks/use-topic-progress';
 import { useUsername } from '@/hooks/use-username';
 import { getTodayTask, taskTitle, type DailyTask } from '@/lib/daily-task';
+import { personalizationOf, sectionProgress } from '@/lib/plan-progress';
 import { useXp } from '@/lib/xp';
 import { setPreferences, usePreferences, type MapViewPref } from '@/lib/preferences';
 import { useAuth } from '@/lib/auth-context';
-import { ERROR_TEXT } from '@/lib/supabase-errors';
+import { ERROR_TEXT, loadErrorKind } from '@/lib/supabase-errors';
 
 // Konu detayını açar. Harita kimliği de gönderilir: detay ekranı içeriği veritabanına gitmeden bulur.
 function openTopic(roadmap: Roadmap, topicId: string) {
@@ -100,6 +101,12 @@ function MemberRoadmapScreen() {
   const [nameVersion, setNameVersion] = useState(0);
   // useCallback: kimliği sabit kalsın (gereksiz yeniden çizimi önler)
   const onNameSaved = useCallback(() => setNameVersion((v) => v + 1), []);
+  // Harita geçişi kaydedilemezse (activate iyimser öne alır, sonra geri alır) kullanıcıya kısa haber
+  const [switchFailed, setSwitchFailed] = useState(false);
+  async function switchMap(id: string) {
+    setSwitchFailed(false);
+    if (!(await activate(id))) setSwitchFailed(true);
+  }
 
   // Harita yokken ("…" menüsü ve harita değiştirici anlamsız) yalın başlık
   const header = <RoadmapHeader key={nameVersion} />;
@@ -118,10 +125,7 @@ function MemberRoadmapScreen() {
     return (
       <TabScreen>
         {header}
-        <View style={styles.errorBox}>
-          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-        </View>
+        <LoadError onRetry={retry} />
       </TabScreen>
     );
   }
@@ -151,8 +155,9 @@ function MemberRoadmapScreen() {
     <TabScreen>
       {/* Başlık bloğu: selam + "…" menüsü, hemen altında altı çizili harita sekmeleri ("+ Ekle" de burada) */}
       <RoadmapHeader key={nameVersion} menu={{ roadmap, map }}>
-        {roadmaps.length > 0 && <MapTabs roadmaps={roadmaps} activeId={roadmap.id} onSelect={activate} />}
+        {roadmaps.length > 0 && <MapTabs roadmaps={roadmaps} activeId={roadmap.id} onSelect={switchMap} />}
       </RoadmapHeader>
+      {switchFailed && <Banner tone="warning">{ERROR_TEXT.switchFailed}</Banner>}
       {/* Kullanıcı adı yoksa (kayıtta ad seçilmeyen eski hesaplar) tek satırlık şerit olarak bir kez sorulur */}
       <NamePrompt onSaved={onNameSaved} />
       {/* key: harita değişince içteki açık/kapalı bölüm durumu sıfırdan başlasın */}
@@ -280,12 +285,11 @@ function MapView({
   const weekly: WeeklyHoursId = isAnswerId('weeklyHours', roadmap.weekly_hours)
     ? (roadmap.weekly_hours as WeeklyHoursId)
     : '3-5';
-  const goal: GoalId = isAnswerId('goal', roadmap.goal) ? (roadmap.goal as GoalId) : 'job';
-  // Kayıtlı kişisel işaretler; yoksa (eski kayıt) seviyeye göre kurallar
+  // Kayıtlı kişisel işaretler; yoksa (eski kayıt) seviyeye göre kurallar (Ayarlar › Haritalarım ile ortak çözüm)
   // useMemo: her render'da yeni nesne üretilirse günün görevi efekti her seferinde yeniden çalışır
   const personalization = useMemo(
-    () => personalizationFor(map, roadmap.personalization, toLevelId(roadmap.level), goal),
-    [map, roadmap.personalization, roadmap.level, goal]
+    () => personalizationOf(map, roadmap),
+    [map, roadmap]
   );
 
   const ready = progress.status === 'ready';
@@ -333,17 +337,10 @@ function MapView({
       />
 
       {(progress.status === 'schema' || progress.status === 'network' || progress.status === 'error') && (
-        <View style={styles.errorBox}>
-          <Banner tone="warning">
-            {progress.status === 'schema'
-              ? ERROR_TEXT.loadSchema
-              : progress.status === 'network'
-                ? ERROR_TEXT.network
-                : ERROR_TEXT.other}
-          </Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={progress.retry} />
-        </View>
+        <LoadError kind={loadErrorKind(progress.status)} onRetry={progress.retry} />
       )}
+      {/* Konular okunurken yerleşim zıplamasın: ağaç gelince yerini alacak iskelet */}
+      {progress.status === 'loading' && <RoadmapSkeleton />}
 
       {ready && (
         <Sections
@@ -777,9 +774,8 @@ function SectionBlock({
   onOpenTopic: (id: string) => void;
 }) {
   const theme = useTheme();
-  const inPlan = section.topics.filter((t) => planIds.has(t.id));
-  const done = inPlan.filter((t) => statuses.get(t.id) === 'done').length;
-  const complete = inPlan.length > 0 && done === inPlan.length;
+  const { done, total } = sectionProgress(section, planIds, statuses);
+  const complete = total > 0 && done === total;
   const note = personalization.notes[section.id];
 
   return (
@@ -788,19 +784,19 @@ function SectionBlock({
         onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`${section.title}. ${inPlan.length} konunun ${done} tanesi bitti. ${open ? 'Kapatmak' : 'Açmak'} için dokun.`}
+        accessibilityLabel={`${section.title}. ${total} konunun ${done} tanesi bitti. ${open ? 'Kapatmak' : 'Açmak'} için dokun.`}
         style={styles.blockHead}>
         <ThemedText type="defaultSemiBold" style={styles.flex1}>
           {section.title}
         </ThemedText>
         <ThemedText type="small" themeColor="textSecondary" style={styles.blockCount}>
-          {inPlan.length === 0 ? 'planında yok' : complete ? 'Bitti' : `${done}/${inPlan.length}`}
+          {total === 0 ? 'planında yok' : complete ? 'Bitti' : `${done}/${total}`}
         </ThemedText>
       </Pressable>
 
       {open && (
         <Animated.View entering={FadeIn.duration(150)} style={styles.blockBody}>
-          {inPlan.length > 0 && <ProgressBar ratio={done / inPlan.length} />}
+          {total > 0 && <ProgressBar ratio={done / total} />}
           {/* Kişisel bölüm notu: kutusuz, simgesiz, nötr küçük yazı (mercan yalnız durum/XP içindir) */}
           {note && (
             <ThemedText type="small" themeColor="textSecondary">
@@ -917,7 +913,6 @@ function EmptyState({ title }: { title: string }) {
 
 const styles = StyleSheet.create({
   flex1: { flex: 1, minWidth: 0 },
-  errorBox: { gap: Spacing.three },
   // Başlık bloğu: başlık ile harita sekmeleri arası dar (tek blok gibi okunsun)
   headBlock: { gap: Spacing.one },
   moreButton: { width: MinTouch, height: MinTouch, borderRadius: Radius.pill, alignItems: 'center', justifyContent: 'center' },
