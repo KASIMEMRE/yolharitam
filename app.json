@@ -2,7 +2,7 @@
   "expo": {
     "name": "Yol Haritam",
     "slug": "yolharitam",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "yolharitam",
@@ -38,7 +38,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 140
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -77,7 +77,8 @@ npx eas-cli@latest submit --platform android                       # ya da Play 
 **Veri güvenliği (Play) / App Privacy (Apple)**
 - Toplanan: e-posta (hesap), kullanıcı adı (herkese görünür), uygulama etkinliği (ilerleme, XP), kullanıcı içeriği (vitrin projeleri, yapay zekâya sorulan sorular).
 - Paylaşılan: yapay zekâ sorusu ve konu bilgisi Groq'a işlenmek üzere gider (kimlik bilgisi olmadan).
-- Konum, rehber, fotoğraf, cihaz/reklam kimliği: **toplanmıyor**. Reklam ve takip: **yok** (Apple: "Data not used to track you").
+- Çökme kayıtları (Play: "Çökme günlükleri" / "Tanılama"): hata ayrıntısı, cihaz modeli, işletim sistemi ve uygulama sürümü Sentry'ye (Functional Software, Inc., ABD) gider; kimlik bilgisi yok, kullanıcıyla ilişkilendirilmez, izleme için kullanılmaz. Play'de "Uygulama işlevselliği/Analiz" amacıyla, isteğe bağlı değil olarak işaretle. Apple: "Crash Data", "Not linked to you", izleme yok.
+- Konum, rehber, fotoğraf, cihaz/reklam kimliği: **toplanmıyor**. Reklam, kullanım analitiği ve takip: **yok** (Apple: "Data not used to track you").
 - Aktarım şifreli: evet. Kullanıcı verisinin silinmesini isteyebilir: evet (uygulama içi + hesap silme sayfası).
 - Uygulamada kullanıcı içeriği var: evet (bildir, engelle, filtre mevcut).
 - Şifreleme ihracatı: yalnız standart HTTPS (`ITSAppUsesNonExemptEncryption: false` ayarlı).

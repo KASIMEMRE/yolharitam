@@ -7,11 +7,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 > **Aktif plan: Play'e çıkış hazırlığı** (13 Kasım). PL-01 … PL-05 birbirinden bağımsız, paralel yürür.
 
-### PL-02 · Çökme takibi (Sentry)
-- `@sentry/react-native` (`npx expo install`), DSN `EXPO_PUBLIC_SENTRY_DSN` ortam değişkeninden; boşsa tamamen kapalı.
-- Expo Go'da uygulama bozulmamalı. Kişisel veri gönderilmez (e-posta, kullanıcı adı yok; yalnız anonim kullanıcı kimliği değil, hiç kimlik yok).
-- Gizlilik politikası ve YAYIN.md veri güvenliği bölümü güncellenir; kurulum adımları `docs/SENTRY.md`.
-
 
 
 > **Plan tamamlandı:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti). TS-01 … TS-04 tamamlandı (PR'lar açıldı); son kabul raporu: `docs/plan/TS-04-kabul-raporu.md`. Hiçbir özellik kaldırılmadı (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
@@ -34,6 +29,12 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### PL-02 · Çökme takibi (Sentry)
+- `@sentry/react-native` (`npx expo install`), DSN `EXPO_PUBLIC_SENTRY_DSN` ortam değişkeninden; boşsa tamamen kapalı.
+- Expo Go'da uygulama bozulmamalı. Kişisel veri gönderilmez (e-posta, kullanıcı adı yok; yalnız anonim kullanıcı kimliği değil, hiç kimlik yok).
+- Gizlilik politikası ve YAYIN.md veri güvenliği bölümü güncellenir; kurulum adımları `docs/SENTRY.md`.
+- ✅ `@sentry/react-native` (~8.28) kuruldu. `src/lib/sentry.ts`: DSN `EXPO_PUBLIC_SENTRY_DSN`'den; boşsa, Expo Go'da, web'de `init` çağrılmaz ve `Sentry.wrap` bileşeni değiştirmez. `sendDefaultPii:false`, izleme/oturum tekrarı/oturum takibi kapalı, geliştirmede gönderim kapalı, ağ breadcrumb'ları ve `user`/`request` olaydan silinir. `_layout.tsx` başlatır ve sarar; `app-error.tsx` yakaladığı hatayı bildirir. `app.json`'a eklenti, `metro.config.js` (Debug ID), `app.config.js` (token/org/proje yoksa kaynak haritası yüklemesi kapalı: derleme bozulmaz). `docs/SENTRY.md`, gizlilik politikası (yeni Bölüm 3), `YAYIN.md` veri güvenliği güncellendi. Yeni APK şart (native modül).
 
 ### PL-04 · Kullanıcı adı filtresi 🗄️
 - Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
