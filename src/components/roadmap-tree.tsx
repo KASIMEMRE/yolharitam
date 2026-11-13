@@ -7,6 +7,7 @@ import type { Personalization, TopicStatus } from '@/constants/dev-roadmaps/pers
 import { Border, MinTouch, Radius, Spacing } from '@/constants/theme';
 import { MARKER_STYLE, STATUS_STYLE } from '@/constants/visuals';
 import { useTheme } from '@/hooks/use-theme';
+import { sectionProgress } from '@/lib/plan-progress';
 
 // GÖRSEL HARİTA: roadmap.sh'teki ağacın telefona uyarlanmış hali.
 // Ortada dikey bir omurga (yol), üstünde bölüm kutuları; konular omurganın iki yanına sırayla
@@ -36,9 +37,9 @@ export function RoadmapTree({ map, statuses, personalization, planIds, nextId, o
   return (
     <View accessibilityRole="list">
       {map.sections.map((section, sIndex) => {
-        const inPlan = section.topics.filter((t) => planIds.has(t.id));
-        const done = inPlan.filter((t) => statuses.get(t.id) === 'done').length;
-        const complete = inPlan.length > 0 && done === inPlan.length;
+        // Liste görünümüyle aynı bölüm sayacı (ortak yardımcı)
+        const { done, total } = sectionProgress(section, planIds, statuses);
+        const complete = total > 0 && done === total;
         return (
           <View key={section.id}>
             {/* Bölüm kutusu: omurganın tam ortasında */}
@@ -47,7 +48,7 @@ export function RoadmapTree({ map, statuses, personalization, planIds, nextId, o
               <View
                 accessible
                 accessibilityRole="header"
-                accessibilityLabel={`Bölüm ${sIndex + 1}: ${section.title}. ${inPlan.length} konunun ${done} tanesi bitti.`}
+                accessibilityLabel={`Bölüm ${sIndex + 1}: ${section.title}. ${total} konunun ${done} tanesi bitti.`}
                 style={[
                   styles.sectionBox,
                   // Nötr zemin; tamamlanan bölüm daha da sade (zemin yok, yalnız çizgi)
@@ -63,7 +64,7 @@ export function RoadmapTree({ map, statuses, personalization, planIds, nextId, o
                   {section.title}
                 </ThemedText>
                 <ThemedText type="small" themeColor="textSecondary">
-                  {done}/{inPlan.length}
+                  {done}/{total}
                 </ThemedText>
               </View>
             </View>

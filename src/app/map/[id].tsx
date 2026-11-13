@@ -3,10 +3,12 @@ import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { HeaderBackButton } from '@/components/header-back-button';
 import { ListGroup, ListRow } from '@/components/list-row';
 import { Glyph } from '@/components/icon';
+import { LoadError } from '@/components/load-error';
 import { StatusDot } from '@/components/status-dot';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -16,6 +18,7 @@ import { HUES, MARKER_STYLE } from '@/constants/visuals';
 import { useLatestRoadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
 import { useAuthGate } from '@/lib/auth-gate';
+import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 function first(param: string | string[] | undefined): string | undefined {
   return Array.isArray(param) ? param[0] : param;
@@ -28,10 +31,11 @@ export default function MapPreviewScreen() {
   const map = getRoadmap(first(params.id));
   const { requireAuth, isGuest } = useAuthGate();
   // Kullanıcı bu haritayı zaten takip ediyorsa düğme "Haritama git" olur (misafirde sorgu atılmaz)
-  const { roadmaps, loading, activate } = useLatestRoadmap();
+  const { roadmaps, loading, failed, retry, activate } = useLatestRoadmap();
   // Bölüm açık/kapalı: varsayılan yalnız ilk bölüm açık (ilk bakışta içerik görünsün, gerisi dokununca).
   // State "varsayılandan çevrilenler" kümesidir; böylece başlangıç değeri hesaplamak gerekmez.
   const [flipped, setFlipped] = useState<Set<string>>(new Set());
+  const [pickFailed, setPickFailed] = useState(false);
   const theme = useTheme();
   const { width } = useWindowDimensions();
   const gutter = width < 360 ? Spacing.three : Spacing.four;
@@ -90,8 +94,10 @@ export default function MapPreviewScreen() {
     }
     if (followed) {
       // Haritayı aktif yap ki Yol Haritam sekmesi bu haritayla açılsın
-      await activate(followed.id);
-      router.replace('/roadmap');
+      setPickFailed(false);
+      // Geçiş kaydedilemezse başka ekrana atlamayız; kısa haber veririz
+      if (await activate(followed.id)) router.replace('/roadmap');
+      else setPickFailed(true);
       return;
     }
     router.push({ pathname: '/onboarding', params: { map: map.id } });
@@ -119,6 +125,10 @@ export default function MapPreviewScreen() {
                 {`${map.sections.length} bölüm · ${counts.total} konu · ~${hours} saat`}
               </ThemedText>
             </View>
+
+            {/* Takip durumu okunamadıysa düğme yanlış yere (ikinci kez harita ekleme) götürmesin: hata + tekrar dene */}
+            {!isGuest && failed && <LoadError variant="inline" onRetry={retry} />}
+            {pickFailed && <Banner tone="warning">{ERROR_TEXT.switchFailed}</Banner>}
 
             {/* Bölümler: ince çizgili satırlar. Açık bölümde konu satırları; konuya dokununca salt okunur konu ekranı. */}
             <View>
@@ -174,7 +184,7 @@ export default function MapPreviewScreen() {
             <Button
               label={followed ? 'Haritama git' : 'Bu haritayı seç'}
               onPress={handlePick}
-              disabled={!isGuest && loading}
+              disabled={!isGuest && (loading || failed)}
             />
           </View>
         </View>

@@ -7,23 +7,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 > **Aktif plan: Play'e çıkış hazırlığı** (13 Kasım). PL-01 … PL-05 birbirinden bağımsız, paralel yürür.
 
-### PL-01 · Hata, boş ve yükleniyor durumları (Y-07'nin yerini alır)
-- Veri çeken her ekranda ağ hatası "kayıt yok" gibi görünmemeli: Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
-- `useLatestRoadmap` ve diğer veri kancaları hata durumunu döndürsün; tek ortak hata bileşeni.
-- Yükleniyor durumlarında yerleşimi zıplatmayan iskelet; okuma hatası ~7 sn yerine kısa sürede görünsün.
-
-### PL-03 · XP'yi sunucuya taşımak 🗄️
-- İstemci `xp_events` tablosuna doğrudan yazamasın; XP miktarını sunucu belirlesin (RPC / Edge Function).
-- Quiz ve "sor" XP'si yalnız Edge Function gerçekten çalıştıysa verilsin. Aynı haritayı ikinci kez ekleyip puan toplama kapansın (`roadmaps(user_id, topic_path)` benzersiz).
-- Mevcut XP toplamları ve lig bozulmaz.
-
-### PL-04 · Kullanıcı adı filtresi 🗄️
-- Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
-- Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
-- `username_available` için hız sınırı.
-
-### PL-05 · Sayaç tutarlılığı
-- Ayarlar › Haritalarım "8 / 43" (tüm harita) ile Yol Haritam "6/31" (plan) aynı tanımla saysın: plan. Tek ortak yardımcı fonksiyon.
 
 
 > **Plan tamamlandı:** `docs/plan/TASARIM-MUREKKEP.md` — yeni görünüm (B düzeni + Mürekkep & mercan paleti). TS-01 … TS-04 tamamlandı (PR'lar açıldı); son kabul raporu: `docs/plan/TS-04-kabul-raporu.md`. Hiçbir özellik kaldırılmadı (envanter: `docs/plan/SADELIK-VE-MISAFIR.md` bölüm 5).
@@ -53,6 +36,27 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Gizlilik politikası ve YAYIN.md veri güvenliği bölümü güncellenir; kurulum adımları `docs/SENTRY.md`.
 - ✅ `@sentry/react-native` (~8.28) kuruldu. `src/lib/sentry.ts`: DSN `EXPO_PUBLIC_SENTRY_DSN`'den; boşsa, Expo Go'da, web'de `init` çağrılmaz ve `Sentry.wrap` bileşeni değiştirmez. `sendDefaultPii:false`, izleme/oturum tekrarı/oturum takibi kapalı, geliştirmede gönderim kapalı, ağ breadcrumb'ları ve `user`/`request` olaydan silinir. `_layout.tsx` başlatır ve sarar; `app-error.tsx` yakaladığı hatayı bildirir. `app.json`'a eklenti, `metro.config.js` (Debug ID), `app.config.js` (token/org/proje yoksa kaynak haritası yüklemesi kapalı: derleme bozulmaz). `docs/SENTRY.md`, gizlilik politikası (yeni Bölüm 3), `YAYIN.md` veri güvenliği güncellendi. Yeni APK şart (native modül).
 
+### PL-04 · Kullanıcı adı filtresi 🗄️
+- Uygunsuz kelime içeren kullanıcı adı kayıtta ve değiştirmede reddedilir (sunucuda zorunlu, istemcide anlaşılır mesaj).
+- Var olan `banned_words` listesi kullanılır; ayrıca ayrılmış adlar (admin, yolharitam, destek…).
+- `username_available` için hız sınırı.
+- ✅ `20261113110000_username_moderation.sql`: `profiles` üzerinde `BEFORE INSERT OR UPDATE OF username` tetikleyicisi (`profiles_username_guard`); `username_blocked()` mevcut `contains_banned_words` + leetspeak/ayraç sadeleştirmesi + `reserved_usernames` tablosu (admin, yonetici, moderator, yolharitam, destek, support, root, system, anthropic, claude, null ve birkaç ek). `handle_new_user` yasaklı adda kaydı bozmaz, adsız profil açar (uygulama yeni ad seçtirir). `username_available` uygunsuz/ayrılmış adda `false`; hız sınırı: kullanıcı başı 30/dk, anon IP başı 20/dk + anon toplam 300/dk (aşılınca `rate_limited` hatası, istemci "belirsiz" sayar). İstemci: tek mesaj "Bu kullanıcı adı kullanılamaz.", kayıttan önce son uygunluk sorusu, `isUsernameRejection` yardımcısı. Mevcut adlara dokunulmadı; yönetici sorgusu migration sonundaki yorumda. `database.types.ts` değişmedi (yeni tablolar/işlevler istemciye kapalı, `username_available` imzası aynı).
+
+### PL-03 · XP'yi sunucuya taşımak 🗄️
+- İstemci `xp_events` tablosuna doğrudan yazamasın; XP miktarını sunucu belirlesin (RPC / Edge Function).
+- Quiz ve "sor" XP'si yalnız Edge Function gerçekten çalıştıysa verilsin. Aynı haritayı ikinci kez ekleyip puan toplama kapansın (`roadmaps(user_id, topic_path)` benzersiz).
+- Mevcut XP toplamları ve lig bozulmaz.
+- ✅ XP artık yalnız sunucudan yazılır: `award_xp(kind, ref)` RPC'si (tutar sabit tablodan, istemci tutar göndermez; konu bitmiş mi / harita kullanıcıya mı ait kontrolü) ve `topic-assist` Edge Function'ı (ask: cevap üretilince; quiz: yeni `quiz_submit` ile doğru sayısını önbellekteki quiz'den sunucu hesaplar, cevaba `xp_awarded` eklenir). `authenticated` rolünün `xp_events` yazma yetkisi kalktı; okuma ve lig/toplam hesapları aynı. "Aynı olay" anahtarı artık harita satırının uuid'si değil `xp_events.dedupe_key` (`<harita>:<konu>`): haritayı silip yeniden eklemek ya da kopya satırla konuyu yeniden bitirmek puan vermez. `roadmaps(user_id, topic_path)` benzersiz; mevcut kopyalar migration'da birleştirilir (en eski satır kalır, ilerleme ve en son kişisel ayarlar ona taşınır, silinenler `roadmap_merge_backup`'a yedeklenir); harita ekleme upsert. Migration: `20261113100000_xp_server.sql`. Ders: `docs/dersler/PL-03.md`.
+
+### PL-01 · Hata, boş ve yükleniyor durumları (Y-07'nin yerini alır)
+- Veri çeken her ekranda ağ hatası "kayıt yok" gibi görünmemeli: Türkçe, ne yapılacağını söyleyen mesaj + "Tekrar dene".
+- `useLatestRoadmap` ve diğer veri kancaları hata durumunu döndürsün; tek ortak hata bileşeni.
+- Yükleniyor durumlarında yerleşimi zıplatmayan iskelet; okuma hatası ~7 sn yerine kısa sürede görünsün.
+✅ Ortak `LoadError` bileşeni (ekran/satır içi), tüm veri ekranlarında hata dalı, okuma zaman aşımı 4 sn (yazma 15 sn), supabase-js otomatik yeniden denemesi kapatıldı, harita geçişi başarısızlığında bildirim, Haritalarım ve Yol Haritam konu listesi için iskelet.
+
+### PL-05 · Sayaç tutarlılığı
+- Ayarlar › Haritalarım "8 / 43" (tüm harita) ile Yol Haritam "6/31" (plan) aynı tanımla saysın: plan. Tek ortak yardımcı fonksiyon.
+- ✅ Tek tanım "plan": `src/lib/plan-progress.ts` (`planProgress`, `sectionProgress`, `personalizationOf`, `roadmapPlanTopics`; sayma `computeProgress` ile aynı kural, kopya yok). Kullananlar: Yol Haritam (kişiselleştirme + bölüm sayaçları liste/ağaç), Ayarlar › Haritalarım (ek istek yok: seviye/kişiselleştirme zaten `roadmaps` satırında, yalnız `topic_progress` sorgusu artık tüm durumları okur), Konu ekranı kutlama yüzdesi, rozet hesabı (`achievements.ts`; artık kişisel işaretleri de sayar). Doğrulama: node betiğiyle 8 senaryo, web 390 px açık/koyu taklit veriyle iki ekran "4/25" ve "4 / 25" gösterdi.
 
 ### TS-04 · Son kabul (yeni görünüm)
 - Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.
@@ -285,11 +289,11 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 
 
 ## Öneriler (ekipten)
+- `useActivity` hata durumunu döndürmüyor; hatada seri/haftalık hedef kartı sessizce gizleniyor (PL-01 dışı bırakıldı).
 
 Sıraya konmadı; önceliği proje sahibi verir.
 
 - **Hata/yıkıcı eylem için ayrı renk jetonu** (TS-04'ten): hata yazısı, geçersiz alan çerçevesi, "Çıkış yap"/"Engelle" gibi eylemler `coral`/`coralInk` kullanıyor; bu aynı zamanda bir harita rengi (Java, Mobil, Rust…). Küçük noktada karışmıyor ama anlam ayrımı için `danger`/`dangerInk` jetonu eklenmeli (theme.ts + `Button quiet` + `TextField invalid` + `Banner`).
-- **Sayaç tutarsızlığı: tüm harita ile plan** (TS-04'ten): Ayarlar › Haritalarım "8 / 43 konu bitti" tüm haritaya, Yol Haritam "6/31" plana (seviye + kişiselleştirme) göre sayıyor. Tek tanım seçilmeli (plan).
 - **Başarım ve lig renkleri** (TS-04'ten): `achievements.ts` bazı rozetlerde `accent`/`marker` hue; Lig'de 1. madalya `markerEdge`, 3. `coralEdge` (koyu temada birbirine yakın). Plan "mercan yalnız durum/XP" dediği için nötr tonlara çekilebilir.
 - **Native cihazda görsel doğrulama** (TS-04'ten): kabul yalnız web + taklit veriyle yapıldı. Android/iOS'ta yeni splash/adaptive-icon rengi (yeni APK), Figtree/Bricolage yüklemesi, `adjustsFontSizeToFit` ve "…" menüsünün alt sayfası gerçek cihazda gözle denenmeli. Uygulama simgesi PNG'si (`icon.png`) hâlâ eski teal zemin; yeni palete göre yeniden çizilmeli.
 - **Web üst çubuk geri düğmesi** (TS-04'ten): web'de `‹` metin karakteri kalın ve varsayılan yazı tipinde; Lucide `ChevronLeft` ile aynı çizgi kalınlığına getirilebilir (yalnız web, native sistem oku).
@@ -306,21 +310,28 @@ Sıraya konmadı; önceliği proje sahibi verir.
 - **Okuma hatasında "Tekrar dene" ve kısa zaman aşımı** (Y-02'den): supabase-js GET isteklerini birkaç kez yeniden denediği için "Adın yüklenemedi" uyarısı ~7 sn sonra çıkıyor (Y-07 ile birlikte ele alınabilir).
 - **Pasif buton kontrastı** (Y-02'den): `Button` pasifken etiket koyu modda zor seçiliyor; disabled etiket rengi `textSecondary`'ye yaklaştırılabilir.
 - **Selamlamayı belirginleştirme** (Y-02'den): "Merhaba, <ad>" eyebrow'u küçük ve silik; tema renkleriyle bir kademe daha belirgin yapılabilir.
-- **XP'yi sunucuda hesaplamak** (QA-01'den): XP satırları istemciden yazılıyor (300'e kadar); lig/sıralama gelmeden önce RPC ile sunucuya taşınmalı. Toplam da RPC ile hesaplanabilir.
-- **Aynı haritanın iki kez eklenmesini engelleme** (QA-01'den): `roadmaps(user_id, topic_path)` benzersiz kısıtı + upsert (önce kopyaları temizleyen migration).
+- **XP'yi sunucuda hesaplamak** (QA-01'den): ✅ PL-03'te yapıldı (toplam hâlâ `xp_events` toplamından okunur). XP satırları istemciden yazılıyor (300'e kadar); lig/sıralama gelmeden önce RPC ile sunucuya taşınmalı. Toplam da RPC ile hesaplanabilir.
+- **Aynı haritanın iki kez eklenmesini engelleme** (QA-01'den): ✅ PL-03'te yapıldı. `roadmaps(user_id, topic_path)` benzersiz kısıtı + upsert (önce kopyaları temizleyen migration).
 - **topic-assist önbellek anahtarına özet (hash)** (QA-01'den): şimdilik içerik `_src` ile doğrulanıyor; kalıcı çözüm anahtara hash eklemek (migration).
 - **pg_net/cron kayıt temizliği** (Y-09'dan): `net._http_response` ve `cron.job_run_details` zamanla büyür; haftalık temizlik işi eklenebilir.
 - **Push bildirimi** (Y-12'den): "Ahmet bugün 2 konu bitirdi" şimdilik uygulama içi kart; gerçek bildirim için development build + expo-notifications gerekir (Expo Go'da yok).
 - **Kullanıcı adı denetimi ve hız sınırı** (Y-12'den): küfür filtresi, `username_available`/`friend_request` için hız sınırı.
 - **XP'yi tamamen sunucuya taşımak** (Y-12'den): tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
+- **Kullanıcı adı taraması için CAPTCHA** (SEC-01'den; PL-04 hız sınırını ekledi, IP başlığı canlıda doğrulanmalı): `username_available` anon çağrılabiliyor; kullanıcı adları toplu taranabilir.
+
+- **XP'yi tamamen sunucuya taşımak** (Y-12'den): ✅ PL-03'te yapıldı. tetikleyici hileyi büyük ölçüde engelliyor ama sunucu harita içeriğini bilmiyor; aynı haritayı ikinci kez ekleyip konuları yeniden bitirmek günlük tavana kadar puan getirir.
 - **Kullanıcı adı taraması için hız sınırı / CAPTCHA** (SEC-01'den): `username_available` anon çağrılabiliyor; kullanıcı adları toplu taranabilir.
 - **Web için Content-Security-Policy** (SEC-01'den): web yayınında başlık olarak eklenmeli.
-- **XP'yi tamamen sunucuya taşımak (quiz/ask kanıtı)** (SEC-01'den): quiz ve soru-cevap XP'si için sunucu tarafında yapıldığının kanıtı (Edge Function sonucu) aranmalı.
+- **XP'yi tamamen sunucuya taşımak (quiz/ask kanıtı)** (SEC-01'den): ✅ PL-03'te yapıldı. quiz ve soru-cevap XP'si için sunucu tarafında yapıldığının kanıtı (Edge Function sonucu) aranmalı.
 - **pg_net uzantısını `extensions` şemasına taşımak** (SEC-01'den): Supabase uyarısı; silip yeniden kurmayı gerektirdiği için ertelendi.
 
 - **Erişilebilirlik etiketlerini görünür metinle hizalama** (UX-01'den): "Harita ekle" çipinin etiketi "Yeni harita ekle", Harita/Liste anahtarının etiketi "Harita görünümü"; sesli kontrol için etiket görünür metinle başlamalı.
 - **Aynı konuyu açan iki kart** (UX-01'den): günün görevi quiz/bitir türündeyken sıradaki konuyla aynı konuysa iki kart da görünür; birleştirilebilir.
 - **Gün değişiminde günün görevi** (UX-01'den): uygulama gece yarısı açık kalırsa görev bayat kalır; `AppState` ile yeniden hesaplanabilir.
+- **Günün görevi bonusu hâlâ istemci kanıtına dayanıyor** (PL-03'ten): `daily` XP'sini sunucu ref'in tarihine ve günde bir kez kuralına göre veriyor ama görevin gerçekten yapıldığını bilmiyor (görev cihazda üretiliyor). Günde en çok 30 XP; görev seçimi sunucuya (ya da seçilen görevin `topic_progress`/quiz kanıtına) bağlanabilir.
+- **Bölüm ve harita bonusu için sunucuda içerik listesi** (PL-03'ten): sunucu hangi bölümde hangi konuların olduğunu bilmiyor; `section_done`/`roadmap_done` yalnız "en az bir konu bitti + günlük tavan" sezgisiyle doğrulanıyor. Konu/bölüm kimliklerini bir tabloya (seed) koyup bonusu gerçek tamamlanmaya bağlamak kapatır.
+- **Quiz'in doğru cevapları istemciye gidiyor** (PL-03'ten): quiz XP'sini sunucu hesaplıyor ama şıkların doğru olanı cevapla birlikte istemciye geliyor; teknik bir kullanıcı hepsini doğru göndererek konu başına 25 XP alabilir. Cevabı ancak seçim sonrası açıklamak (soru soru doğrulama) gerekir.
+- **Eski `create_roadmap_with_steps` RPC'si** (PL-03'ten): uygulama kullanmıyor; `roadmaps` benzersiz olduktan sonra var olan haritada `unique_violation` verir. Artık kullanılmayan RPC ve `roadmap_steps` tablosu bir temizlik migration'ında kaldırılabilir.
 
 ## Yayından sonra
 - [ ] **Yapay zekâ katmanı ücretli abonelik (freemium):** kişisel işaretleme (`src/lib/personalize-roadmap.ts` → `personalize-roadmap` Edge Function) abonelere açık olsun; ücretsiz kullanıcılar kural tabanlı işaretlemeyi görür. Mağaza içi satın alma (RevenueCat vb.) + sunucu tarafında abonelik kontrolü.

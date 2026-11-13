@@ -3,12 +3,12 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { blockAction } from '@/components/block-user-button';
-import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { FilterChipRow } from '@/components/filter-chips';
 import { RowMenu, type SheetAction } from '@/components/row-menu';
 import { Skeleton } from '@/components/skeleton';
 import { ListGroup } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
 import { ThemedText } from '@/components/themed-text';
 import { getRoadmap } from '@/constants/dev-roadmaps';
 import { MinTouch, Spacing } from '@/constants/theme';
@@ -23,7 +23,7 @@ const ALL = '__all__';
 // Topluluk › Vitrin. Kullanıcı adı zorunluluğunu üstteki ekran (UsernameGate) sağlar.
 // Düzen: "Projeni paylaş" (tek birincil) → harita çipleri (tek satır) → düz proje kartları.
 export function ShowcasePanel() {
-  const { roadmaps, status: mapsStatus } = useLatestRoadmap();
+  const { roadmaps, failed: mapsFailed, retry: retryMaps } = useLatestRoadmap();
   // null = "Tümü"
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -44,7 +44,7 @@ export function ShowcasePanel() {
         onPress={() => router.push(active ? { pathname: '/showcase-new', params: { map: active } } : '/showcase-new')}
       />
 
-      {mapsStatus === 'error' && <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>}
+      {mapsFailed && <LoadError variant="inline" onRetry={retryMaps} />}
 
       {maps.length > 0 && (
         <FilterChipRow
@@ -74,10 +74,7 @@ export function ShowcasePanel() {
       )}
 
       {status === 'error' && (
-        <View style={styles.list}>
-          <Banner tone="warning">{ERROR_TEXT.showcaseLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-        </View>
+        <LoadError variant={items.length > 0 ? 'inline' : 'screen'} onRetry={retry} />
       )}
 
       {status === 'ready' && items.length === 0 && (

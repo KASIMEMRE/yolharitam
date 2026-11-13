@@ -165,6 +165,23 @@ export default function LoginScreen() {
         if (error) setError(toTurkish(error));
         // Başarılıysa Stack.Protected bizi otomatik içeri alır.
       } else {
+        // Kayıttan ÖNCE son bir uygunluk sorusu: canlı kontrol henüz bitmemiş ya da belirsiz kalmış olabilir.
+        // Sunucu uygunsuz adla da kaydı başarısız etmez (adsız profil açar), bu yüzden en iyi yer burası.
+        // Hata/hız sınırı (null) kayda engel değildir; son karar sunucudaki tetikleyicide.
+        if (checked !== true) {
+          let ok: boolean | null = null;
+          try {
+            const res = await supabase.rpc('username_available', { p: handle });
+            if (!res.error && typeof res.data === 'boolean') ok = res.data;
+          } catch {
+            // belirsiz bırak
+          }
+          if (ok === false) {
+            setNameCheck({ name: handle, available: false });
+            setError(ERROR_TEXT.usernameTaken);
+            return;
+          }
+        }
         // Kullanıcı adı hesabın bilgilerine (user_metadata) yazılır; veritabanındaki handle_new_user
         // tetikleyicisi hesap oluşurken onu profile kopyalar (e-posta onayı beklenmeden).
         const { data, error } = await supabase.auth.signUp({

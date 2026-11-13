@@ -5,37 +5,50 @@ import { StyleSheet, View } from 'react-native';
 import { Banner } from '@/components/banner';
 import { Button } from '@/components/button';
 import { ListGroup, ListRow } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
+import { Skeleton } from '@/components/skeleton';
 import { Surface } from '@/components/surface';
 import { ThemedText } from '@/components/themed-text';
-import { countTopics, getRoadmap, KIND_LABEL } from '@/constants/dev-roadmaps';
+import { getRoadmap, KIND_LABEL } from '@/constants/dev-roadmaps';
+import type { TopicStatus } from '@/constants/dev-roadmaps/personalize';
 import { Radius, Spacing } from '@/constants/theme';
 import { useLatestRoadmap, type Roadmap } from '@/hooks/use-latest-roadmap';
 import { useTheme } from '@/hooks/use-theme';
+import { planProgress, type Count } from '@/lib/plan-progress';
 import { supabase } from '@/lib/supabase';
 import { ERROR_TEXT } from '@/lib/supabase-errors';
+
+const EMPTY_STATUSES: ReadonlyMap<string, TopicStatus> = new Map(); // ilerlemesi olmayan harita
 
 // Haritalarım: geç, kaldır, ekle. (Eski settings.tsx'ten taşındı; mantık aynı, yalnız düzen ListGroup.)
 export function MapsSection() {
   const { roadmap: active, roadmaps, leftovers, loading, failed, retry, activate, remove } = useLatestRoadmap();
-  // Haritalardaki biten konu sayıları (her odakta tazelenir)
+  // Haritaya geçiş kaydedilemezse listede kalır ve kısa haber verilir (sessizce başka ekrana atlamayız)
+  const [openFailed, setOpenFailed] = useState(false);
+  // Haritalardaki konu durumları (her odakta tazelenir), harita kimliğine göre.
   // null = okunamadı (0 diye gösterip kullanıcıyı yanıltmayalım)
-  const [doneCounts, setDoneCounts] = useState<Record<string, number> | null>({});
+  // Neden TÜM durumlar (yalnız 'done' değil)? Plan sayacı "atladım" (plandan çıkar) ve "çalışıyorum"
+  // (plana girer) durumlarına da bağlı; tek istekte hepsini okumak ek ağ isteği gerektirmez.
+  // Seviye/kişiselleştirme ise zaten useLatestRoadmap'in okuduğu roadmaps satırlarında (select *) var.
+  const [statusesByMap, setStatusesByMap] = useState<Record<string, Map<string, TopicStatus>> | null>({});
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       supabase
         .from('topic_progress')
-        .select('roadmap_id, status')
-        .eq('status', 'done')
+        .select('roadmap_id, topic_id, status')
         .then(({ data, error }) => {
           if (cancelled) return;
           if (error || !data) {
-            setDoneCounts(null);
+            setStatusesByMap(null);
             return;
           }
-          const counts: Record<string, number> = {};
-          for (const r of data) counts[r.roadmap_id] = (counts[r.roadmap_id] ?? 0) + 1;
-          setDoneCounts(counts);
+          const byMap: Record<string, Map<string, TopicStatus>> = {};
+          for (const r of data) {
+            if (r.status !== 'done' && r.status !== 'in_progress' && r.status !== 'skipped') continue;
+            (byMap[r.roadmap_id] ??= new Map()).set(r.topic_id, r.status);
+          }
+          setStatusesByMap(byMap);
         });
       return () => {
         cancelled = true;
@@ -46,14 +59,13 @@ export function MapsSection() {
   return (
     <View style={styles.section}>
       {loading ? (
-        <ThemedText type="small" themeColor="textSecondary">
-          Yükleniyor…
-        </ThemedText>
-      ) : failed ? (
-        <View style={styles.section}>
-          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
+        // Satır boyunda iskelet: harita gelince liste zıplamasın
+        <View accessible accessibilityLabel="Haritalar yükleniyor" accessibilityState={{ busy: true }} style={styles.section}>
+          <Skeleton height={64} radius={Radius.md} />
+          <Skeleton height={64} radius={Radius.md} />
         </View>
+      ) : failed ? (
+        <LoadError onRetry={retry} />
       ) : roadmaps.length === 0 ? (
         <ThemedText>Henüz bir haritan yok.</ThemedText>
       ) : (
@@ -64,16 +76,19 @@ export function MapsSection() {
               key={r.id}
               roadmap={r}
               active={r.id === active?.id}
-              done={doneCounts ? (doneCounts[r.id] ?? 0) : null}
+              statuses={statusesByMap ? (statusesByMap[r.id] ?? EMPTY_STATUSES) : null}
               onOpen={async () => {
-                await activate(r.id);
-                router.replace('/roadmap');
+                setOpenFailed(false);
+                if (await activate(r.id)) router.replace('/roadmap');
+                else setOpenFailed(true);
               }}
               onRemove={() => remove(r.id)}
             />
           ))}
         </ListGroup>
       )}
+
+      {openFailed && <Banner tone="warning">{ERROR_TEXT.switchFailed}</Banner>}
 
       {/* Her durumda görünür (yükleniyor/hata dahil). Hiç harita yoksa asıl eylem bu olduğu için birincil. */}
       <Button
@@ -100,18 +115,21 @@ export function MapsSection() {
 function MapRow({
   roadmap,
   active,
-  done,
+  statuses,
   onOpen,
   onRemove,
 }: {
   roadmap: Roadmap;
   active: boolean;
-  done: number | null;
+  statuses: ReadonlyMap<string, TopicStatus> | null;
   onOpen: () => void;
   onRemove: () => Promise<boolean>;
 }) {
   const theme = useTheme();
   const map = getRoadmap(roadmap.topic_path)!;
+  // Yol Haritam ekranıyla aynı plan sayacı (tüm harita değil)
+  const count: Count | null = statuses ? planProgress(map, roadmap, statuses) : null;
+  const done = count?.done ?? null;
   // Kaldırma iki adımlı: önce "Kaldır", sonra satırın altında açık bir onay (tarayıcı uyarı penceresi yok)
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -127,7 +145,7 @@ function MapRow({
 
   const subtitle =
     `${KIND_LABEL[map.kind]}` +
-    (done !== null ? ` · ${done} / ${countTopics(map).total} konu bitti` : '') +
+    (count ? ` · ${count.done} / ${count.total} konu bitti` : '') +
     (active ? ' · şu an açık' : '');
 
   return (

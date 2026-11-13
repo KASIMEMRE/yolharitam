@@ -48,7 +48,8 @@ export const ERROR_TEXT = {
   // Topluluk: kullanıcı adı ve lig
   usernameLoadFailed: 'Kullanıcı adın yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
   usernameSaveFailed: 'Kullanıcı adı kaydedilemedi. Biraz sonra tekrar dene.',
-  usernameTaken: 'Bu kullanıcı adı alınmış.',
+  // Alınmış, ayrılmış ve uygunsuz adlar için TEK mesaj: hangisi olduğunu söylemek kelime listesini sızdırır
+  usernameTaken: 'Bu kullanıcı adı kullanılamaz.',
   inappropriate: 'Bu metin uygunsuz ifade içeriyor gibi görünüyor. Lütfen değiştir.',
   usernameCheckFailed: 'Uygunluk şu an denetlenemedi. Yine de kaydetmeyi deneyebilirsin.',
   leagueLoadFailed: 'Lig sıralaması yüklenemedi. İnternet bağlantını kontrol edip tekrar dene.',
@@ -65,5 +66,21 @@ export const ERROR_TEXT = {
   // Adım işaretlenirken
   markFailed: 'İşaret kaydedilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   markSchema: 'İşaret kaydedilemedi. Biraz sonra tekrar dene.',
+  // Haritalar arasında geçerken
+  switchFailed: 'Harita değiştirilemedi. İnternet bağlantını kontrol edip tekrar dene.',
   session: 'Oturumun kapanmış. Lütfen yeniden giriş yap.',
 } as const;
+
+// Ortak hata bileşeninin (LoadError) metinleri: kısa, ünlemsiz. Başlık ne olduğunu, ipucu ne yapılacağını söyler.
+export type LoadErrorKind = 'network' | 'schema' | 'other';
+export const LOAD_ERROR_TEXT: Record<LoadErrorKind, { title: string; hint: string }> = {
+  network: { title: 'Bağlantı kurulamadı.', hint: 'İnternetini kontrol edip tekrar dene.' },
+  schema: { title: 'Şu an yüklenemiyor.', hint: 'Biraz sonra tekrar dene.' },
+  other: { title: 'Bir şeyler ters gitti.', hint: 'Biraz sonra tekrar dene.' },
+};
+
+// Üç türlü hata durumu veren kancaların ('schema' | 'network' | 'error') durumunu LoadError türüne çevirir.
+// Yalnız 'error' / 'loading' diyen kancalarda tür bilinmez; orada LoadError'a tür verilmez (varsayılan: ağ).
+export function loadErrorKind(status: string): LoadErrorKind {
+  return status === 'schema' ? 'schema' : status === 'error' ? 'other' : 'network';
+}

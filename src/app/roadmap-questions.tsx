@@ -269,28 +269,17 @@ export default function RoadmapQuestionsScreen() {
         updated_at: new Date().toISOString(), // "en son kullanılan harita" sırası bununla
       };
 
-      // Hangi satır güncellenecek? roadmapId ile açıldıysa o; değilse bu haritanın eski satırı (varsa)
-      let targetId = roadmapId ?? null;
-      if (!targetId) {
-        const found = await supabase
-          .from('roadmaps')
-          .select('id')
-          .eq('topic_path', map.id)
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .abortSignal(controller.signal)
-          .maybeSingle();
-        if (found.error) return { message: errorText(found.error) };
-        targetId = found.data?.id ?? null;
-      }
-
+      // roadmapId ile açıldıysa (Planımı güncelle) o satır güncellenir. Değilse UPSERT: veritabanında
+      // (user_id, topic_path) benzersizdir; harita varsa güncellenir, yoksa eklenir. Eskiden "önce ara,
+      // yoksa ekle" iki adımdı: çift dokunma ya da iki cihaz aynı haritanın kopyasını açabiliyor, kopya
+      // üzerinden konular yeniden bitirilip XP toplanabiliyordu. Tek istek bu yarışı da kapatır.
       // .select('id'): güncelleme RLS ya da silinmiş satır yüzünden 0 satıra denk gelirse hata dönmez;
       // dönen satırı sayarak "kaydedildi" kutlamasının sahte olmasını önleriz.
-      const { data: saved, error: saveError } = targetId
-        ? await supabase.from('roadmaps').update(fields).eq('id', targetId).select('id').abortSignal(controller.signal)
+      const { data: saved, error: saveError } = roadmapId
+        ? await supabase.from('roadmaps').update(fields).eq('id', roadmapId).select('id').abortSignal(controller.signal)
         : await supabase
             .from('roadmaps')
-            .insert({ ...fields, user_id: session.user.id, topic_path: map.id })
+            .upsert({ ...fields, user_id: session.user.id, topic_path: map.id }, { onConflict: 'user_id,topic_path' })
             .select('id')
             .abortSignal(controller.signal);
       // Sunucu kullanıcı başına 30 haritayı aşan eklemeyi 'roadmap_limit' (P0001) ile reddeder

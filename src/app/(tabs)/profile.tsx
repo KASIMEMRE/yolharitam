@@ -2,11 +2,11 @@ import { router } from 'expo-router';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { Glyph, IconLabel } from '@/components/icon';
-import { Banner } from '@/components/banner';
 import { AchievementsStrip } from '@/components/achievements-section';
 import { Avatar } from '@/components/avatar';
 import { Button } from '@/components/button';
 import { ListGroup, ListRow } from '@/components/list-row';
+import { LoadError } from '@/components/load-error';
 import { ScreenHeader } from '@/components/screen-header';
 import { Segmented } from '@/components/segmented';
 import { Surface } from '@/components/surface';
@@ -23,7 +23,6 @@ import { useAuth } from '@/lib/auth-context';
 import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/lib/config';
 import { openExternalUrl } from '@/lib/open-url';
 import { setPreferences, usePreferences } from '@/lib/preferences';
-import { ERROR_TEXT } from '@/lib/supabase-errors';
 
 
 // Misafirde kimlik, XP, rozet ve harita sorguları atılmaz: ayrı bileşen (hook kuralı yüzünden koşullu çağrı olmaz).
@@ -152,10 +151,7 @@ function MemberProfileScreen() {
 
       {/* Okunamadı ≠ haritan yok: yanlış "seçmedin" demek yerine hata + tekrar dene */}
       {failed && (
-        <View style={styles.errorBox}>
-          <Banner tone="warning">{ERROR_TEXT.mapsLoadFailed}</Banner>
-          <Button variant="secondary" icon="🔄" label="Tekrar dene" onPress={retry} />
-        </View>
+        <LoadError variant="inline" onRetry={retry} />
       )}
 
       <ListGroup>
@@ -215,7 +211,6 @@ const styles = StyleSheet.create({
   identity: { alignItems: 'center', gap: Spacing.two },
   email: { alignSelf: 'stretch', textAlign: 'center' },
   center: { textAlign: 'center' },
-  errorBox: { gap: Spacing.three },
   guestActions: { gap: Spacing.one },
   themeRow: { gap: Spacing.two, paddingVertical: Spacing.three },
 });
