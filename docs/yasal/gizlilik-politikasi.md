@@ -1,6 +1,6 @@
 # Yol Haritam — Gizlilik Politikası
 
-Son güncelleme: 31 Ekim 2026
+Son güncelleme: 13 Kasım 2026
 
 Bu metin, Yol Haritam mobil uygulamasının ("Uygulama") hangi kişisel verileri hangi amaçla işlediğini anlatır. 6698 sayılı Kişisel Verilerin Korunması Kanunu (KVKK) kapsamında aydınlatma metni yerine de geçer.
 
@@ -22,7 +22,7 @@ Bu metin, Yol Haritam mobil uygulamasının ("Uygulama") hangi kişisel verileri
 
 **Teknik kayıtlar:** Hizmeti güvenle çalıştırmak için altyapı sağlayıcımız istek zamanı ve IP adresi gibi teknik günlükleri kısa süreliğine tutar; bunlar profil oluşturmak için kullanılmaz.
 
-**Toplamadıklarımız:** Konum, rehber, fotoğraf, mikrofon, cihaz ya da reklam kimliği toplamıyoruz. Uygulamada reklam, analitik veya takip aracı yoktur; seni başka uygulama ve sitelerde izlemeyiz.
+**Toplamadıklarımız:** Konum, rehber, fotoğraf, mikrofon, cihaz ya da reklam kimliği toplamıyoruz. Uygulamada reklam veya kullanım analitiği yoktur (çökme kayıtları için bkz. Bölüm 3); seni başka uygulama ve sitelerde izlemeyiz.
 
 ## 2. Yapay zekâ (Groq)
 
@@ -30,22 +30,26 @@ Konu açıklaması, mini quiz, "Yapay zekâya sor" ve haritanın sana göre işa
 
 Yapay zekâ yanıtları hata içerebilir; önemli konularda önerilen kaynaklardan doğrula.
 
-## 3. Verilerin saklandığı yer
+## 3. Çökme kayıtları (Sentry)
 
-Veriler Supabase, Inc. altyapısındaki şifreli bağlantıyla erişilen bulut veritabanında saklanır. Bu hizmet sağlayıcıları (Supabase ve Groq) yurt dışında bulunduğundan verilerin bir kısmı yurt dışına aktarılır; uygulamayı kullanarak bu aktarıma açık rıza vermiş olursun.
+Uygulama beklenmedik şekilde hata verdiğinde ya da kapandığında, sorunu bulup düzeltebilmek için Functional Software, Inc. (Sentry, ABD) hizmetine bir hata kaydı gönderilir. Bu kayıt **yalnızca** hata ayrıntısını (hatanın mesajı ve kodun hangi satırında olduğu), cihaz modelini, işletim sistemi sürümünü ve uygulama sürümünü içerir. **E-posta adresin, kullanıcı adın, hesap kimliğin ve IP adresin kaydedilmez**; ekran görüntüsü ve ağ istekleri de gönderilmez. Bu kayıtlar seni tanımak ya da izlemek için değil, yalnızca hataları gidermek için kullanılır.
 
-## 4. Saklama süresi ve silme
+## 4. Verilerin saklandığı yer
+
+Veriler Supabase, Inc. altyapısındaki şifreli bağlantıyla erişilen bulut veritabanında saklanır. Bu hizmet sağlayıcıları (Supabase, Groq ve Sentry) yurt dışında bulunduğundan verilerin bir kısmı yurt dışına aktarılır; uygulamayı kullanarak bu aktarıma açık rıza vermiş olursun.
+
+## 5. Saklama süresi ve silme
 
 Verilerin hesabın açık olduğu sürece saklanır. **Ayarlar › Hesabımı sil** ile hesabını ve tüm verilerini (ilerleme, puanlar, arkadaşlıklar, vitrin projeleri) kalıcı olarak silebilirsin. Silme işlemi geri alınamaz. Ayrıntılar: [Hesap silme](hesap-silme.md).
 
-## 5. Haklarının
+## 6. Haklarının
 
 KVKK'nın 11. maddesi uyarınca verilerinin işlenip işlenmediğini öğrenme, düzeltilmesini veya silinmesini isteme, itiraz etme gibi hakların vardır. Taleplerini kasimemresekersoy@gmail.com adresine yazabilirsin; en geç 30 gün içinde yanıt verilir.
 
-## 6. Yaş sınırı
+## 7. Yaş sınırı
 
 Uygulama 13 yaşından küçük çocuklara yönelik değildir. 13 yaşından küçüksen uygulamayı kullanma.
 
-## 7. Değişiklikler
+## 8. Değişiklikler
 
 Bu politika değişirse güncel hâli bu sayfada yayımlanır ve "Son güncelleme" tarihi değişir.

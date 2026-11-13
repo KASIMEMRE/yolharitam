@@ -12,11 +12,6 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - `useLatestRoadmap` ve diğer veri kancaları hata durumunu döndürsün; tek ortak hata bileşeni.
 - Yükleniyor durumlarında yerleşimi zıplatmayan iskelet; okuma hatası ~7 sn yerine kısa sürede görünsün.
 
-### PL-02 · Çökme takibi (Sentry)
-- `@sentry/react-native` (`npx expo install`), DSN `EXPO_PUBLIC_SENTRY_DSN` ortam değişkeninden; boşsa tamamen kapalı.
-- Expo Go'da uygulama bozulmamalı. Kişisel veri gönderilmez (e-posta, kullanıcı adı yok; yalnız anonim kullanıcı kimliği değil, hiç kimlik yok).
-- Gizlilik politikası ve YAYIN.md veri güvenliği bölümü güncellenir; kurulum adımları `docs/SENTRY.md`.
-
 ### PL-03 · XP'yi sunucuya taşımak 🗄️
 - İstemci `xp_events` tablosuna doğrudan yazamasın; XP miktarını sunucu belirlesin (RPC / Edge Function).
 - Quiz ve "sor" XP'si yalnız Edge Function gerçekten çalıştıysa verilsin. Aynı haritayı ikinci kez ekleyip puan toplama kapansın (`roadmaps(user_id, topic_path)` benzersiz).
@@ -51,6 +46,13 @@ Ajanlar "Sıradaki" bölümündeki en üstteki başlamamış görevi alır (bkz.
 - Bu PR "2 açık ajan PR'ı" sınırına SAYILMAZ.
 
 ## Tamamlanan (PR açıldı)
+
+### PL-02 · Çökme takibi (Sentry)
+- `@sentry/react-native` (`npx expo install`), DSN `EXPO_PUBLIC_SENTRY_DSN` ortam değişkeninden; boşsa tamamen kapalı.
+- Expo Go'da uygulama bozulmamalı. Kişisel veri gönderilmez (e-posta, kullanıcı adı yok; yalnız anonim kullanıcı kimliği değil, hiç kimlik yok).
+- Gizlilik politikası ve YAYIN.md veri güvenliği bölümü güncellenir; kurulum adımları `docs/SENTRY.md`.
+- ✅ `@sentry/react-native` (~8.28) kuruldu. `src/lib/sentry.ts`: DSN `EXPO_PUBLIC_SENTRY_DSN`'den; boşsa, Expo Go'da, web'de `init` çağrılmaz ve `Sentry.wrap` bileşeni değiştirmez. `sendDefaultPii:false`, izleme/oturum tekrarı/oturum takibi kapalı, geliştirmede gönderim kapalı, ağ breadcrumb'ları ve `user`/`request` olaydan silinir. `_layout.tsx` başlatır ve sarar; `app-error.tsx` yakaladığı hatayı bildirir. `app.json`'a eklenti, `metro.config.js` (Debug ID), `app.config.js` (token/org/proje yoksa kaynak haritası yüklemesi kapalı: derleme bozulmaz). `docs/SENTRY.md`, gizlilik politikası (yeni Bölüm 3), `YAYIN.md` veri güvenliği güncellendi. Yeni APK şart (native modül).
+
 
 ### TS-04 · Son kabul (yeni görünüm)
 - Tüm ekranlar açık/koyu × 390/320 px; kontrast ≥ 4.5:1; konsol hatası yok; envanter tekrar denetlenir; kalan "yapay zekâ" izleri (simge kutusu, gereksiz alt yazı, ✨, 3D kenar) temizlenir.

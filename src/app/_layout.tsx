@@ -18,13 +18,17 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import { usePendingIntentRunner } from '@/lib/auth-gate';
+import { initSentry, wrapRoot } from '@/lib/sentry';
+
+// Çökme takibi, her şeyden önce (modül yüklenirken) başlar. DSN yoksa hiçbir şey yapmaz.
+initSentry();
 
 SplashScreen.preventAutoHideAsync();
 
 // Ekranlardan birinde yakalanmamış hata olursa Türkçe hata ekranı göster (Expo Router bu adı tanır)
 export { AppErrorScreen as ErrorBoundary };
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
   // Yazı tipi dosyalarını yükle. Her ağırlık ayrı aile adıdır (bkz. Fonts). Yüklenene kadar hiçbir şey
   // çizmiyoruz; yerel açılış ekranı (splash) AnimatedSplashOverlay çizilene kadar zaten açık kalır.
@@ -52,6 +56,9 @@ export default function RootLayout() {
     </ThemeProvider>
   );
 }
+
+// Sentry sarmalayıcısı kök bileşeni dinler; DSN yoksa bileşen aynen döner.
+export default wrapRoot(RootLayout);
 
 function navigationTheme(colorScheme: 'light' | 'dark' | 'unspecified' | null | undefined) {
   const dark = colorScheme === 'dark';
